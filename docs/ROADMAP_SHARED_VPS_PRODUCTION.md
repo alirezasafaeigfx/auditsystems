@@ -9,7 +9,18 @@
 - اصل طراحی: shared host, isolated runtime (PM2/env/releases/logs)
 - وضعیت اجرا: `Done` (production + staging live)
 
-## Infrastructure Snapshot (Measured: 2026-02-23 23:37 +03:30)
+## Current Production Snapshot (Updated: 2026-06-09)
+| Area | Current State | Outcome |
+|---|---|---|
+| Public URL | `https://audit.alirezasafaeisystems.ir/` | production live |
+| Release path | `/var/www/asdev-audit-ir/releases/production/20260609T175200Z-local-latest` | latest local deployment |
+| PM2 web app | `asdev-audit-ir-production-web` | online |
+| PM2 worker app | `asdev-audit-ir-production-worker` | online |
+| Web port | `127.0.0.1:3010` | isolated from the other live projects |
+| DB Engine | PostgreSQL on `127.0.0.1:5432` | used by `asdev_audit_production` |
+| Env file | `/var/www/asdev-audit-ir/shared/env/production.env` | secrets excluded from docs |
+
+## Historical Infrastructure Snapshot (Measured: 2026-02-23 23:37 +03:30)
 | Area | Current State | Outcome |
 |---|---|---|
 | CPU | 4 vCPU | کافی برای اضافه‌شدن یک Next.js service دیگر |
@@ -23,9 +34,9 @@
 | Existing release footprint | `my-portfolio` + `persian-tools` + `asdev-audit-ir` (retention active) | تحت کنترل با retention + logrotate |
 
 ## Live Validation Snapshot
-- `https://alirezasafaeisystems.ir`:
+- `https://alirezasafaeisystems.ir/`:
   - HTTP -> HTTPS redirect فعال
-  - روت به `/fa` redirect می‌شود (locale پیش‌فرض فارسی)
+  - روت فارسی بدون پسوند `/fa` سرو می‌شود
 - `https://persiantoolbox.ir`:
   - HTTP -> HTTPS redirect فعال
   - cookie پیش‌فرض `ptb_locale=fa` تنظیم می‌شود
@@ -33,7 +44,7 @@
   - HTTP -> HTTPS redirect فعال
   - روت فارسی به‌صورت پیش‌فرض سرو می‌شود (`lang="fa"`, `dir="rtl"`)
 - `GET https://audit.alirezasafaeisystems.ir/api/ready` -> `200`
-- `GET https://staging.audit.alirezasafaeisystems.ir/api/ready` -> `200`
+- وضعیت staging در VPS جدید در این سند تأیید نشده است؛ قبل از استفاده دوباره healthcheck جداگانه بگیرید.
 - نکته probe: برای audit app معیار health روی `GET` سنجیده می‌شود؛ `HEAD` در بعضی مسیرها می‌تواند رفتار متفاوت نشان دهد.
 
 ## Work Packages
@@ -70,7 +81,7 @@
 - [x] callback پرداخت endpoint در production route حاضر است (نیازمند merchant live برای end-to-end payment success).
 
 ### 6) Main-Site Integration
-- [x] لینک داخلی از `alirezasafaeisystems.ir/fa` و `alirezasafaeisystems.ir/en` به audit app اضافه شد.
+- [x] لینک داخلی از سایت اصلی `alirezasafaeisystems.ir` به audit app اضافه شد.
 - [x] anchor text و placement با رویکرد conversion-oriented تنظیم شد.
 
 ## Entry Criteria

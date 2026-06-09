@@ -3,6 +3,12 @@
 Last updated (UTC): 2026-02-24T02:06:58Z
 Base commit at capture: `178c5c3`
 
+## Current VPS Deployment
+- Latest deployment record: `docs/NEW_VPS_DEPLOYMENT_2026-06-09.md`
+- Current production process split: `asdev-audit-ir-production-web` + `asdev-audit-ir-production-worker`
+- Current production release: `/var/www/asdev-audit-ir/releases/production/20260609T175200Z-local-latest`
+- Current public URL: `https://audit.alirezasafaeisystems.ir/`
+
 ## Implemented baseline
 - ASDEV cross-site contract: `/asdev` page + footer signature + UTM links + Telegram (`@asdevsystems`).
 - `/standards` و `/en/standards` با intent-map و لینک داخلی استاندارد بین سه سایت.

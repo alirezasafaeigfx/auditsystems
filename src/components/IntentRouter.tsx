@@ -68,7 +68,7 @@ export default function IntentRouter({ locale }: { locale: Locale }) {
       execution: {
         key: "execution",
         title: "برای اصلاح و اجرا به تیم فنی نیاز دارم",
-        description: "اگر بعد از گزارش نیاز به اجرا دارید، مستقیم وارد مسیر همکاری با علیرضا صفایی شوید.",
+        description: "اگر بعد از گزارش نیاز به اجرا دارید، مستقیم وارد مسیر همکاری با علیرضا صفایی شوید. یا اسکوپ یک‌صفحه‌ای بررسی فنی + Quick Fix را دانلود کنید.",
         href: "https://alirezasafaeisystems.ir/?utm_source=audit&utm_medium=intent_router&utm_campaign=alireza_safaei_network&utm_content=execution_route",
         external: true,
         cta: "ورود به سایت Alireza Safaei",
@@ -95,7 +95,7 @@ export default function IntentRouter({ locale }: { locale: Locale }) {
       execution: {
         key: "execution",
         title: "I need implementation support",
-        description: "Move from diagnosis to execution with direct engineering collaboration.",
+        description: "Move from diagnosis to execution with direct engineering collaboration. Or download the one-page Audit + Quick Fix scope.",
         href: "https://alirezasafaeisystems.ir/?utm_source=audit&utm_medium=intent_router&utm_campaign=alireza_safaei_network&utm_content=execution_route_en",
         external: true,
         cta: "Open Alireza Safaei Systems",
