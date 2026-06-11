@@ -33,6 +33,7 @@ enum FindingCategory {
   SEO
   SECURITY
   UX
+  ACCESSIBILITY
 }
 
 enum OrderStatus {

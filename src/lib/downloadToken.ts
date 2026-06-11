@@ -1,6 +1,13 @@
 import crypto from "node:crypto";
 
-const DOWNLOAD_SECRET = process.env.DOWNLOAD_TOKEN_SECRET ?? "asdev-download-dev-secret";
+const DOWNLOAD_SECRET = process.env.DOWNLOAD_TOKEN_SECRET;
+
+function requireSecret(): string {
+  if (!DOWNLOAD_SECRET) {
+    throw new Error("DOWNLOAD_TOKEN_SECRET environment variable is required but not set");
+  }
+  return DOWNLOAD_SECRET;
+}
 
 export type DownloadTokenPayload = {
   runId: string;
@@ -18,7 +25,8 @@ function base64UrlDecode(value: string): string {
 }
 
 function sign(data: string): string {
-  return crypto.createHmac("sha256", DOWNLOAD_SECRET).update(data).digest("base64url");
+  const secret = requireSecret();
+  return crypto.createHmac("sha256", secret).update(data).digest("base64url");
 }
 
 export function createDownloadToken(input: { runId: string; orderId: string; email: string; ttlSec?: number }): string {

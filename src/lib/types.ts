@@ -9,7 +9,7 @@ export type ExtractedResource = {
   attrs?: Record<string, string | boolean>;
 };
 
-export type FindingCategory = "RESILIENCE" | "PERFORMANCE" | "SEO" | "SECURITY" | "UX";
+export type FindingCategory = "RESILIENCE" | "PERFORMANCE" | "SEO" | "SECURITY" | "UX" | "ACCESSIBILITY";
 export type FindingSeverity = "INFO" | "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
 export type FindingCode =
@@ -22,7 +22,16 @@ export type FindingCode =
   | "STATIC_ASSETS_NO_LONG_CACHE"
   | "SLOW_TTFB_OR_SERVER_RESPONSE"
   | "TOO_MANY_REQUESTS_OR_HEAVY_PAGE"
-  | "SEO_BASICS_MISSING";
+  | "SEO_BASICS_MISSING"
+  | "IMG_MISSING_ALT"
+  | "IMG_EMPTY_ALT_MANY"
+  | "INPUT_MISSING_LABEL"
+  | "NO_ROBOTS_TXT"
+  | "NO_SITEMAP"
+  | "SLOW_SERVER_TTFB"
+  | "SLOW_SERVER_RESPONSE"
+  | "NO_SCHEMA_ORG"
+  | "SCHEMA_ORG_PRESENT";
 
 export type Finding = {
   code: FindingCode;

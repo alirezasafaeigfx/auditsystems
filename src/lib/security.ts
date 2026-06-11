@@ -1,7 +1,14 @@
 import crypto from "node:crypto";
 import { NextRequest } from "next/server";
 
-const IP_HASH_SALT = process.env.IP_HASH_SALT ?? "asdev-audit-default-salt";
+const IP_HASH_SALT = process.env.IP_HASH_SALT;
+
+function requireSalt(): string {
+  if (!IP_HASH_SALT) {
+    throw new Error("IP_HASH_SALT environment variable is required but not set");
+  }
+  return IP_HASH_SALT;
+}
 
 export function getClientIp(request: NextRequest): string {
   const xForwardedFor = request.headers.get("x-forwarded-for");
@@ -14,7 +21,8 @@ export function getClientIp(request: NextRequest): string {
 }
 
 export function hashClientIp(ip: string): string {
-  return crypto.createHash("sha256").update(`${IP_HASH_SALT}:${ip}`).digest("hex");
+  const salt = requireSalt();
+  return crypto.createHash("sha256").update(`${salt}:${ip}`).digest("hex");
 }
 
 export function sanitizeApiError(error: unknown): { status: number; code: string } {
@@ -26,7 +34,7 @@ export function sanitizeApiError(error: unknown): { status: number; code: string
     return { status: 503, code: "DNS_LOOKUP_FAILED" };
   }
 
-  if (error.message.startsWith("INVALID_URL_") || error.message.startsWith("SSRF_BLOCKED_")) {
+  if (error.message.startsWith("INVALID_URL_") || error.message.startsWith("SSRF_BLOCKED_") || error.message.startsWith("INVALID_HOSTNAME_")) {
     return { status: 400, code: error.message };
   }
 

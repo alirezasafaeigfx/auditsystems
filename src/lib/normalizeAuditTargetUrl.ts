@@ -83,6 +83,21 @@ function assertPublicAddress(host: string): void {
   }
 }
 
+function validateHostnameStructure(hostname: string): void {
+  if (net.isIP(hostname)) return; // Skip structure validation for IP addresses
+
+  const parts = hostname.split(".");
+  if (parts.length < 2) {
+    throw new Error("INVALID_HOSTNAME_STRUCTURE");
+  }
+
+  // Basic hostname validation: each part should be non-empty and valid
+  const hostnameRegex = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/i;
+  if (!hostnameRegex.test(hostname)) {
+    throw new Error("INVALID_HOSTNAME_FORMAT");
+  }
+}
+
 function extractFirstFromSrcset(raw: string): string {
   return raw.split(",")[0]?.trim().split(/\s+/)[0] ?? "";
 }
@@ -144,6 +159,7 @@ export async function normalizeAuditTargetUrl(
   url.hostname = asciiHost;
 
   assertPublicAddress(url.hostname);
+  validateHostnameStructure(url.hostname);
 
   if ((url.protocol === "http:" && url.port === "80") || (url.protocol === "https:" && url.port === "443")) {
     url.port = "";

@@ -65,7 +65,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tok
         severity: finding.severity,
         recommendation: finding.recommendation
       })),
-      generatedAt: new Date().toISOString()
+      generatedAt: new Date().toISOString(),
+      locale: share.run.locale ?? "en"
     });
 
     return new Response(Buffer.from(pdfBytes), {

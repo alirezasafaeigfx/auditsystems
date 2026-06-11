@@ -25,12 +25,17 @@ function withSecurityHeaders(request: NextRequest, response: NextResponse): Next
         "base-uri 'self'",
         "object-src 'none'",
         "frame-ancestors 'none'",
-        "img-src 'self' data: https:",
-        "font-src 'self' data:",
-        "style-src 'self' 'unsafe-inline'",
-        "script-src 'self' 'unsafe-inline'",
-        "connect-src 'self' https:",
-        "form-action 'self'"
+        "img-src 'self' data: https: blob:",
+        "font-src 'self' data: https:",
+        "style-src 'self' 'unsafe-inline' https:",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+        "connect-src 'self' https: wss:",
+        "form-action 'self'",
+        "frame-src 'none'",
+        "media-src 'self' https:",
+        "manifest-src 'self'",
+        "worker-src 'self' blob:",
+        "upgrade-insecure-requests"
       ].join("; ")
     );
   } else {

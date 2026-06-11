@@ -1,3 +1,4 @@
+import * as cheerio from "cheerio";
 import { firstSrcsetCandidate } from "./normalizeAuditTargetUrl";
 import { ExtractedResource, ResourceKind } from "./types";
 
@@ -5,18 +6,6 @@ type ExtractOptions = {
   baseUrl: string;
   firstPartyHosts: Set<string>;
 };
-
-function parseAttrs(tag: string): Record<string, string> {
-  const attrs: Record<string, string> = {};
-  const attrRegex = /(\w[\w:-]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g;
-  let match: RegExpExecArray | null;
-  while ((match = attrRegex.exec(tag)) !== null) {
-    const key = match[1].toLowerCase();
-    const value = (match[2] ?? match[3] ?? match[4] ?? "").trim();
-    attrs[key] = value;
-  }
-  return attrs;
-}
 
 function safeToAbsolute(baseUrl: string, candidate: string): string | null {
   const value = String(candidate ?? "").trim();
@@ -55,6 +44,7 @@ function buildResource(
 
 export function extractResourcesFromHtml(html: string, opts: ExtractOptions): ExtractedResource[] {
   const resources: ExtractedResource[] = [];
+  const $ = cheerio.load(html);
   const headEnd = html.toLowerCase().indexOf("</head>");
 
   const push = (
@@ -67,65 +57,74 @@ export function extractResourcesFromHtml(html: string, opts: ExtractOptions): Ex
     if (resource) resources.push(resource);
   };
 
-  const scriptRegex = /<script\b[^>]*>/gi;
-  let scriptMatch: RegExpExecArray | null;
-  while ((scriptMatch = scriptRegex.exec(html)) !== null) {
-    const attrs = parseAttrs(scriptMatch[0]);
-    if (!attrs.src) continue;
-    push(attrs.src, "script", scriptMatch.index, {
-      async: Object.hasOwn(attrs, "async"),
-      defer: Object.hasOwn(attrs, "defer"),
-      type: attrs.type ?? ""
-    });
-  }
+  // Extract scripts
+  $("script").each((_i: number, element: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const src = $(element).attr("src");
+    if (src) {
+      const attrs: Record<string, string | boolean> = {
+        async: $(element).attr("async") !== undefined,
+        defer: $(element).attr("defer") !== undefined,
+        type: $(element).attr("type") ?? ""
+      };
+      push(src, "script", html.indexOf($.html(element)), attrs);
+    }
+  });
 
-  const linkRegex = /<link\b[^>]*>/gi;
-  let linkMatch: RegExpExecArray | null;
-  while ((linkMatch = linkRegex.exec(html)) !== null) {
-    const attrs = parseAttrs(linkMatch[0]);
-    if (!attrs.href) continue;
-    const rel = (attrs.rel ?? "").toLowerCase();
-    const as = (attrs.as ?? "").toLowerCase();
+  // Extract links
+  $("link").each((_i: number, element: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const href = $(element).attr("href");
+    if (!href) return;
+
+    const rel = ($(element).attr("rel") ?? "").toLowerCase();
+    const as = ($(element).attr("as") ?? "").toLowerCase();
+    const tagIndex = html.indexOf($.html(element));
 
     if (rel.includes("stylesheet")) {
-      push(attrs.href, "style", linkMatch.index, { rel, as });
-      continue;
+      push(href, "style", tagIndex, { rel, as });
+      return;
     }
 
     if (rel.includes("preload")) {
-      if (as === "font") push(attrs.href, "font", linkMatch.index, { rel, as });
-      else if (as === "style") push(attrs.href, "style", linkMatch.index, { rel, as });
-      else if (as === "script") push(attrs.href, "script", linkMatch.index, { rel, as });
-      else push(attrs.href, "preload", linkMatch.index, { rel, as });
-      continue;
+      if (as === "font") push(href, "font", tagIndex, { rel, as });
+      else if (as === "style") push(href, "style", tagIndex, { rel, as });
+      else if (as === "script") push(href, "script", tagIndex, { rel, as });
+      else push(href, "preload", tagIndex, { rel, as });
+      return;
     }
 
-    push(attrs.href, "other", linkMatch.index, { rel, as });
-  }
+    push(href, "other", tagIndex, { rel, as });
+  });
 
-  const imgRegex = /<img\b[^>]*>/gi;
-  let imgMatch: RegExpExecArray | null;
-  while ((imgMatch = imgRegex.exec(html)) !== null) {
-    const attrs = parseAttrs(imgMatch[0]);
-    if (attrs.src) {
-      push(attrs.src, "img", imgMatch.index, { loading: attrs.loading ?? "" });
-      continue;
-    }
-    if (attrs.srcset) {
-      const candidate = firstSrcsetCandidate(attrs.srcset);
-      if (candidate) push(candidate, "img", imgMatch.index, { srcset: "used-first-candidate" });
-    }
-  }
+  // Extract images
+  $("img").each((_i: number, element: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const src = $(element).attr("src");
+    const srcset = $(element).attr("srcset");
+    const loading = $(element).attr("loading") ?? "";
+    const tagIndex = html.indexOf($.html(element));
 
-  const sourceRegex = /<source\b[^>]*>/gi;
-  let sourceMatch: RegExpExecArray | null;
-  while ((sourceMatch = sourceRegex.exec(html)) !== null) {
-    const attrs = parseAttrs(sourceMatch[0]);
-    if (!attrs.srcset) continue;
-    const candidate = firstSrcsetCandidate(attrs.srcset);
-    if (!candidate) continue;
-    push(candidate, "img", sourceMatch.index, { srcset: "used-first-candidate", type: attrs.type ?? "" });
-  }
+    if (src) {
+      push(src, "img", tagIndex, { loading });
+      return;
+    }
+
+    if (srcset) {
+      const candidate = firstSrcsetCandidate(srcset);
+      if (candidate) push(candidate, "img", tagIndex, { srcset: "used-first-candidate" });
+    }
+  });
+
+  // Extract source elements
+  $("source").each((_i: number, element: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const srcset = $(element).attr("srcset");
+    if (!srcset) return;
+
+    const candidate = firstSrcsetCandidate(srcset);
+    if (!candidate) return;
+
+    const type = $(element).attr("type") ?? "";
+    const tagIndex = html.indexOf($.html(element));
+    push(candidate, "img", tagIndex, { srcset: "used-first-candidate", type });
+  });
 
   return resources;
 }
