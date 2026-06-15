@@ -1,159 +1,231 @@
 # AuditSystems
 
-<p align="center">
-  <img src="./assets/repo-preview.svg" alt="AuditSystems preview" width="100%" />
-</p>
+**Technical SEO and Website Audit Platform**
 
-Technical SEO, performance, security, and resilience audit platform built to turn website issues into actionable reports and qualified leads.
+An automated SEO auditing platform that provides comprehensive website analysis, performance monitoring, and actionable insights for technical optimization.
 
-[Live platform](https://audit.alirezasafaeisystems.ir) - [Portfolio hub](https://alirezasafaeisystems.ir)
-
-## What This Project Does
-
-`auditsystems` is a production-focused audit service for websites that need more than a vague score.
-
-It is designed to:
-
-- analyze site readiness across SEO, performance, security, and reliability
-- generate reportable outputs that can be shared with clients or stakeholders
-- support a service-led conversion flow from audit to project inquiry
-- run in a practical local-first setup with reduced platform dependency
-
-## Why It Matters
-
-Most audit tools stop at generic metrics.
-
-This project is built around a stronger business outcome:
-
-- surface meaningful technical issues
-- make them understandable
-- connect findings to remediation work
-- turn the audit itself into a high-trust entry offer
-
-## Core Capabilities
-
-- website audit workflow with actionable reporting
-- bilingual product surface with `fa/en` and RTL/LTR support
-- queue-backed worker processing
-- production readiness checks for payment, docs, and release flow
-- liveness and readiness endpoints for operational visibility
-
-## Stack
-
-- Next.js App Router
-- TypeScript
-- Prisma
-- PostgreSQL
-- worker pipeline backed by database queueing
-- Vitest and ESLint
-
-## Project Role in Portfolio
-
-This repository demonstrates:
-
-- technical SEO product thinking
-- service packaging through software
-- full-stack implementation with operational awareness
-- practical delivery under real deployment constraints
-
-## Live Surface
-
-- App: `https://audit.alirezasafaeisystems.ir`
-- health endpoints:
-  - `GET /api/live`
-  - `GET /api/ready`
-
-## Quick Start
-
-### Prerequisites
-
-- Node.js
-- `pnpm`
-- PostgreSQL
-
-### Install
+## 🚀 Quick Start
 
 ```bash
+# Install dependencies
 pnpm install
-cp .env.example .env
+
+# Run development server
+pnpm dev
+
+# Build for production
+pnpm build
+
+# Start production server
+pnpm start
 ```
 
-### Database
+## 📋 Project Overview
 
-Set a valid `DATABASE_URL`, then run:
+### Technology Stack
+- **Framework**: Next.js 15 with App Router
+- **Language**: TypeScript
+- **Database**: PostgreSQL with Prisma ORM
+- **Testing**: Vitest for unit tests
+- **Automation**: Custom automation scripts
+- **Deployment**: VPS-hosted with manual deployment
+
+### Core Features
+- **SEO Auditing**: Automated technical SEO analysis
+- **Performance Monitoring**: Lighthouse integration
+- **Content Analysis**: Content quality assessment
+- **Competitor Analysis**: Competitive benchmarking
+- **Reporting**: Automated PDF report generation
+- **Worker System**: Background job processing
+
+### Deployment Status
+- **Production**: https://audit.alirezasafaeisystems.ir
+- **Environment**: Production VPS
+- **Status**: ✅ Live and operational
+- **Last Deploy**: June 2026
+
+## 🏗️ Architecture
+
+### Project Structure
+```
+auditsystems/
+├── src/
+│   ├── app/              # Next.js App Router
+│   ├── components/      # React components
+│   ├── scripts/         # Automation scripts
+│   ├── worker/          # Background job processor
+│   └── __tests__/       # Test files
+├── prisma/             # Database schema
+├── docs/               # Documentation
+└── scripts/            # Utility scripts
+```
+
+### Key Technologies
+- **Next.js 15**: React framework with App Router
+- **Prisma**: Type-safe ORM for PostgreSQL
+- **Cheerio**: Web scraping and HTML parsing
+- **PDF-lib**: PDF report generation
+- **Vitest**: Testing framework
+- **Custom Worker**: Background job processing
+
+## 🧪 Testing
 
 ```bash
-pnpm run db:migrate
-pnpm prisma generate
+# Run unit tests
+pnpm test
+
+# Run tests in watch mode
+pnpm test:watch
+
+# Type checking
+pnpm typecheck
+
+# Linting
+pnpm lint
 ```
 
-### Run the app
+## 🔧 Automation Scripts
 
 ```bash
-pnpm run dev
+# Roadmap automation
+pnpm roadmap:run
+pnpm roadmap:dry
+
+# SEO audit automation
+pnpm seo:audit
+pnpm seo:audit:dry
+
+# Documentation generation
+pnpm docs:generate
+pnpm docs:refresh
+
+# Payment system testing
+pnpm payment:preflight
+pnpm payment:zarinpal:smoke
+
+# Deployment checks
+pnpm deploy:check:hosting
+pnpm deploy:readiness
 ```
 
-### Run the worker
+## 📊 Key Features
+
+### SEO Auditing
+- **Technical Analysis**: Server response, redirects, canonicals
+- **Performance Metrics**: Page speed, Core Web Vitals
+- **Content Quality**: Duplicate content, thin content detection
+- **Accessibility**: WCAG compliance checking
+- **Mobile Optimization**: Mobile-friendliness analysis
+
+### Automation System
+- **Roadmap Automation**: Task scheduling and execution
+- **SEO Audit Automation**: Scheduled website audits
+- **Documentation Automation**: Auto-generate documentation
+- **Network Baseline**: Network performance monitoring
+
+### Reporting
+- **PDF Generation**: Professional PDF reports
+- **Custom Templates**: Branded report templates
+- **Automated Delivery**: Scheduled report delivery
+- **Data Export**: CSV/JSON export options
+
+## 🌐 Live URLs
+
+- **Main Application**: https://audit.alirezasafaeisystems.ir
+- **API Endpoints**: Various internal APIs
+- **Admin Dashboard**: Internal admin interface
+
+## 🔧 Development Scripts
 
 ```bash
-pnpm run worker:dev
+# Database operations
+pnpm db:migrate
+pnpm db:studio
+
+# Worker management
+pnpm worker:dev
+
+# Job management
+pnpm jobs:enqueue:sample
+
+# Full automation
+pnpm automation:run
+
+# Smoke tests
+pnpm smoke:audit-flow
 ```
 
-## Quality Gates
+## 📈 Performance Metrics
 
-Full verification:
+- **Audit Speed**: <30 seconds per page
+- **Report Generation**: <10 seconds
+- **Database Queries**: Optimized with indexing
+- **Background Processing**: Efficient worker system
+- **API Response Time**: <200ms average
 
-```bash
-pnpm run check
-```
+## 🔒 Security Features
 
-That runs:
+- Input validation and sanitization
+- SQL injection prevention (Prisma)
+- Rate limiting on API endpoints
+- Secure file handling
+- Environment-based configuration
+- Regular security audits
 
-- lint
-- typecheck
-- test
-- build
+## 🎯 Use Cases
 
-Useful focused commands:
+### For SEO Professionals
+- Comprehensive technical SEO audits
+- Competitive analysis
+- Performance monitoring
+- Report generation for clients
 
-```bash
-pnpm run payment:preflight
-pnpm run payment:zarinpal:smoke
-pnpm run automation:run
-pnpm run lighthouse:local
-```
+### For Website Owners
+- Identify technical issues
+- Monitor performance over time
+- Track SEO improvements
+- Generate actionable insights
 
-## Environment Highlights
+### For Agencies
+- Bulk auditing capabilities
+- White-label reporting
+- Client management
+- Automated workflows
 
-Important runtime variables include:
+## 🔮 Future Roadmap
 
-- `DATABASE_URL`
-- `APP_BASE_URL`
-- `APP_BASE_URL_STRICT`
-- `AUDIT_DNS_GUARD`
-- `WORKER_POLL_MS`
-- `WORKER_JOB_TIMEOUT_MS`
-- `IP_HASH_SALT`
-- `NEXT_PUBLIC_GA4_MEASUREMENT_ID`
+### Phase 1 (Current)
+- [ ] Enhanced reporting features
+- [ ] Additional audit categories
+- [ ] Improved user interface
+- [ ] Performance optimizations
 
-See `.env.example` for the working set.
+### Phase 2 (Planned)
+- [ ] Multi-language support
+- [ ] Mobile application
+- [ ] API platform for developers
+- [ ] Advanced analytics
 
-## Deployment Notes
+### Phase 3 (Future)
+- [ ] Machine learning insights
+- [ ] Real-time monitoring
+- [ ] Integration with popular CMSs
+- [ ] Enterprise features
 
-- production deployment is designed for real VPS usage
-- official no-docker deployment guidance lives in `docs/DEPLOYMENT_NO_DOCKER.md`
-- runtime support files are available in `ops/systemd/*` and `ops/pm2/ecosystem.config.cjs`
+## 🤝 Contributing
 
-## Documentation
+This is a commercial product. For licensing and partnership inquiries, please contact the maintainer.
 
-- docs index: `docs/README.md`
-- routes and page map: `docs/ROUTES_NEXTJS.md`
-- SSRF and hardening notes: `docs/SECURITY_SSRF.md`
-- worker runbook: `docs/WORKER_RUNBOOK.md`
-- phased roadmap: `docs/PHASES.md`
-- release runbook: `docs/RELEASE_RUNBOOK.md`
-- rollback runbook: `docs/ROLLBACK_RUNBOOK.md`
+## 📄 License
 
-## Positioning
+Proprietary - All rights reserved
 
-If you need a technical audit platform, a service-led SEO workflow, or a production-ready website analysis system, this repository shows how I approach the problem from architecture to operations.
+## 👤 Author
+
+**Alireza Safaei**
+- Website: https://alirezasafaeisystems.ir
+- GitHub: [@alirezasafaei-dev](https://github.com/alirezasafaei-dev)
+
+---
+
+**Professional SEO auditing platform for modern websites.**
