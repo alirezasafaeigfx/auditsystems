@@ -1,4 +1,4 @@
-export type ResourceKind = "script" | "style" | "font" | "img" | "preload" | "other";
+export type ResourceKind = "script" | "style" | "font" | "img" | "image" | "preload" | "other";
 
 export type ExtractedResource = {
   url: string;
@@ -31,7 +31,19 @@ export type FindingCode =
   | "SLOW_SERVER_TTFB"
   | "SLOW_SERVER_RESPONSE"
   | "NO_SCHEMA_ORG"
-  | "SCHEMA_ORG_PRESENT";
+  | "SCHEMA_ORG_PRESENT"
+  | "SCHEMA_ORG_NO_RECOMMENDED_TYPES"
+  | "SCHEMA_ORG_ERRORS"
+  | "SCHEMA_ORG_WARNINGS"
+  | "CWV_LCP_POOR_PROXY"
+  | "CWV_FID_POOR_PROXY"
+  | "CWV_CLS_POOR_PROXY"
+  | "CWV_OVERALL_NEEDS_IMPROVEMENT"
+  | "CWV_OVERALL_GOOD_PROXY"
+  | "IMAGES_MISSING_LAZY_LOADING"
+  | "IFRAMES_MISSING_LAZY_LOADING"
+  | "SCRIPTS_MISSING_ASYNC_DEFER"
+  | "LAZY_LOADING_IMPLEMENTED";
 
 export type Finding = {
   code: FindingCode;

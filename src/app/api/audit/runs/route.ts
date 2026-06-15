@@ -6,6 +6,7 @@ import { observeApiRequest } from "../../../../lib/metrics";
 import { createRequestId, logEvent, respondJson } from "../../../../lib/observability";
 import { consumeDistributedRateLimit, isDistributedRateLimitRequired } from "../../../../lib/rateLimit";
 import { getClientIp, hashClientIp, isDnsLookupFailure, sanitizeApiError } from "../../../../lib/security";
+import { csrfProtection } from "../../../../lib/csrf";
 import { NextRequest } from "next/server";
 
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
@@ -17,6 +18,17 @@ export async function POST(request: NextRequest) {
   let statusCode = 200;
 
   try {
+    // CSRF protection check
+    const csrfCheck = await csrfProtection(request);
+    if (!csrfCheck.valid) {
+      statusCode = 403;
+      logEvent("warn", "audit_run_csrf_validation_failed", { requestId, error: csrfCheck.error });
+      return respondJson({ error: "FORBIDDEN", requestId, details: csrfCheck.error }, requestId, { 
+        status: statusCode, 
+        headers: { "Cache-Control": "no-store" } 
+      });
+    }
+
     let body: unknown;
     try {
       body = await request.json();

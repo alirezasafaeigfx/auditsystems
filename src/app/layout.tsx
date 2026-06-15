@@ -9,6 +9,8 @@ import {
   ASDEV_TELEGRAM_URL,
 } from "../lib/brand";
 import RumTracker from "../components/RumTracker";
+import ThemeProvider from "../components/ThemeProvider";
+import ThemeToggle from "../components/ThemeToggle";
 
 const appBaseUrl = getAppBaseUrl();
 const googleVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim();
@@ -250,26 +252,28 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         ) : null}
       </head>
       <body>
-        <a href="#main-content" className="skip-link">
-          {copy.skipToContent}
-        </a>
-        <header className="topbar">
-          <div className="container topbar-inner">
-            <Link href={withLocalePath("/", locale)} className="brand">
-              <span className="brand-title">{copy.brand}</span>
-              <span className="brand-subtitle">{locale === "en" ? "Technical SEO + Security" : "ارزیابی فنی، سئو و امنیت"}</span>
-            </Link>
-            <nav className="nav">
-              <Link href={withLocalePath("/audit", locale)}>{copy.nav.audit}</Link>
-              <Link href={withLocalePath("/guides", locale)}>{copy.nav.guides}</Link>
-              <Link href={withLocalePath("/sample-report", locale)}>{copy.nav.sample}</Link>
-              <Link href={withLocalePath("/pillar/iran-readiness-audit", locale)}>{copy.nav.pillar}</Link>
-              <Link className="lang-switch" href={toOtherLocalePath(pathname, locale)}>
-                {copy.footer.langSwitch}
+        <ThemeProvider>
+          <a href="#main-content" className="skip-link">
+            {copy.skipToContent}
+          </a>
+          <header className="topbar">
+            <div className="container topbar-inner">
+              <Link href={withLocalePath("/", locale)} className="brand">
+                <span className="brand-title">{copy.brand}</span>
+                <span className="brand-subtitle">{locale === "en" ? "Technical SEO + Security" : "ارزیابی فنی، سئو و امنیت"}</span>
               </Link>
-            </nav>
-          </div>
-        </header>
+              <nav className="nav">
+                <Link href={withLocalePath("/audit", locale)}>{copy.nav.audit}</Link>
+                <Link href={withLocalePath("/guides", locale)}>{copy.nav.guides}</Link>
+                <Link href={withLocalePath("/sample-report", locale)}>{copy.nav.sample}</Link>
+                <Link href={withLocalePath("/pillar/iran-readiness-audit", locale)}>{copy.nav.pillar}</Link>
+                <ThemeToggle />
+                <Link className="lang-switch" href={toOtherLocalePath(pathname, locale)}>
+                  {copy.footer.langSwitch}
+                </Link>
+              </nav>
+            </div>
+          </header>
         <div className="container page-shell">
           <div id="main-content" role="main" className="main-content">
             {children}
@@ -336,6 +340,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           </div>
         </footer>
         <RumTracker locale={locale} />
+        </ThemeProvider>
       </body>
     </html>
   );

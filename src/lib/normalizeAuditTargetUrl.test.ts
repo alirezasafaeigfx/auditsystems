@@ -92,4 +92,70 @@ describe("normalizeAuditTargetUrl", () => {
     const out = await normalizeAuditTargetUrl("http://example.com/path");
     expect(out.protocol).toBe("http:");
   });
+
+  it("handles international domain names with punycode", async () => {
+    const out = await normalizeAuditTargetUrl("https://中国.cn");
+    expect(out.host).toBe("xn--fiqs8s.cn");
+  });
+
+  it("strips multiple tracking parameters", async () => {
+    const out = await normalizeAuditTargetUrl("https://example.com/?utm_source=google&utm_medium=cpc&fbclid=abc123&gclid=xyz789");
+    expect(out.normalizedUrl).toBe("https://example.com/");
+  });
+
+  it("handles empty query parameters after stripping", async () => {
+    const out = await normalizeAuditTargetUrl("https://example.com/?utm_source=test");
+    expect(out.normalizedUrl).toBe("https://example.com/");
+  });
+
+  it("preserves legitimate query parameters", async () => {
+    const out = await normalizeAuditTargetUrl("https://example.com/?page=1&sort=desc");
+    expect(out.normalizedUrl).toBe("https://example.com/?page=1&sort=desc");
+  });
+
+  it("sorts query parameters alphabetically", async () => {
+    const out = await normalizeAuditTargetUrl("https://example.com/?z=1&a=2&m=3");
+    expect(out.normalizedUrl).toBe("https://example.com/?a=2&m=3&z=1");
+  });
+
+  it("handles URLs with fragments and tracking params", async () => {
+    const out = await normalizeAuditTargetUrl("https://example.com/path#section?utm_source=test");
+    expect(out.normalizedUrl).toBe("https://example.com/path");
+    expect(out.warnings).not.toContain("SCHEME_ADDED_DEFAULT");
+  });
+
+  it("blocks internal network domains", async () => {
+    await expect(normalizeAuditTargetUrl("http://app.home")).rejects.toThrow("SSRF_BLOCKED_HOSTNAME");
+    await expect(normalizeAuditTargetUrl("http://server.lan")).rejects.toThrow("SSRF_BLOCKED_HOSTNAME");
+  });
+
+  it("handles username without password", async () => {
+    const out = await normalizeAuditTargetUrl("https://user@example.com/path");
+    expect(out.normalizedUrl).toBe("https://example.com/path");
+    expect(out.warnings).toContain("CREDENTIALS_STRIPPED");
+  });
+
+  it("handles port normalization for non-standard ports", async () => {
+    const out = await normalizeAuditTargetUrl("https://example.com:8443/path");
+    expect(out.normalizedUrl).toBe("https://example.com:8443/path");
+  });
+
+  it("handles complex path normalization", async () => {
+    const out = await normalizeAuditTargetUrl("https://example.com/a//b///c/");
+    expect(out.normalizedUrl).toBe("https://example.com/a/b/c");
+  });
+
+  it("handles URL with only query parameters", async () => {
+    const out = await normalizeAuditTargetUrl("https://example.com/?a=1&b=2");
+    expect(out.normalizedUrl).toBe("https://example.com/?a=1&b=2");
+  });
+
+  it("handles URL with leading/trailing spaces in input", async () => {
+    const out = await normalizeAuditTargetUrl("  https://example.com  ");
+    expect(out.normalizedUrl).toBe("https://example.com/");
+  });
+
+  it("rejects URL with invalid characters in hostname", async () => {
+    await expect(normalizeAuditTargetUrl("https://example$domain.com")).rejects.toThrow("INVALID_HOSTNAME_FORMAT");
+  });
 });

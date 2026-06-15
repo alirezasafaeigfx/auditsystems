@@ -87,6 +87,24 @@
   }
 }
 
+/* Class-based dark mode for manual toggle */
+.dark {
+  --bg: #0d1715;
+  --surface: #12211f;
+  --surface-soft: #162a27;
+  --surface-strong: #1b322f;
+  --text: #e9f7f3;
+  --muted: #9fc1b9;
+  --brand: #2fa88f;
+  --brand-strong: #57ccb0;
+  --line: #244540;
+  --line-strong: #315a52;
+  --danger: #f18a8a;
+  --warn: #f3c067;
+  --shadow-soft: 0 16px 30px rgba(0, 0, 0, 0.28);
+  --shadow-card: 0 24px 40px rgba(0, 0, 0, 0.34);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -204,6 +222,30 @@ a {
   background: var(--surface);
   color: var(--brand-strong);
   font-weight: 700;
+}
+
+.theme-toggle {
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  transition: 180ms ease;
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  border-color: var(--brand);
+  color: var(--text);
+  background: var(--surface);
+}
+
+.theme-toggle:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent);
 }
 
 .page-shell {

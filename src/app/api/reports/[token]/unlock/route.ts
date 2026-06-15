@@ -3,6 +3,7 @@ import { observeApiRequest } from "../../../../../lib/metrics";
 import { createRequestId, logEvent, respondJson } from "../../../../../lib/observability";
 import { isReportShareAccessible } from "../../../../../lib/reportShare";
 import { normalizeEmail } from "../../../../../lib/validators";
+import { csrfProtection } from "../../../../../lib/csrf";
 
 export async function POST(request: Request, context: { params: Promise<{ token: string }> }) {
   const requestId = createRequestId();
@@ -10,6 +11,17 @@ export async function POST(request: Request, context: { params: Promise<{ token:
   let statusCode = 200;
 
   try {
+    // CSRF protection check
+    const csrfCheck = await csrfProtection(request);
+    if (!csrfCheck.valid) {
+      statusCode = 403;
+      logEvent("warn", "unlock_csrf_validation_failed", { requestId, error: csrfCheck.error });
+      return respondJson({ error: "FORBIDDEN", requestId, details: csrfCheck.error }, requestId, { 
+        status: statusCode, 
+        headers: { "Cache-Control": "no-store" } 
+      });
+    }
+
     const { token } = await context.params;
     const body = await request.json();
     const email = normalizeEmail(body.email);

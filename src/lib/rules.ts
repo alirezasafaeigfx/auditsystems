@@ -54,9 +54,9 @@ function checkAccessibilityRules(html: string): Array<{ code: string; title: str
   return issues;
 }
 
-function checkStructuredData(html: string): Array<{ code: string; title: string; severity: string; types: string[] }> {
+function checkStructuredData(html: string): Array<{ code: string; title: string; severity: string; types: string[]; details?: Record<string, unknown> }> {
   const $ = cheerio.load(html);
-  const issues: Array<{ code: string; title: string; severity: string; types: string[] }> = [];
+  const issues: Array<{ code: string; title: string; severity: string; types: string[]; details?: Record<string, unknown> }> = [];
 
   // Check for Schema.org structured data
   const schemaScripts = $("script[type='application/ld+json']");
@@ -65,36 +65,155 @@ function checkStructuredData(html: string): Array<{ code: string; title: string;
       code: "NO_SCHEMA_ORG",
       title: "No Schema.org structured data found",
       severity: "LOW",
-      types: []
+      types: [],
+      details: { recommendation: "Add basic Schema.org structured data for WebSite, Organization, or WebPage" }
     });
   } else {
     const types: string[] = [];
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
     schemaScripts.each((_i: number, script: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
       try {
         const data = JSON.parse($(script).html() || "{}") as any; // eslint-disable-line @typescript-eslint/no-explicit-any
         if (Array.isArray(data)) {
           data.forEach((item: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-            if (item["@type"]) types.push(item["@type"]);
+            if (item["@type"]) {
+              types.push(item["@type"]);
+              validateSchemaItem(item, errors, warnings);
+            }
           });
         } else if (data["@type"]) {
           types.push(data["@type"]);
+          validateSchemaItem(data, errors, warnings);
         }
       } catch {
         // Invalid JSON, skip
+        errors.push("Invalid JSON in structured data script");
       }
     });
 
     if (types.length > 0) {
+      const uniqueTypes = [...new Set(types)];
       issues.push({
         code: "SCHEMA_ORG_PRESENT",
         title: "Schema.org structured data detected",
         severity: "INFO",
-        types: [...new Set(types)]
+        types: uniqueTypes,
+        details: {
+          count: uniqueTypes.length,
+          errors: errors.length > 0 ? errors : undefined,
+          warnings: warnings.length > 0 ? warnings : undefined
+        }
       });
+
+      // Check for recommended types
+      const recommendedTypes = ["WebSite", "Organization", "WebPage", "Article", "BreadcrumbList"];
+      const hasRecommended = uniqueTypes.some((type) => recommendedTypes.includes(type));
+      
+      if (!hasRecommended) {
+        issues.push({
+          code: "SCHEMA_ORG_NO_RECOMMENDED_TYPES",
+          title: "Schema.org missing recommended types",
+          severity: "LOW",
+          types: uniqueTypes,
+          details: {
+            recommended: recommendedTypes,
+            current: uniqueTypes
+          }
+        });
+      }
+
+      // Check for specific SEO-enhanced types
+      if (!uniqueTypes.includes("WebSite")) {
+        warnings.push("WebSite schema type recommended for sitelinks search");
+      }
+      if (!uniqueTypes.includes("Organization")) {
+        warnings.push("Organization schema type recommended for knowledge panel");
+      }
+      if (!uniqueTypes.includes("BreadcrumbList")) {
+        warnings.push("BreadcrumbList schema type recommended for navigation");
+      }
+
+      // Report errors if any
+      if (errors.length > 0) {
+        issues.push({
+          code: "SCHEMA_ORG_ERRORS",
+          title: "Schema.org structured data has errors",
+          severity: "MEDIUM",
+          types: uniqueTypes,
+          details: { errors }
+        });
+      }
+
+      // Report warnings if any
+      if (warnings.length > 0) {
+        issues.push({
+          code: "SCHEMA_ORG_WARNINGS",
+          title: "Schema.org structured data has warnings",
+          severity: "LOW",
+          types: uniqueTypes,
+          details: { warnings }
+        });
+      }
     }
   }
 
   return issues;
+}
+
+/**
+ * Validate individual Schema.org item for common issues
+ */
+function validateSchemaItem(item: any, errors: string[], warnings: string[]): void { // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (!item["@type"]) {
+    errors.push("Schema item missing @type property");
+    return;
+  }
+
+  const type = item["@type"];
+
+  // Type-specific validation
+  switch (type) {
+    case "WebSite":
+      if (!item.name && !item.url) {
+        warnings.push("WebSite schema should have name or url property");
+      }
+      break;
+    case "Organization":
+      if (!item.name && !item.url) {
+        warnings.push("Organization schema should have name or url property");
+      }
+      break;
+    case "WebPage":
+      if (!item.url) {
+        warnings.push("WebPage schema should have url property");
+      }
+      break;
+    case "Article":
+    case "BlogPosting":
+    case "NewsArticle":
+      if (!item.headline) {
+        warnings.push(`${type} schema should have headline property`);
+      }
+      if (!item.datePublished) {
+        warnings.push(`${type} schema should have datePublished property`);
+      }
+      break;
+    case "BreadcrumbList":
+      if (!item.itemListElement || !Array.isArray(item.itemListElement)) {
+        errors.push("BreadcrumbList schema requires itemListElement array");
+      }
+      break;
+    case "Product":
+      if (!item.name) {
+        warnings.push("Product schema should have name property");
+      }
+      if (!item.offers && !item.price) {
+        warnings.push("Product schema should have offers or price property");
+      }
+      break;
+  }
 }
 
 export function evaluateAuditRules(ctx: AuditContext): Finding[] {
@@ -301,6 +420,12 @@ export function evaluateAuditRules(ctx: AuditContext): Finding[] {
     }
   }
 
+  // Core Web Vitals proxy checks (based on server-side metrics that correlate with CWV)
+  checkCoreWebVitalsProxies(ctx, findings);
+
+  // Check for lazy loading implementation
+  checkLazyLoading(ctx, findings);
+
   // Check structured data
   const structuredDataIssues = checkStructuredData(ctx.main.html);
   for (const issue of structuredDataIssues) {
@@ -311,7 +436,7 @@ export function evaluateAuditRules(ctx: AuditContext): Finding[] {
         severity: "LOW",
         title: issue.title,
         recommendation: "Add Schema.org structured data to help search engines understand your content.",
-        evidence: { present: false }
+        evidence: { present: false, details: issue.details }
       });
     } else if (issue.code === "SCHEMA_ORG_PRESENT") {
       findings.push({
@@ -320,7 +445,34 @@ export function evaluateAuditRules(ctx: AuditContext): Finding[] {
         severity: "INFO",
         title: issue.title,
         recommendation: "Good! Schema.org structured data is present.",
-        evidence: { types: issue.types }
+        evidence: { types: issue.types, details: issue.details }
+      });
+    } else if (issue.code === "SCHEMA_ORG_NO_RECOMMENDED_TYPES") {
+      findings.push({
+        code: issue.code,
+        category: "SEO",
+        severity: "LOW",
+        title: issue.title,
+        recommendation: "Add recommended Schema.org types like WebSite, Organization, or WebPage for better SEO.",
+        evidence: { types: issue.types, details: issue.details }
+      });
+    } else if (issue.code === "SCHEMA_ORG_ERRORS") {
+      findings.push({
+        code: issue.code,
+        category: "SEO",
+        severity: "MEDIUM",
+        title: issue.title,
+        recommendation: "Fix Schema.org structured data errors to ensure proper indexing by search engines.",
+        evidence: { types: issue.types, details: issue.details }
+      });
+    } else if (issue.code === "SCHEMA_ORG_WARNINGS") {
+      findings.push({
+        code: issue.code,
+        category: "SEO",
+        severity: "LOW",
+        title: issue.title,
+        recommendation: "Address Schema.org warnings to maximize SEO benefits.",
+        evidence: { types: issue.types, details: issue.details }
       });
     }
   }
@@ -335,4 +487,207 @@ function getAccessibilityRecommendation(code: string): string {
     INPUT_MISSING_LABEL: "Add labels to all form inputs using <label> tags or aria-label attributes."
   };
   return recommendations[code] || "Follow WCAG guidelines for accessibility.";
+}
+
+/**
+ * Check Core Web Vitals proxies based on server-side metrics
+ * These are proxy indicators since we can't measure actual Core Web Vitals server-side
+ */
+function checkCoreWebVitalsProxies(ctx: AuditContext, findings: Finding[]): void {
+  // LCP Proxy: Based on response time and resource count
+  if (ctx.main.metrics) {
+    const responseTime = ctx.main.metrics.responseMs || 0;
+    const resourceCount = ctx.resources.length;
+    
+    // High response time + many resources likely means slow LCP
+    if (responseTime > 2000 && resourceCount > 50) {
+      findings.push({
+        code: "CWV_LCP_POOR_PROXY",
+        category: "PERFORMANCE",
+        severity: "HIGH",
+        title: "Core Web Vitals: Likely poor Largest Contentful Paint (LCP)",
+        recommendation: "Optimize LCP by preloading critical resources, using CDN, optimizing images, and reducing server response time.",
+        evidence: { 
+          responseTime,
+          resourceCount,
+          proxy: "Based on server response time and resource count"
+        }
+      });
+    }
+  }
+
+  // FID Proxy: Based on blocking scripts and total JS size
+  const blockingScripts = ctx.resources.filter(
+    (r) => r.kind === "script" && r.isThirdParty && r.inHead && r.attrs?.async !== true && r.attrs?.defer !== true
+  );
+  
+  if (blockingScripts.length > 3) {
+    findings.push({
+      code: "CWV_FID_POOR_PROXY",
+      category: "PERFORMANCE",
+      severity: "HIGH",
+      title: "Core Web Vitals: Likely poor First Input Delay (FID)",
+      recommendation: "Reduce JavaScript execution time, defer non-critical JS, and use code splitting to improve interactivity.",
+      evidence: {
+        blockingScriptCount: blockingScripts.length,
+        proxy: "Based on blocking third-party scripts in head"
+      }
+    });
+  }
+
+  // CLS Proxy: Based on images without dimensions and late-loaded resources
+  const imagesWithoutDimensions = ctx.resources.filter(
+    (r) => r.kind === "img" && (!r.attrs?.width || !r.attrs?.height)
+  );
+  
+  if (imagesWithoutDimensions.length > 5) {
+    findings.push({
+      code: "CWV_CLS_POOR_PROXY",
+      category: "PERFORMANCE",
+      severity: "MEDIUM",
+      title: "Core Web Vitals: Likely poor Cumulative Layout Shift (CLS)",
+      recommendation: "Specify width and height for all images, reserve space for dynamic content, and avoid inserting content above existing content.",
+      evidence: {
+        imagesWithoutDimensions: imagesWithoutDimensions.length,
+        proxy: "Based on images without explicit dimensions"
+      }
+    });
+  }
+
+  // Overall Core Web Vitals assessment
+  const poorLCP = findings.some((f) => f.code === "CWV_LCP_POOR_PROXY");
+  const poorFID = findings.some((f) => f.code === "CWV_FID_POOR_PROXY");
+  const poorCLS = findings.some((f) => f.code === "CWV_CLS_POOR_PROXY");
+
+  if (poorLCP || poorFID || poorCLS) {
+    findings.push({
+      code: "CWV_OVERALL_NEEDS_IMPROVEMENT",
+      category: "PERFORMANCE",
+      severity: "MEDIUM",
+      title: "Core Web Vitals: Overall performance needs improvement",
+      recommendation: "Use tools like Lighthouse, PageSpeed Insights, or Web Vitals library to measure actual Core Web Vitals and optimize accordingly.",
+      evidence: {
+        poorLCP,
+        poorFID,
+        poorCLS,
+        proxy: "Based on server-side proxy metrics"
+      }
+    });
+  } else if (!poorLCP && !poorFID && !poorCLS && ctx.main.metrics?.responseMs && ctx.main.metrics.responseMs < 1500) {
+    findings.push({
+      code: "CWV_OVERALL_GOOD_PROXY",
+      category: "PERFORMANCE",
+      severity: "INFO",
+      title: "Core Web Vitals: Likely good performance based on proxy metrics",
+      recommendation: "Continue monitoring actual Core Web Vitals using RUM (Real User Monitoring) for accurate measurements.",
+      evidence: {
+        proxy: "Based on server-side proxy metrics",
+        responseTime: ctx.main.metrics.responseMs
+      }
+    });
+  }
+}
+
+/**
+ * Check for lazy loading implementation
+ */
+function checkLazyLoading(ctx: AuditContext, findings: Finding[]): void {
+  const $ = cheerio.load(ctx.main.html);
+
+  // Check images that should have lazy loading but don't
+  const images = $("img");
+  const imagesWithoutLazy = images.filter(function(this: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const $img = $(this);
+    const loading = $img.attr("loading");
+    const isAboveFold = $img.closest("header, hero, .hero, #hero, [role='banner']").length > 0;
+    
+    // Skip above-fold images for lazy loading recommendation
+    if (isAboveFold) return false;
+    
+    // Images without loading="lazy" attribute (except above-fold)
+    return loading !== "lazy";
+  });
+
+  if (imagesWithoutLazy.length > 5) {
+    findings.push({
+      code: "IMAGES_MISSING_LAZY_LOADING",
+      category: "PERFORMANCE",
+      severity: "MEDIUM",
+      title: "Images missing lazy loading attribute",
+      recommendation: `Add loading="lazy" to ${imagesWithoutLazy.length} below-fold images to improve initial page load performance.`,
+      evidence: { count: imagesWithoutLazy.length }
+    });
+  }
+
+  // Check for iframe lazy loading (e.g., embeds, videos)
+  const iframes = $("iframe");
+  const iframesWithoutLazy = iframes.filter(function(this: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const $iframe = $(this);
+    const loading = $iframe.attr("loading");
+    const src = $iframe.attr("src") || "";
+    
+    // Skip iframes that are likely above-fold content
+    const isAboveFold = $iframe.closest("header, hero, .hero, #hero, [role='banner']").length > 0;
+    if (isAboveFold) return false;
+    
+    // Focus on embed content that should be lazy loaded
+    const isEmbedContent = /youtube|vimeo|dailymotion|soundcloud|spotify|twitter|facebook|instagram/i.test(src);
+    if (isEmbedContent && loading !== "lazy") {
+      return true;
+    }
+    
+    return false;
+  });
+
+  if (iframesWithoutLazy.length > 0) {
+    findings.push({
+      code: "IFRAMES_MISSING_LAZY_LOADING",
+      category: "PERFORMANCE",
+      severity: "MEDIUM",
+      title: "Embed iframes missing lazy loading",
+      recommendation: `Add loading="lazy" to ${iframesWithoutLazy.length} embed iframes to defer loading of heavy third-party content.`,
+      evidence: { count: iframesWithoutLazy.length }
+    });
+  }
+
+  // Check for scripts that could use async/defer
+  const scriptsInBody = $("body script[src]");
+  const scriptsWithoutAsyncDefer = scriptsInBody.filter(function(this: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const $script = $(this);
+    const async = $script.attr("async");
+    const defer = $script.attr("defer");
+    const type = $script.attr("type");
+    
+    // Skip scripts that are already async/defer or are module type
+    if (async || defer || type === "module") return false;
+    
+    return true;
+  });
+
+  if (scriptsWithoutAsyncDefer.length > 3) {
+    findings.push({
+      code: "SCRIPTS_MISSING_ASYNC_DEFER",
+      category: "PERFORMANCE",
+      severity: "LOW",
+      title: "Scripts missing async or defer attributes",
+      recommendation: `Add async or defer attributes to ${scriptsWithoutAsyncDefer.length} body scripts to improve parsing performance.`,
+      evidence: { count: scriptsWithoutAsyncDefer.length }
+    });
+  }
+
+  // Check for native lazy loading support detection
+  const hasNativeLazyLoading = imagesWithoutLazy.length === 0 || iframesWithoutLazy.length === 0;
+  if (hasNativeLazyLoading) {
+    findings.push({
+      code: "LAZY_LOADING_IMPLEMENTED",
+      category: "PERFORMANCE",
+      severity: "INFO",
+      title: "Native lazy loading is implemented",
+      recommendation: "Good! Native lazy loading helps improve initial page load performance.",
+      evidence: { 
+        imagesOptimized: imagesWithoutLazy.length === 0,
+        iframesOptimized: iframesWithoutLazy.length === 0
+      }
+    });
+  }
 }

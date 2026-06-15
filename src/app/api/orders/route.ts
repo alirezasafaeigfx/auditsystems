@@ -5,6 +5,7 @@ import { createRequestId, logEvent, respondJson } from "../../../lib/observabili
 import { createCheckout, resolvePaymentProvider } from "../../../lib/payments";
 import { isReportShareAccessible } from "../../../lib/reportShare";
 import { normalizeEmail } from "../../../lib/validators";
+import { csrfProtection } from "../../../lib/csrf";
 import crypto from "node:crypto";
 
 export async function POST(request: Request) {
@@ -13,6 +14,17 @@ export async function POST(request: Request) {
   let statusCode = 200;
 
   try {
+    // CSRF protection check
+    const csrfCheck = await csrfProtection(request);
+    if (!csrfCheck.valid) {
+      statusCode = 403;
+      logEvent("warn", "order_csrf_validation_failed", { requestId, error: csrfCheck.error });
+      return respondJson({ error: "FORBIDDEN", requestId, details: csrfCheck.error }, requestId, { 
+        status: statusCode, 
+        headers: { "Cache-Control": "no-store" } 
+      });
+    }
+
     const body = await request.json();
     const token = String(body.token ?? "").trim();
     const email = normalizeEmail(body.email);
