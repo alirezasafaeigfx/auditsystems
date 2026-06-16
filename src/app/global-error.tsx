@@ -12,13 +12,13 @@ export default function GlobalError({ reset }: GlobalErrorProps) {
     <html lang="fa" dir="rtl">
       <body>
         <main className="container py-10" role="main" aria-live="polite">
-          <section className="card space-y-4">
+          <section className="card" style={{ display: 'grid', gap: '1rem' }}>
             <span className="badge">اختلال سراسری</span>
             <h1 className="text-2xl font-bold">سامانه موقتاً در دسترس نیست</h1>
             <p className="text-muted leading-6">
               یک خطای غیرمنتظره رخ داده است. لطفاً چند ثانیه بعد دوباره تلاش کنید.
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
               <button type="button" className="button" onClick={reset}>
                 تلاش مجدد
               </button>

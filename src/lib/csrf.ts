@@ -27,8 +27,16 @@ export interface CSRFProtectionOptions {
   headerName?: string;
 }
 
+function getCsrfSecret(): string {
+  const secret = process.env.CSRF_SECRET;
+  if (!secret) {
+    throw new Error("CSRF_SECRET environment variable is required but not set");
+  }
+  return secret;
+}
+
 const DEFAULT_CSRF_OPTIONS: Required<CSRFProtectionOptions> = {
-  secret: process.env.CSRF_SECRET || "default-csrf-secret-change-in-production",
+  secret: "",
   expiresIn: 3600, // 1 hour
   headerName: "x-csrf-token"
 };
@@ -37,7 +45,8 @@ const DEFAULT_CSRF_OPTIONS: Required<CSRFProtectionOptions> = {
  * Generate a CSRF token
  */
 export function generateCSRFToken(options: CSRFProtectionOptions = {}): string {
-  const opts = { ...DEFAULT_CSRF_OPTIONS, ...options };
+  const secret = options.secret || getCsrfSecret();
+  const opts = { ...DEFAULT_CSRF_OPTIONS, ...options, secret };
   const timestamp = Date.now();
   const randomString = randomBytes(32).toString("hex");
   
@@ -57,7 +66,8 @@ export function verifyCSRFToken(
   token: string,
   options: CSRFProtectionOptions = {}
 ): boolean {
-  const opts = { ...DEFAULT_CSRF_OPTIONS, ...options };
+  const secret = options.secret || getCsrfSecret();
+  const opts = { ...DEFAULT_CSRF_OPTIONS, ...options, secret };
   
   try {
     // Decode token

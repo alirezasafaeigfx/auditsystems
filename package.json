@@ -6,11 +6,16 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "gpu:build": "../../../scripts/gpu-browser-run.sh pnpm run build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
+    "gpu:lint": "../../../scripts/gpu-run.sh pnpm run lint",
     "check": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build",
+    "gpu:check": "../../../scripts/gpu-run.sh pnpm run check",
     "typecheck": "tsc --noEmit",
+    "gpu:typecheck": "../../../scripts/gpu-run.sh pnpm run typecheck",
     "test": "vitest run",
+    "gpu:test": "../../../scripts/gpu-run.sh pnpm run test",
     "test:watch": "vitest",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
@@ -31,7 +36,8 @@
     "smoke:audit-flow": "node scripts/deploy/smoke-audit-flow.cjs",
     "lighthouse:local": "tsx src/scripts/lighthouse-local.ts",
     "deploy:check:hosting": "bash scripts/deploy/check-hosting-sync.sh --strict",
-    "deploy:readiness": "bash scripts/deploy/run-readiness-suite.sh --strict"
+    "deploy:readiness": "bash scripts/deploy/run-readiness-suite.sh --strict",
+    "gpu:lighthouse:local": "../../../scripts/gpu-browser-run.sh pnpm run lighthouse:local"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

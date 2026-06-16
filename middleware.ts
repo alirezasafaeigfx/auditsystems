@@ -28,7 +28,7 @@ function withSecurityHeaders(request: NextRequest, response: NextResponse): Next
         "img-src 'self' data: https: blob:",
         "font-src 'self' data: https:",
         "style-src 'self' 'unsafe-inline' https:",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+        "script-src 'self' 'unsafe-inline'",
         "connect-src 'self' https: wss:",
         "form-action 'self'",
         "frame-src 'none'",

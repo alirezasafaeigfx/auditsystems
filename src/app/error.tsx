@@ -50,7 +50,7 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
 
   return (
     <main className="container py-10" role="main" aria-live="polite">
-      <section className="card space-y-4">
+      <section className="card" style={{ display: 'grid', gap: '1rem' }}>
         <span className="badge">{isEnglish ? "Temporary issue" : "اختلال موقت"}</span>
         <h1 className="text-2xl font-bold">
           {isEnglish ? "The page encountered an issue" : "صفحه با یک خطا مواجه شد"}
@@ -61,7 +61,7 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
             : "هنگام نمایش این صفحه یک خطای فنی رخ داد. می‌توانید با خیال راحت دوباره تلاش کنید یا به صفحه اصلی برگردید."}
         </p>
 
-        <div className="flex flex-wrap gap-2">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
           <button type="button" className="button" onClick={reset}>
             {isEnglish ? "Retry" : "تلاش مجدد"}
           </button>

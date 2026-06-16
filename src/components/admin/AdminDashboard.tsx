@@ -43,68 +43,45 @@ export function AdminDashboard() {
   }
 
   if (loading) {
-    return <div className="p-8">Loading...</div>
+    return <div style={{ padding: '2rem' }}>Loading...</div>
   }
 
   return (
-    <div className="container mx-auto p-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <button
-          onClick={handleLogout}
-          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-        >
-          Logout
-        </button>
+    <div style={{ padding: '2rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <h1 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Admin Dashboard</h1>
+        <button onClick={handleLogout}>Logout</button>
       </div>
       
-      <div className="grid gap-6 md:grid-cols-3 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold">Total Audits</h3>
-          </div>
-          <div>
-            <p className="text-4xl font-bold">{stats?.totalAudits || 0}</p>
-          </div>
+      <div style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginBottom: '2rem' }}>
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--muted)' }}>Total Audits</h3>
+          <p style={{ fontSize: '2rem', fontWeight: 700 }}>{stats?.totalAudits || 0}</p>
         </div>
         
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold">Total Orders</h3>
-          </div>
-          <div>
-            <p className="text-4xl font-bold">{stats?.totalOrders || 0}</p>
-          </div>
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--muted)' }}>Total Orders</h3>
+          <p style={{ fontSize: '2rem', fontWeight: 700 }}>{stats?.totalOrders || 0}</p>
         </div>
         
-        <div className="bg-white p-6 rounded-lg shadow">
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold">Pending Orders</h3>
-          </div>
-          <div>
-            <p className="text-4xl font-bold">{stats?.pendingOrders || 0}</p>
-          </div>
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--muted)' }}>Pending Orders</h3>
+          <p style={{ fontSize: '2rem', fontWeight: 700 }}>{stats?.pendingOrders || 0}</p>
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold">Recent Audits</h3>
-        </div>
-        <div>
-          <div className="space-y-4">
-            {stats?.recentAudits?.map(audit => (
-              <div key={audit.id} className="flex justify-between items-center border-b pb-2">
-                <div>
-                  <p className="font-medium">{audit.url}</p>
-                  <p className="text-sm text-gray-500">{new Date(audit.createdAt).toLocaleString('fa-IR')}</p>
-                </div>
-                <span className="px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
-                  {audit.status}
-                </span>
+      <div className="card" style={{ padding: '1.5rem' }}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>Recent Audits</h3>
+        <div style={{ display: 'grid', gap: '1rem' }}>
+          {stats?.recentAudits?.map(audit => (
+            <div key={audit.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid var(--line)' }}>
+              <div>
+                <p style={{ fontWeight: 500 }}>{audit.url}</p>
+                <p style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>{new Date(audit.createdAt).toLocaleString('fa-IR')}</p>
               </div>
-            ))}
-          </div>
+              <span className="badge">{audit.status}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>

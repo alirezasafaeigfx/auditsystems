@@ -324,16 +324,16 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             </section>
 
             <div className="mt-8 pt-5 border-t text-xs text-muted-foreground flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-              <span>© {currentYear} سیستم ممیزی. همه حقوق محفوظ است.</span>
+              <span>© {currentYear} {locale === "en" ? "Alireza Safaei Audit Platform. All rights reserved." : "سیستم ممیزی. همه حقوق محفوظ است."}</span>
               <span>
-                طراحی و توسعه توسط{" "}
+                {locale === "en" ? "Built by " : "طراحی و توسعه توسط "}
                 <a
                   target="_blank"
                   rel="noopener noreferrer"
                   className="underline underline-offset-4 hover:text-primary"
                   href="https://alirezasafaeisystems.ir/"
                 >
-                  علیرضا صفایی مهندس سیستم های وب
+                  {locale === "en" ? "Alireza Safaei" : "علیرضا صفایی مهندس سیستم های وب"}
                 </a>
               </span>
             </div>
