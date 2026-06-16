@@ -46,35 +46,35 @@ const faqs = [
 
 export default function FAQPage() {
   return (
-    <main className="container mx-auto px-4 py-12 max-w-4xl">
-      <div className="mb-8">
-        <Link href="/" className="text-blue-600 hover:underline">
+    <main className="container page-shell">
+      <div style={{ marginBottom: '2rem' }}>
+        <Link href="/" className="link">
           ← بازگشت به صفحه اصلی
         </Link>
       </div>
 
-      <h1 className="text-4xl font-bold mb-4">سوالات متداول</h1>
-      <p className="text-lg text-gray-600 mb-12">
+      <h1 className="text-2xl font-bold" style={{ marginBottom: '0.5rem' }}>سوالات متداول</h1>
+      <p className="text-muted" style={{ marginBottom: '3rem' }}>
         پاسخ به سوالاتی که معمولاً از ما می‌پرسند
       </p>
 
-      <div className="space-y-8">
+      <div style={{ display: 'grid', gap: '2rem' }}>
         {faqs.map((faq, index) => (
-          <div key={index} className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <h2 className="text-xl font-bold mb-3 text-gray-900">{faq.q}</h2>
-            <p className="text-gray-700 leading-relaxed">{faq.a}</p>
+          <div key={index} className="card" style={{ padding: '1.5rem' }}>
+            <h2 className="font-bold" style={{ fontSize: '1.15rem', marginBottom: '0.75rem' }}>{faq.q}</h2>
+            <p className="text-muted" style={{ lineHeight: 1.8 }}>{faq.a}</p>
           </div>
         ))}
       </div>
 
-      <div className="mt-12 p-6 bg-blue-50 rounded-lg">
-        <h3 className="text-xl font-bold mb-3">سوال دیگری دارید؟</h3>
-        <p className="mb-4">
+      <div className="card" style={{ marginTop: '3rem', padding: '1.5rem', background: 'color-mix(in srgb, var(--brand) 8%, var(--surface))' }}>
+        <h3 className="font-bold" style={{ fontSize: '1.15rem', marginBottom: '0.75rem' }}>سوال دیگری دارید؟</h3>
+        <p style={{ marginBottom: '1rem' }}>
           اگر پاسخ سوال خود را پیدا نکردید، می‌توانید با ما تماس بگیرید.
         </p>
         <Link
           href="https://alirezasafaeisystems.ir/?utm_source=audit&utm_medium=faq&utm_campaign=contact"
-          className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="button"
           target="_blank"
           rel="noopener noreferrer"
         >

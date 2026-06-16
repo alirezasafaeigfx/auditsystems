@@ -17,6 +17,7 @@ export default function AuditPageClientEn() {
 
   function toUserMessage(errorCode: string): string {
     if (errorCode === "RATE_LIMITED") return "Too many requests. Please retry in a few minutes.";
+    if (errorCode === "DNS_LOOKUP_FAILED") return "DNS lookup is required for this domain; please try again shortly.";
     if (errorCode === "RATE_LIMIT_BACKEND_REQUIRED") return "Distributed rate-limit backend is temporarily unavailable. Please retry shortly.";
     if (errorCode === "INVALID_URL_EMPTY") return "Target URL is required.";
     if (errorCode === "INVALID_URL_TOO_LONG") return "Target URL is too long.";
@@ -25,8 +26,32 @@ export default function AuditPageClientEn() {
     return "Failed to create audit run. Please try again.";
   }
 
+  function normalizeUrl(raw: string): string {
+    const cleaned = raw.trim();
+    if (!cleaned) return "";
+    if (/^https?:\/\//i.test(cleaned)) return cleaned;
+    return `https://${cleaned}`;
+  }
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    const normalizedUrl = normalizeUrl(url);
+    if (!normalizedUrl) {
+      setMessage("Please enter a website URL.");
+      return;
+    }
+
+    try {
+      const parsed = new URL(normalizedUrl);
+      if (!parsed.hostname || !parsed.hostname.includes(".")) {
+        setMessage("Invalid URL. Please enter a full domain.");
+        return;
+      }
+    } catch {
+      setMessage("Invalid URL format. Example: https://example.com");
+      return;
+    }
+
     trackSeoEvent("seo_audit_start", { locale: "en", depth });
     setIsSubmitting(true);
     setMessage("Submitting audit run...");
@@ -36,7 +61,7 @@ export default function AuditPageClientEn() {
       const response = await fetch("/api/audit/runs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, depth })
+        body: JSON.stringify({ url: normalizedUrl, depth })
       });
 
       const body = await response.json();
