@@ -135,9 +135,11 @@ module.exports = {
 };
 ECOSYSTEM
  
-pm2 delete "$APP_WEB_NAME" >/dev/null 2>&1 || true
-pm2 delete "$APP_WORKER_NAME" >/dev/null 2>&1 || true
-pm2 start ecosystem.config.cjs --update-env
+if pm2 describe "$APP_WEB_NAME" >/dev/null 2>&1 || pm2 describe "$APP_WORKER_NAME" >/dev/null 2>&1; then
+  pm2 startOrReload ecosystem.config.cjs --update-env
+else
+  pm2 start ecosystem.config.cjs --update-env
+fi
 pm2 save >/dev/null 2>&1 || true
 
 ln -sfn "$RELEASE_DIR" "$CURRENT_LINK"

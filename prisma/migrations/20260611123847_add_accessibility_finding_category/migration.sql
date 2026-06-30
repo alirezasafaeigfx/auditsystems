@@ -1,0 +1,4 @@
+-- Intentionally left as a no-op.
+-- The effective enum change already exists in
+-- 20250111000000_add_accessibility_finding_category.
+-- This file restores Prisma migration chain integrity for deploys.

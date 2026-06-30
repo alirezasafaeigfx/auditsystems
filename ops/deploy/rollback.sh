@@ -38,6 +38,8 @@ command -v pm2 >/dev/null 2>&1 || { echo "[rollback] pm2 required" >&2; exit 1; 
 RELEASES_DIR="$BASE_DIR/releases/$ENVIRONMENT"
 CURRENT_LINK="$BASE_DIR/current/$ENVIRONMENT"
 APP_NAME="$APP_SLUG-$ENVIRONMENT"
+APP_WEB_NAME="${APP_NAME}-web"
+APP_WORKER_NAME="${APP_NAME}-worker"
 PORT="3011"
 [[ "$ENVIRONMENT" == "production" ]] && PORT="3010"
 
@@ -57,8 +59,9 @@ TARGET_DIR="$RELEASES_DIR/$TARGET_RELEASE"
 [[ -d "$TARGET_DIR" && -f "$TARGET_DIR/ecosystem.config.cjs" ]] || { echo "[rollback] invalid target: $TARGET_DIR" >&2; exit 1; }
 
 ln -sfn "$TARGET_DIR" "$CURRENT_LINK"
-pm2 delete "$APP_NAME" >/dev/null 2>&1 || true
-pm2 start "$TARGET_DIR/ecosystem.config.cjs" --only "$APP_NAME" --update-env
+pm2 delete "$APP_WEB_NAME" >/dev/null 2>&1 || true
+pm2 delete "$APP_WORKER_NAME" >/dev/null 2>&1 || true
+pm2 start "$TARGET_DIR/ecosystem.config.cjs" --update-env
 pm2 save >/dev/null 2>&1 || true
 
 for attempt in {1..20}; do
@@ -70,4 +73,4 @@ for attempt in {1..20}; do
   sleep 2
 done
 
-echo "[rollback] switched $ENVIRONMENT to release $TARGET_RELEASE ($APP_NAME)"
+echo "[rollback] switched $ENVIRONMENT to release $TARGET_RELEASE ($APP_WEB_NAME, $APP_WORKER_NAME)"

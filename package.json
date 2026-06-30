@@ -37,6 +37,10 @@
     "lighthouse:local": "tsx src/scripts/lighthouse-local.ts",
     "deploy:check:hosting": "bash scripts/deploy/check-hosting-sync.sh --strict",
     "deploy:readiness": "bash scripts/deploy/run-readiness-suite.sh --strict",
+    "vps:prepare": "bash scripts/vps-deploy.sh prepare",
+    "vps:sync-env": "bash scripts/vps-deploy.sh sync-env",
+    "vps:deploy": "bash scripts/vps-deploy.sh deploy production",
+    "vps:status": "bash scripts/vps-deploy.sh status",
     "gpu:lighthouse:local": "../../../scripts/gpu-browser-run.sh pnpm run lighthouse:local"
   },
   "dependencies": {
