@@ -60,6 +60,7 @@ Status: Done
 - [x] Locale-aware shell (`lang/dir/navigation/footer`) in unified layout
 - [x] Multi-language SEO coverage (hreflang alternates + bilingual sitemap)
 - [x] Edge security headers and liveness/readiness API model
+- [x] Migrated `middleware.ts` to `proxy.ts` for Next.js 16 compatibility
 
 ## Phase I — SEO Execution Automation
 Status: Done
@@ -69,6 +70,8 @@ Status: Done
 - [x] Localized guide content split (`fa/en`) + guide breadcrumbs/related links + article schema
 - [x] Real sitemap freshness model (`updatedAt`) and stricter robots disallow rules
 - [x] Automated SEO checks (`pnpm run seo:audit`) with artifacts in `logs/seo/`
+- [x] Fixed SEO-C06 sitemap count mismatch (12→14 static entries)
+- [x] Removed localhost fallback from `src/lib/site.ts` (SEO-C04)
 
 ## Phase J — Shared VPS Production Rollout
 Status: Done
@@ -103,3 +106,11 @@ Status: Done (2026-02-24)
 - [x] بهینه‌سازی CWV با تمرکز روی LCP صفحات کلیدی (`/fa`, `/fa/standards`, `/audit`)
 - [x] تکمیل measurement واقعی (GA4/GSC + conversion events) و ثبت baseline KPI
 - [x] ارتقای محتوای استانداردها با intent map فارسی و internal-link plan بین سه محصول
+
+### Phase 4 — UX Polish & Conversion
+Status: Done (2026-07-02)
+- [x] HeroAuditForm component for inline audit form on homepage (FA/EN)
+- [x] Enhanced sample report pages with detailed findings (CRITICAL/HIGH/MEDIUM severity)
+- [x] URL prefill support (`?url=`) on audit pages for seamless flow from homepage
+- [x] Migrated `middleware.ts` to `proxy.ts` for Next.js 16 compatibility
+- [x] Fixed SEO audit sitemap count (SEO-C06) and localhost fallback (SEO-C04)
