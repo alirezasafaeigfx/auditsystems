@@ -100,8 +100,8 @@ module.exports = {
     {
       name: '$APP_WEB_NAME',
       cwd: '$RELEASE_DIR',
-      script: 'pnpm',
-      args: 'exec next start -H 127.0.0.1 -p $PORT',
+      script: 'node',
+      args: '.next/standalone/server.js',
       env_file: '$ENV_FILE',
       env: {
         NODE_ENV: 'production',
