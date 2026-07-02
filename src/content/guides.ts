@@ -173,6 +173,66 @@ const guideSeeds: GuideSeed[] = [
       summary: "Build scalable guide hubs with quality governance and schema discipline.",
       sections: ["Topic clustering", "Template constraints", "Internal linking", "Quality review"]
     }
+  },
+  {
+    slug: "website-security-checklist-iran",
+    updatedAt: "2026-07-02",
+    relatedSlugs: ["security-headers-for-growth-sites", "ssrf-safe-url-processing", "third-party-script-risk-audit"],
+    fa: {
+      title: "چک‌لیست امنیت وب‌سایت برای کسب‌وکارهای ایرانی",
+      summary: "چک‌لیست جامع امنیت وب‌سایت شامل هدرها، HTTPS، XSS و محافظت از داده‌ها.",
+      sections: ["هدرهای امنیتی", "گواهی SSL و HTTPS", "محافظت XSS و CSRF", "حریم خصوصی داده‌ها"]
+    },
+    en: {
+      title: "Website Security Checklist for Iranian Businesses",
+      summary: "Comprehensive website security checklist covering headers, HTTPS, XSS, and data protection.",
+      sections: ["Security headers", "SSL and HTTPS", "XSS and CSRF protection", "Data privacy"]
+    }
+  },
+  {
+    slug: "wordpress-speed-optimization",
+    updatedAt: "2026-07-02",
+    relatedSlugs: ["fix-core-web-vitals-fast", "iran-website-performance-checklist", "third-party-script-risk-audit"],
+    fa: {
+      title: "بهینه‌سازی سرعت برای سایت‌های وردپرسی",
+      summary: "راهنمای عملی بهینه‌سازی سرعت وردپرس از انتخاب هاست تا بهینه‌سازی اسکریپت‌ها.",
+      sections: ["انتخاب هاست مناسب", "بهینه‌سازی تصاویر و دیتابیس", "کش و CDN", "کاهش اسکریپت‌های اضافی"]
+    },
+    en: {
+      title: "WordPress Speed Optimization Guide",
+      summary: "Practical guide to optimize WordPress speed from hosting selection to script optimization.",
+      sections: ["Choosing the right hosting", "Image and database optimization", "Caching and CDN", "Reducing bloat scripts"]
+    }
+  },
+  {
+    slug: "ecommerce-seo-technical-guide",
+    updatedAt: "2026-07-02",
+    relatedSlugs: ["technical-seo-audit-template", "programmatic-seo-content-system", "fix-core-web-vitals-fast"],
+    fa: {
+      title: "سئوی فنی برای فروشگاه‌های آنلاین",
+      summary: "راهنمای جامع سئوی فنی فروشگاهی شامل صفحات محصول، فیلترها و داده ساختاریافته.",
+      sections: ["سئوی صفحات محصول", "مدیریت فیلترها و صفحه‌بندی", "داده ساختاریافته Product", "سایت‌مپ محصولات"]
+    },
+    en: {
+      title: "Technical SEO for E-commerce Sites",
+      summary: "Comprehensive e-commerce technical SEO covering product pages, filters, and structured data.",
+      sections: ["Product page SEO", "Filter and pagination management", "Product structured data", "Product sitemaps"]
+    }
+  },
+  {
+    slug: "mobile-app-performance-audit",
+    updatedAt: "2026-07-02",
+    relatedSlugs: ["fix-core-web-vitals-fast", "production-observability-baseline", "iran-website-performance-checklist"],
+    fa: {
+      title: "ارزیابی عملکرد اپلیکیشن‌های موبایل",
+      summary: "چک‌لیست ارزیابی عملکرد PWA و اپلیکیشن‌های موبایل وب‌محور.",
+      sections: ["بارگذاری اولیه", "تعامل و پاسخ‌دهی", "صرفه‌جویی در باتری", "آفلاین و کشینگ"]
+    },
+    en: {
+      title: "Mobile App Performance Audit",
+      summary: "Checklist for auditing PWA and mobile web application performance.",
+      sections: ["Initial load", "Interaction and responsiveness", "Battery efficiency", "Offline and caching"]
+    }
   }
 ];
 

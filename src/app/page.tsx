@@ -5,6 +5,7 @@ import SeoPageEvent from "../components/SeoPageEvent";
 import IntentRouter from "../components/IntentRouter";
 import HeroAuditForm from "../components/HeroAuditForm";
 import SocialProofCounter from "../components/SocialProofCounter";
+import NewsletterSignup from "../components/NewsletterSignup";
 
 export const metadata: Metadata = buildPageMetadata({
   locale: "fa",
@@ -146,6 +147,8 @@ export default function HomePage() {
       </section>
 
       <IntentRouter locale="fa" />
+
+      <NewsletterSignup locale="fa" />
 
       <section className="kpi-grid">
         <article className="kpi">
