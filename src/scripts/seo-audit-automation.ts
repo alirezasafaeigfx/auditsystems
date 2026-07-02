@@ -154,7 +154,7 @@ async function main(): Promise<void> {
   addCheck(checks, "SEO-C05", "robots.txt must block API and token report trees", robotsOk, robotsOk ? "robots rules include API and token route disallow paths." : `Current disallow paths: ${disallowValues.join(", ")}`);
 
   const sitemapEntries = await Promise.resolve(sitemap());
-  const expectedCount = 12 + getGuides("fa").length * 2;
+  const expectedCount = 14 + getGuides("fa").length * 2;
   addCheck(
     checks,
     "SEO-C06",
