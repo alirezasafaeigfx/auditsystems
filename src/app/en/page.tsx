@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { buildPageMetadata } from "../../lib/seoMeta";
 import SeoPageEvent from "../../components/SeoPageEvent";
 import IntentRouter from "../../components/IntentRouter";
+import HeroAuditForm from "../../components/HeroAuditForm";
 
 export const metadata: Metadata = buildPageMetadata({
   locale: "en",
@@ -22,6 +23,7 @@ export default function HomePageEn() {
         <p className="hero-lead">
           In minutes, technical SEO, performance, and security issues are prioritized so your team can execute fixes with clarity.
         </p>
+        <HeroAuditForm />
         <ul className="hero-checklist">
           <li>Clear output for engineering, content, and growth teams</li>
           <li>Risk classification: critical, high, medium</li>

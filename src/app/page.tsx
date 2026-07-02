@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { buildPageMetadata } from "../lib/seoMeta";
 import SeoPageEvent from "../components/SeoPageEvent";
 import IntentRouter from "../components/IntentRouter";
+import HeroAuditForm from "../components/HeroAuditForm";
 
 export const metadata: Metadata = buildPageMetadata({
   locale: "fa",
@@ -22,6 +23,7 @@ export default function HomePage() {
         <p className="hero-lead">
           فقط آدرس سایت را بدهید. ما مشکلات را پیدا می‌کنیم و به شما می‌گوییم کدام یکی مهم‌تر است و چطور حلش کنید.
         </p>
+        <HeroAuditForm />
         <ul className="hero-checklist">
           <li>گزارش ساده و قابل فهم برای همه</li>
           <li>مشکلات مهم را اول نشان می‌دهیم</li>
@@ -72,6 +74,54 @@ export default function HomePage() {
           <strong>قابل اعتماد</strong>
           <p>روی سیستم‌های واقعی تست شده</p>
         </article>
+      </section>
+
+      <section className="card" aria-labelledby="preview-heading">
+        <h2 id="preview-heading">پیش‌نمایش خروجی گزارش</h2>
+        <p style={{ color: "var(--muted)", fontSize: "0.9rem", marginBottom: "1rem" }}>
+          بعد از ارزیابی، گزارش شما شامل این بخش‌ها خواهد بود:
+        </p>
+        <div className="kpi-grid" style={{ marginBottom: "1rem" }}>
+          <article className="kpi">
+            <strong style={{ color: "var(--brand)" }}>امتیاز کلی</strong>
+            <p>وضعیت کلی سایت شما از ۱۰۰</p>
+          </article>
+          <article className="kpi">
+            <strong style={{ color: "var(--danger)" }}>مشکلات سئو</strong>
+            <p>مسائل فنی تأثیرگذار بر رتبه</p>
+          </article>
+          <article className="kpi">
+            <strong style={{ color: "var(--warn)" }}>مشکلات امنیت</strong>
+            <p>آسیب‌پذیری‌های قابل بهبود</p>
+          </article>
+          <article className="kpi">
+            <strong style={{ color: "var(--brand)" }}>مشکلات سرعت</strong>
+            <p>عوامل کندی بارگذاری</p>
+          </article>
+        </div>
+        <div className="hero-actions" style={{ justifyContent: "center" }}>
+          <Link href="/sample-report" className="button secondary">
+            مشاهده نمونه گزارش کامل
+          </Link>
+        </div>
+      </section>
+
+      <section className="card" aria-labelledby="upsell-heading">
+        <h2 id="upsell-heading">سه سطح خروجی</h2>
+        <div className="kpi-grid">
+          <article className="kpi" style={{ textAlign: "center" }}>
+            <strong style={{ color: "var(--brand)" }}>گزارش اولیه رایگان</strong>
+            <p>۵ مشکل اصلی + امتیاز کلی</p>
+          </article>
+          <article className="kpi" style={{ textAlign: "center" }}>
+            <strong style={{ color: "var(--brand)" }}>گزارش کامل PDF</strong>
+            <p>راهکار مرحله‌ای + اولویت‌بندی + راهنمای اجرا</p>
+          </article>
+          <article className="kpi" style={{ textAlign: "center" }}>
+            <strong style={{ color: "var(--brand)" }}>مشاوره یا اصلاح فنی</strong>
+            <p>جلسه ۳۰ دقیقه‌ای بررسی نتیجه و اجرای تغییرات</p>
+          </article>
+        </div>
       </section>
 
       <IntentRouter locale="fa" />
