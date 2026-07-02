@@ -1,4 +1,4 @@
-const DEV_BASE_URL = "http://localhost:3000";
+const PRODUCTION_FALLBACK_URL = "https://audit.alirezasafaeisystems.ir";
 const LOCALHOST_HOSTNAMES = new Set(["localhost", "127.0.0.1", "0.0.0.0"]);
 
 function isStrictBaseUrlEnforced(): boolean {
@@ -28,7 +28,10 @@ export function getAppBaseUrl(): string {
     if (strict) {
       throw new Error("APP_BASE_URL_MISSING");
     }
-    return DEV_BASE_URL;
+    if (process.env.NODE_ENV === "production") {
+      return PRODUCTION_FALLBACK_URL;
+    }
+    return PRODUCTION_FALLBACK_URL;
   }
 
   const parsed = parseBaseUrlOrThrow(raw);
