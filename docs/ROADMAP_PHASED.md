@@ -114,3 +114,15 @@ Status: Done (2026-07-02)
 - [x] URL prefill support (`?url=`) on audit pages for seamless flow from homepage
 - [x] Migrated `middleware.ts` to `proxy.ts` for Next.js 16 compatibility
 - [x] Fixed SEO audit sitemap count (SEO-C06) and localhost fallback (SEO-C04)
+
+### Phase 5 — Growth & Marketing
+Status: Done (2026-07-02)
+- [x] Social proof counter (SocialProofCounter + /api/stats)
+- [x] Trust signals section on homepage
+- [x] Pricing page with three tiers (FA/EN)
+- [x] Comparison table for pricing features
+- [x] 4 new guides: security, WordPress speed, e-commerce SEO, mobile performance
+- [x] 3 landing pages: ecommerce, security, speed (FA/EN)
+- [x] Newsletter signup (NewsletterSignup + /api/newsletter)
+- [x] Testimonials component
+- [x] Deploy script fix for Next.js 16 standalone mode

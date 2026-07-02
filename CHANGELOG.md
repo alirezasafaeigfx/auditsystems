@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.4.0 - 2026-07-02
+### Growth Roadmap Execution
+- Added SocialProofCounter component with live audit count from database
+- Added /api/stats endpoint for audit statistics
+- Added trust signals section to homepage (SSL, speed, reports, privacy)
+- Created /pricing page with three tiers (Free/Full/Consultation) - FA/EN
+- Added comparison table for pricing features
+- Added 4 new guides: security checklist, WordPress speed, e-commerce SEO, mobile performance
+- Created /landing/ecommerce-audit page - FA/EN
+- Created /landing/security-audit page - FA/EN
+- Created /landing/speed-optimization page - FA/EN
+- Added NewsletterSignup component with form and /api/newsletter endpoint
+- Added Testimonials component with 3 customer reviews
+- Added newsletter section to homepage
+
+### Fixes
+- Fixed deploy script to use standalone server.js instead of next start (Next.js 16)
+- Fixed SEO audit sitemap count (SEO-C06) to match actual 7 static routes
+- Removed localhost fallback in src/lib/site.ts, now uses production URL
+- Migrated middleware.ts to proxy.ts for Next.js 16 compatibility (zero warnings)
+
+### Testing
+- Added unit tests for csrf, seoMeta, summary, token, brand, observability, metrics (47 new tests)
+
 ## v0.3.0 - 2026-07-02
 - Fixed SEO audit sitemap count (SEO-C06) to match actual 7 static routes.
 - Removed localhost fallback in `src/lib/site.ts`, now uses production URL.
