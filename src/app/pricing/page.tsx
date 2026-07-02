@@ -114,6 +114,76 @@ export default function PricingPage() {
         ))}
       </section>
 
+      <section className="card" style={{ overflowX: "auto" }}>
+        <h2 style={{ textAlign: "center", marginBottom: "1.5rem" }}>جدول مقایسه ویژگی‌ها</h2>
+        <table className="comparison-table">
+          <thead>
+            <tr>
+              <th>ویژگی</th>
+              <th>گزارش اولیه</th>
+              <th>گزارش کامل</th>
+              <th>مشاوره تخصصی</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>ارزیابی خودکار سایت</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>تعداد مشکلات</td>
+              <td>۵ مشکل</td>
+              <td>نامحدود</td>
+              <td>نامحدود</td>
+            </tr>
+            <tr>
+              <td>امتیاز کلی</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>راهنمای اجرای گام به گام</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>گزارش PDF</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>جلسه مشاوره</td>
+              <td>—</td>
+              <td>—</td>
+              <td>۳۰ دقیقه</td>
+            </tr>
+            <tr>
+              <td>طرح اقدام شخصی</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>پیگیری</td>
+              <td>—</td>
+              <td>۷ روز</td>
+              <td>۳۰ روز</td>
+            </tr>
+            <tr>
+              <td>قیمت</td>
+              <td>رایگان</td>
+              <td>۲۹۹,۰۰۰ تومان</td>
+              <td>۵۹۹,۰۰۰ تومان</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
       <section className="card pricing-faq">
         <h2>سوالات متداول درباره قیمت</h2>
         <div className="pricing-faq-grid">

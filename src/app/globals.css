@@ -1383,3 +1383,44 @@ html[dir="ltr"] .footer {
     grid-template-columns: 1fr;
   }
 }
+
+/* Comparison Table */
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.comparison-table th,
+.comparison-table td {
+  padding: 0.75rem 1rem;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.comparison-table th {
+  background: var(--surface);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+}
+
+.comparison-table th:first-child,
+.comparison-table td:first-child {
+  text-align: right;
+}
+
+.comparison-table tbody tr:hover {
+  background: var(--surface);
+}
+
+@media (max-width: 600px) {
+  .comparison-table {
+    font-size: 0.8rem;
+  }
+
+  .comparison-table th,
+  .comparison-table td {
+    padding: 0.5rem;
+  }
+}
