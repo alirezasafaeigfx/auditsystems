@@ -80,7 +80,7 @@ export const viewport: Viewport = {
 
 type LayoutCopy = {
   brand: string;
-  nav: { audit: string; guides: string; sample: string; pillar: string };
+  nav: { audit: string; guides: string; sample: string; pillar: string; pricing: string };
   skipToContent: string;
   footer: {
     aboutTitle: string;
@@ -104,7 +104,7 @@ type LayoutCopy = {
 
 const faCopy: LayoutCopy = {
   brand: "Audit Systems",
-  nav: { audit: "شروع ارزیابی", guides: "راهنماهای کاربردی", sample: "نمونه گزارش", pillar: "چارچوب ارزیابی" },
+  nav: { audit: "شروع ارزیابی", guides: "راهنماهای کاربردی", sample: "نمونه گزارش", pillar: "چارچوب ارزیابی", pricing: "قیمت‌گذاری" },
   skipToContent: "رفتن به محتوای اصلی",
   footer: {
     aboutTitle: "Audit Systems",
@@ -128,7 +128,7 @@ const faCopy: LayoutCopy = {
 
 const enCopy: LayoutCopy = {
   brand: "Alireza Safaei Audit",
-  nav: { audit: "Start Audit", guides: "Guides", sample: "Sample Report", pillar: "Pillar" },
+  nav: { audit: "Start Audit", guides: "Guides", sample: "Sample Report", pillar: "Pillar", pricing: "Pricing" },
   skipToContent: "Skip to main content",
   footer: {
     aboutTitle: "Alireza Safaei",
@@ -264,6 +264,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               </Link>
               <nav className="nav">
                 <Link href={withLocalePath("/audit", locale)}>{copy.nav.audit}</Link>
+                <Link href={withLocalePath("/pricing", locale)}>{copy.nav.pricing}</Link>
                 <Link href={withLocalePath("/guides", locale)}>{copy.nav.guides}</Link>
                 <Link href={withLocalePath("/sample-report", locale)}>{copy.nav.sample}</Link>
                 <Link href={withLocalePath("/pillar/iran-readiness-audit", locale)}>{copy.nav.pillar}</Link>
@@ -296,6 +297,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                   </li>
                   <li>
                     <Link href={withLocalePath("/audit", locale)}>{copy.nav.audit}</Link>
+                  </li>
+                  <li>
+                    <Link href={withLocalePath("/pricing", locale)}>{copy.nav.pricing}</Link>
                   </li>
                   <li>
                     <Link href={withLocalePath("/guides", locale)}>{copy.nav.guides}</Link>

@@ -4,6 +4,7 @@ import { buildPageMetadata } from "../lib/seoMeta";
 import SeoPageEvent from "../components/SeoPageEvent";
 import IntentRouter from "../components/IntentRouter";
 import HeroAuditForm from "../components/HeroAuditForm";
+import SocialProofCounter from "../components/SocialProofCounter";
 
 export const metadata: Metadata = buildPageMetadata({
   locale: "fa",
@@ -74,6 +75,26 @@ export default function HomePage() {
           <strong>قابل اعتماد</strong>
           <p>روی سیستم‌های واقعی تست شده</p>
         </article>
+        <SocialProofCounter />
+      </section>
+
+      <section className="trust-signals" aria-label="اطلاعات اعتماد">
+        <div className="trust-item">
+          <span className="trust-icon">🔒</span>
+          <span>SSL و امنیت کامل</span>
+        </div>
+        <div className="trust-item">
+          <span className="trust-icon">⚡</span>
+          <span>ارزیابی در کمتر از ۲ دقیقه</span>
+        </div>
+        <div className="trust-item">
+          <span className="trust-icon">📊</span>
+          <span>گزارش با راه حل عملی</span>
+        </div>
+        <div className="trust-item">
+          <span className="trust-icon">🛡️</span>
+          <span>بدون ذخیره اطلاعات خصوصی</span>
+        </div>
       </section>
 
       <section className="card" aria-labelledby="preview-heading">
