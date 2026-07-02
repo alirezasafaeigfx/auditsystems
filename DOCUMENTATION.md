@@ -3,7 +3,9 @@
 **Project:** Audit System (Proof Engine)
 **URL:** https://audit.alirezasafaeisystems.ir/
 **Role:** Bottom of Funnel - Lead magnet & conversion
-**Last Updated:** 2026-06-18
+**Last Updated:** 2026-06-20
+
+> **Reality note:** Audit jobs use a custom PostgreSQL-backed queue, not BullMQ. Payment-provider HTTP adapters exist, but the default is `MOCK`; production payment and worker operation require live verification. Current status: [ecosystem research synthesis](../../../docs/reports/ecosystem-research-synthesis-2026-06-20.md).
 
 ---
 
