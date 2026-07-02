@@ -49,7 +49,7 @@ function withSecurityHeaders(request: NextRequest, response: NextResponse): Next
   return response;
 }
 
-export function middleware(request: NextRequest): NextResponse {
+export function proxy(request: NextRequest): NextResponse {
   const requestHeaders = new Headers(request.headers);
   const pathname = request.nextUrl.pathname;
   const locale = pathname === "/en" || pathname.startsWith("/en/") ? "en" : "fa";

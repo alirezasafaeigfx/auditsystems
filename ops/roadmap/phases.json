@@ -148,8 +148,8 @@
         },
         {
           "id": "edge-security-middleware",
-          "description": "Global security headers middleware is enabled",
-          "command": "test -f middleware.ts && rg -n \"Content-Security-Policy|X-Frame-Options|Strict-Transport-Security\" middleware.ts"
+          "description": "Global security headers proxy is enabled",
+          "command": "test -f proxy.ts && rg -n \"Content-Security-Policy|X-Frame-Options|Strict-Transport-Security\" proxy.ts"
         },
         {
           "id": "health-probe-model",
