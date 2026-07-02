@@ -6,6 +6,7 @@ import IntentRouter from "../components/IntentRouter";
 import HeroAuditForm from "../components/HeroAuditForm";
 import SocialProofCounter from "../components/SocialProofCounter";
 import NewsletterSignup from "../components/NewsletterSignup";
+import Testimonials from "../components/Testimonials";
 
 export const metadata: Metadata = buildPageMetadata({
   locale: "fa",
@@ -149,6 +150,8 @@ export default function HomePage() {
       <IntentRouter locale="fa" />
 
       <NewsletterSignup locale="fa" />
+
+      <Testimonials />
 
       <section className="kpi-grid">
         <article className="kpi">

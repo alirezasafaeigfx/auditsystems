@@ -1318,3 +1318,68 @@ html[dir="ltr"] .footer {
     flex-direction: column;
   }
 }
+
+/* Testimonials */
+.testimonials-section {
+  margin: 2rem 0;
+}
+
+.testimonials-section h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.testimonial-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.testimonial-rating {
+  margin-bottom: 0.75rem;
+}
+
+.star {
+  color: var(--border);
+  font-size: 1.1rem;
+}
+
+.star.filled {
+  color: #f59e0b;
+}
+
+.testimonial-text {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--text);
+  margin: 0 0 1rem 0;
+  font-style: italic;
+}
+
+.testimonial-author {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.testimonial-author strong {
+  font-size: 0.9rem;
+}
+
+.testimonial-author span {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+@media (max-width: 600px) {
+  .testimonials-grid {
+    grid-template-columns: 1fr;
+  }
+}
