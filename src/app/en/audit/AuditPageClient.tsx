@@ -13,6 +13,11 @@ export default function AuditPageClientEn() {
 
   useEffect(() => {
     trackSeoEvent("seo_audit_page_view", { locale: "en", path: "/en/audit" });
+    const params = new URLSearchParams(window.location.search);
+    const prefillUrl = params.get("url");
+    if (prefillUrl) {
+      setUrl(decodeURIComponent(prefillUrl));
+    }
   }, []);
 
   function toUserMessage(errorCode: string): string {
