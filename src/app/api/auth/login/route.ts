@@ -4,6 +4,7 @@ import { createSession, verifyPassword } from "../../../../lib/auth";
 import { normalizeEmail } from "../../../../lib/validators";
 import { createRequestId, logEvent, respondJson } from "../../../../lib/observability";
 import { csrfProtection } from "../../../../lib/csrf";
+import { checkAuthRateLimit } from "../../../../lib/authRateLimit";
 
 export async function POST(request: NextRequest) {
   const requestId = createRequestId();
@@ -33,6 +34,13 @@ export async function POST(request: NextRequest) {
       email = normalizeEmail(payload.email);
     } catch {
       return respondJson({ error: "INVALID_EMAIL", requestId }, requestId, { status: 400, headers: { "Cache-Control": "no-store" } });
+    }
+
+    const rateLimitKey = `auth:login:${email}`;
+    const rateCheck = checkAuthRateLimit(rateLimitKey);
+    if (!rateCheck.allowed) {
+      logEvent("warn", "login_rate_limited", { requestId, email });
+      return respondJson({ error: "RATE_LIMITED", requestId }, requestId, { status: 429, headers: { "Cache-Control": "no-store" } });
     }
 
     const password = typeof payload.password === "string" ? payload.password : "";

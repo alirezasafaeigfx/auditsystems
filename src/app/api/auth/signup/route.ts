@@ -5,6 +5,8 @@ import { normalizeEmail } from "../../../../lib/validators";
 import { createRequestId, logEvent, respondJson } from "../../../../lib/observability";
 import { csrfProtection } from "../../../../lib/csrf";
 import { createSlug } from "../../../../lib/organization";
+import { checkAuthRateLimit } from "../../../../lib/authRateLimit";
+import { validatePasswordStrength } from "../../../../lib/passwordValidation";
 
 export async function POST(request: NextRequest) {
   const requestId = createRequestId();
@@ -37,8 +39,16 @@ export async function POST(request: NextRequest) {
     }
 
     const password = typeof payload.password === "string" ? payload.password : "";
-    if (password.length < 8) {
-      return respondJson({ error: "PASSWORD_TOO_SHORT", requestId }, requestId, { status: 400, headers: { "Cache-Control": "no-store" } });
+    const passwordCheck = validatePasswordStrength(password);
+    if (!passwordCheck.valid) {
+      return respondJson({ error: "WEAK_PASSWORD", requestId }, requestId, { status: 400, headers: { "Cache-Control": "no-store" } });
+    }
+
+    const rateLimitKey = `auth:signup:${email}`;
+    const rateCheck = checkAuthRateLimit(rateLimitKey);
+    if (!rateCheck.allowed) {
+      logEvent("warn", "signup_rate_limited", { requestId, email });
+      return respondJson({ error: "RATE_LIMITED", requestId }, requestId, { status: 429, headers: { "Cache-Control": "no-store" } });
     }
 
     const name = typeof payload.name === "string" ? payload.name.trim() : null;
