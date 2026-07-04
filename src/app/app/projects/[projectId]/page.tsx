@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "../../../../lib/db";
 import { validateSession, getOrganizationForUser } from "../../../../lib/auth";
 import { RunAuditButton } from "../../../../components/RunAuditButton";
+import { getUsageStats } from "../../../../lib/usage";
 
 type Props = { params: Promise<{ projectId: string }> };
 
@@ -19,6 +21,8 @@ export default async function ProjectDetailPage({ params }: Props) {
   });
   if (!project) return notFound();
 
+  const usage = await getUsageStats(orgId);
+
   const audits = await prisma.auditRun.findMany({
     where: { projectId: project.id },
     orderBy: { createdAt: "desc" },
@@ -34,34 +38,57 @@ export default async function ProjectDetailPage({ params }: Props) {
     }
   });
 
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthlyAudits = await prisma.auditRun.count({
-    where: {
-      organizationId: orgId,
-      createdAt: { gte: monthStart }
-    }
-  });
+  const latestAudit = audits[0];
+  const summary = latestAudit?.summary as Record<string, unknown> | null;
+  const issueCount = summary ? ((summary as Record<string, unknown>).totalIssues as number ?? 0) : 0;
 
   return (
     <div>
-      <div style={{ marginBottom: "2rem" }}>
-        <h1 style={{ fontSize: "1.5rem", fontWeight: 700 }}>{project.name}</h1>
-        <p style={{ color: "#6b7280", fontSize: "0.875rem", marginTop: "0.25rem" }}>{project.domain}</p>
+      <div style={{ marginBottom: "1.5rem" }}>
+        <Link href="/app/projects" style={{ color: "#6b7280", fontSize: "0.875rem", textDecoration: "none" }}>← All Projects</Link>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "2rem" }}>
+        <div>
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 700 }}>{project.name}</h1>
+          <p style={{ color: "#6b7280", fontSize: "0.875rem", marginTop: "0.25rem" }}>{project.domain}</p>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ color: "#6b7280", fontSize: "0.75rem" }}>Monthly usage</div>
+          <div style={{ fontSize: "0.875rem", fontWeight: 600 }}>
+            {usage.auditCount} / {usage.auditLimit} audits
+          </div>
+        </div>
       </div>
 
       <div style={{ marginBottom: "2rem" }}>
         <RunAuditButton
           projectId={project.id}
-          monthlyAudits={monthlyAudits}
-          limit={3}
+          monthlyAudits={usage.auditCount}
+          limit={usage.auditLimit}
         />
       </div>
+
+      {issueCount > 0 && (
+        <div style={{ padding: "1rem", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "0.5rem", marginBottom: "2rem" }}>
+          <div style={{ fontWeight: 600, fontSize: "0.875rem", marginBottom: "0.25rem" }}>Latest Audit Summary</div>
+          <div style={{ fontSize: "0.875rem", color: "#374151" }}>
+            {issueCount} issues found. {latestAudit?.shares[0]?.token && (
+              <a href={`/audit/r/${latestAudit.shares[0].token}`} target="_blank" rel="noopener noreferrer" style={{ color: "#0f7a66", textDecoration: "none", fontWeight: 600 }}>
+                View full report →
+              </a>
+            )}
+          </div>
+        </div>
+      )}
 
       <h2 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "1rem" }}>Audit History</h2>
 
       {audits.length === 0 ? (
-        <p style={{ color: "#6b7280" }}>No audits yet. Run your first audit above.</p>
+        <div style={{ textAlign: "center", padding: "2rem", border: "1px solid #e5e7eb", borderRadius: "0.5rem" }}>
+          <p style={{ color: "#6b7280", marginBottom: "0.5rem" }}>No audits yet.</p>
+          <p style={{ color: "#9ca3af", fontSize: "0.875rem" }}>Run your first audit above to get started.</p>
+        </div>
       ) : (
         <div style={{ border: "1px solid #e5e7eb", borderRadius: "0.5rem", overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
@@ -70,6 +97,7 @@ export default async function ProjectDetailPage({ params }: Props) {
                 <th style={{ textAlign: "left", padding: "0.75rem", fontWeight: 600 }}>Status</th>
                 <th style={{ textAlign: "left", padding: "0.75rem", fontWeight: 600 }}>Started</th>
                 <th style={{ textAlign: "left", padding: "0.75rem", fontWeight: 600 }}>Finished</th>
+                <th style={{ textAlign: "left", padding: "0.75rem", fontWeight: 600 }}>Details</th>
                 <th style={{ textAlign: "left", padding: "0.75rem", fontWeight: 600 }}>Report</th>
               </tr>
             </thead>
@@ -92,15 +120,20 @@ export default async function ProjectDetailPage({ params }: Props) {
                     {new Date(audit.createdAt).toLocaleString()}
                   </td>
                   <td style={{ padding: "0.75rem", color: "#6b7280" }}>
-                    {audit.finishedAt ? new Date(audit.finishedAt).toLocaleString() : "-"}
+                    {audit.finishedAt ? new Date(audit.finishedAt).toLocaleString() : "—"}
+                  </td>
+                  <td style={{ padding: "0.75rem" }}>
+                    <Link href={`/app/projects/${project.id}/audits/${audit.id}`} style={{ color: "#0f7a66", textDecoration: "none" }}>
+                      View
+                    </Link>
                   </td>
                   <td style={{ padding: "0.75rem" }}>
                     {audit.shares[0]?.token ? (
                       <a href={`/audit/r/${audit.shares[0].token}`} target="_blank" rel="noopener noreferrer" style={{ color: "#0f7a66", textDecoration: "none" }}>
-                        View
+                        Report
                       </a>
                     ) : (
-                      <span style={{ color: "#d1d5db" }}>-</span>
+                      <span style={{ color: "#d1d5db" }}>—</span>
                     )}
                   </td>
                 </tr>

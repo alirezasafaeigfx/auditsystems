@@ -5,8 +5,7 @@ import { enqueueJob } from "../../../../../worker/queue";
 import { createReportToken } from "../../../../../lib/token";
 import { createRequestId, logEvent, respondJson } from "../../../../../lib/observability";
 import { csrfProtection } from "../../../../../lib/csrf";
-
-const FREE_MONTHLY_AUDIT_LIMIT = 3;
+import { canRunAudit } from "../../../../../lib/usage";
 
 type RouteParams = { projectId: string };
 
@@ -42,18 +41,10 @@ export async function POST(
       return respondJson({ error: "PROJECT_NOT_FOUND", requestId }, requestId, { status: 404, headers: { "Cache-Control": "no-store" } });
     }
 
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthlyAudits = await prisma.auditRun.count({
-      where: {
-        organizationId: orgId,
-        createdAt: { gte: monthStart }
-      }
-    });
-
-    if (monthlyAudits >= FREE_MONTHLY_AUDIT_LIMIT) {
+    const auditCheck = await canRunAudit(orgId);
+    if (!auditCheck.allowed) {
       return respondJson(
-        { error: "AUDIT_LIMIT_REACHED", message: `Free plan allows ${FREE_MONTHLY_AUDIT_LIMIT} audits per month. Upgrade to run more.`, requestId },
+        { error: "AUDIT_LIMIT_REACHED", message: `Free plan allows ${auditCheck.limit} audits per month. Upgrade to run more.`, requestId },
         requestId,
         { status: 403, headers: { "Cache-Control": "no-store" } }
       );

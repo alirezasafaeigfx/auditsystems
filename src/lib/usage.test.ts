@@ -1,10 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { FREE_PLAN } from "./usage";
+import { DEFAULT_PLAN, getPlan } from "./usage";
 
-describe("FREE_PLAN constants", () => {
-  it("has correct limits", () => {
-    expect(FREE_PLAN.name).toBe("Free");
-    expect(FREE_PLAN.maxProjects).toBe(1);
-    expect(FREE_PLAN.maxAuditsPerMonth).toBe(3);
+describe("usage helpers", () => {
+  it("DEFAULT_PLAN is free", () => {
+    expect(DEFAULT_PLAN.code).toBe("free");
+    expect(DEFAULT_PLAN.name).toBe("Free");
+  });
+
+  it("getPlan returns free plan", () => {
+    const plan = getPlan("free");
+    expect(plan.projectLimit).toBe(1);
+    expect(plan.monthlyAuditLimit).toBe(3);
+  });
+
+  it("getPlan falls back to free for unknown", () => {
+    const plan = getPlan("nonexistent" as "free" | "starter" | "pro");
+    expect(plan.code).toBe("free");
   });
 });

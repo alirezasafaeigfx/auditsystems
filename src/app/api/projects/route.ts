@@ -4,8 +4,7 @@ import { validateSession, getOrganizationForUser } from "../../../lib/auth";
 import { createRequestId, logEvent, respondJson } from "../../../lib/observability";
 import { csrfProtection } from "../../../lib/csrf";
 import { normalizeAuditTargetUrl } from "../../../lib/normalizeAuditTargetUrl";
-
-const FREE_PROJECT_LIMIT = 1;
+import { canCreateProject } from "../../../lib/usage";
 
 export async function POST(request: NextRequest) {
   const requestId = createRequestId();
@@ -28,8 +27,8 @@ export async function POST(request: NextRequest) {
 
     const orgId = membership.organizationId;
 
-    const projectCount = await prisma.project.count({ where: { organizationId: orgId } });
-    if (projectCount >= FREE_PROJECT_LIMIT) {
+    const projectCheck = await canCreateProject(orgId);
+    if (!projectCheck.allowed) {
       return respondJson({ error: "PROJECT_LIMIT_REACHED", requestId }, requestId, { status: 403, headers: { "Cache-Control": "no-store" } });
     }
 
