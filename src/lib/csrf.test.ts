@@ -3,6 +3,7 @@ import {
   generateCSRFToken,
   verifyCSRFToken,
   csrfProtection,
+  getCSRFTokenForClient,
 } from "./csrf";
 
 const TEST_SECRET = "test-csrf-secret-key-123";
@@ -73,5 +74,27 @@ describe("csrfProtection middleware", () => {
     });
     const result = await csrfProtection(request, { secret: TEST_SECRET });
     expect(result.valid).toBe(true);
+  });
+});
+
+describe("getCSRFTokenForClient", () => {
+  it("returns token and headerName", () => {
+    const result = getCSRFTokenForClient({ secret: TEST_SECRET });
+    expect(result).toHaveProperty("token");
+    expect(result).toHaveProperty("headerName");
+    expect(result.headerName).toBe("x-csrf-token");
+    expect(typeof result.token).toBe("string");
+    expect(result.token.length).toBeGreaterThan(0);
+  });
+
+  it("generated token verifies with same secret", () => {
+    const { token, headerName } = getCSRFTokenForClient({ secret: TEST_SECRET });
+    expect(headerName).toBe("x-csrf-token");
+    expect(verifyCSRFToken(token, { secret: TEST_SECRET })).toBe(true);
+  });
+
+  it("rejects token when secret differs from endpoint", () => {
+    const { token } = getCSRFTokenForClient({ secret: TEST_SECRET });
+    expect(verifyCSRFToken(token, { secret: "endpoint-secret" })).toBe(false);
   });
 });

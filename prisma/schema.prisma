@@ -7,6 +7,77 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── SaaS Models ───────────────────────────────────────────────
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  name            String?
+  passwordHash    String
+  emailVerifiedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  memberships Membership[]
+  sessions    Session[]
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships Membership[]
+  projects    Project[]
+  auditRuns   AuditRun[]
+}
+
+model Membership {
+  id             String       @id @default(cuid())
+  userId         String
+  organizationId String
+  role           String       @default("OWNER")
+  createdAt      DateTime     @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+model Session {
+  id             String   @id @default(cuid())
+  userId         String
+  token          String   @unique
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+model Project {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  domain         String
+  normalizedUrl  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  auditRuns    AuditRun[]
+
+  @@index([organizationId])
+}
+
+// ─── Existing Models ───────────────────────────────────────────
+
 enum AuditStatus {
   QUEUED
   RUNNING
@@ -69,6 +140,9 @@ model AuditRun {
   depth         AuditDepth  @default(QUICK)
   status        AuditStatus @default(QUEUED)
 
+  projectId      String?
+  organizationId String?
+
   ipHash       String?
   userAgent    String?
   locale       String?
@@ -83,6 +157,9 @@ model AuditRun {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  project      Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
   findings  AuditFinding[]
   resources AuditResource[]
   shares    ReportShare[]
@@ -91,6 +168,8 @@ model AuditRun {
 
   @@index([normalizedUrl, createdAt])
   @@index([status, createdAt])
+  @@index([projectId, createdAt])
+  @@index([organizationId, createdAt])
 }
 
 model AuditFinding {
