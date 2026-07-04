@@ -1,9 +1,9 @@
 # Technical Improvements Documentation
 
-**Last Updated**: 2026-06-15  
-**Version**: 1.0.0
+**Last Updated**: 2026-07-04  
+**Version**: 2.0.0
 
-This document provides comprehensive technical documentation for the recent improvements made to the AuditSystems platform, including security enhancements, performance optimizations, accessibility improvements, and new features.
+This document provides comprehensive technical documentation for improvements made to AuditSystems, including security, performance, SaaS layer, and developer experience.
 
 ---
 
@@ -18,6 +18,10 @@ This document provides comprehensive technical documentation for the recent impr
 7. [Lazy Loading Implementation](#lazy-loading-implementation)
 8. [Dark/Light Mode Toggle](#darklight-mode-toggle)
 9. [Accessibility Enhancements](#accessibility-enhancements)
+10. [SaaS Foundation (Sprint 1)](#saas-foundation-sprint-1)
+11. [Dashboard & Billing (Sprint 2)](#dashboard-billing-sprint-2)
+12. [Security Hardening](#security-hardening)
+13. [Developer Experience](#developer-experience)
 
 ---
 
@@ -699,4 +703,117 @@ Report issues via GitHub with:
 
 ---
 
-*This documentation is part of the continuous improvement process for the AuditSystems platform. For the most up-to-date information, always refer to the latest version of this document.*
+## SaaS Foundation (Sprint 1)
+
+**Date**: 2026-07-04  
+**PR**: #4 (merged)
+
+### Database Models Added
+
+| Model | Purpose | Key Fields |
+|---|---|---|
+| User | Account management | email (unique), passwordHash, name |
+| Organization | Workspace/tenant | name, slug (unique) |
+| Membership | User-org association | userId, organizationId, role |
+| Session | Auth sessions | token (unique), expiresAt, userId |
+| Project | Website tracking | organizationId, name, domain, normalizedUrl |
+
+### API Routes Added
+
+| Route | Method | Purpose | Auth Required |
+|---|---|---|---|
+| /api/auth/signup | POST | Create account | No |
+| /api/auth/login | POST | Authenticate | No |
+| /api/auth/logout | POST | End session | Yes (CSRF) |
+| /api/auth/me | GET | Current user | Yes |
+| /api/csrf | GET | CSRF token | No |
+| /api/projects | POST | Create project | Yes (CSRF) |
+| /api/projects/[id]/audit | POST | Run audit | Yes (CSRF) |
+
+### Security Features
+- scrypt password hashing with random salt
+- httpOnly session cookies (secure in production)
+- CSRF double-submit cookie pattern
+- Organization ownership enforcement on all routes
+- Generic login errors (no email enumeration)
+
+---
+
+## Dashboard & Billing (Sprint 2)
+
+**Date**: 2026-07-04  
+**PRs**: #6, #7, #8, #9 (merged)
+
+### Dashboard Improvements
+- Usage stats cards (projects, audits, remaining)
+- Latest audit status indicator
+- Upgrade CTAs when limits reached
+- Better empty states
+- Billing link in navigation
+
+### New Pages
+- `/app/billing` — Plan comparison and upgrade CTA
+- `/app/projects/[id]/audits/[runId]` — Audit detail with findings by severity
+
+### Centralized Plans
+```typescript
+// src/lib/plans.ts
+PLANS.free: { projectLimit: 1, monthlyAuditLimit: 3 }
+PLANS.starter: { projectLimit: 3, monthlyAuditLimit: 20 }
+PLANS.pro: { projectLimit: 10, monthlyAuditLimit: 100 }
+```
+
+### Operations
+- Backup/rollback documentation
+- Post-deploy smoke checklist
+- Automated smoke test script
+- Session/job cleanup helpers
+
+---
+
+## Security Hardening
+
+**Date**: 2026-07-04  
+**PR**: #8 (merged)
+
+### Auth Rate Limiting
+- In-memory rate limiter (15 min window)
+- 10 attempts per email per window
+- Independent per email address
+- Applied to login and signup routes
+
+### Password Validation
+- Minimum 8 characters
+- Maximum 128 characters
+- Must contain uppercase, lowercase, and number
+- Centralized validation helper
+
+### Session Cleanup
+- Expired sessions removed after 30 days
+- Stale jobs removed after 7 days
+- Script: `pnpm cleanup`
+
+---
+
+## Developer Experience
+
+**Date**: 2026-07-04  
+**PR**: #9 (merged)
+
+### New Commands
+| Command | Purpose |
+|---|---|
+| `pnpm dev:check` | Fast lint/typecheck/test loop |
+| `pnpm smoke:routes` | Check public route health |
+| `pnpm cleanup` | Remove expired sessions/jobs |
+| `pnpm test:coverage` | Generate coverage report |
+
+### Documentation
+- CONTRIBUTING.md with dev setup guide
+- Improved .env.example organization
+- Vitest coverage configuration
+
+### Test Coverage
+- 278 tests (up from 210 in Sprint 1)
+- 31 test files covering all lib modules
+- Coverage for CSRF, auth, plans, usage, cleanup, rate limiting
