@@ -126,3 +126,74 @@ Status: Done (2026-07-02)
 - [x] Newsletter signup (NewsletterSignup + /api/newsletter)
 - [x] Testimonials component
 - [x] Deploy script fix for Next.js 16 standalone mode
+
+## Sprint 1 — SaaS Foundation MVP
+Status: Done (2026-07-04) | PR #4 merged
+
+- [x] User/Organization/Membership/Session/Project Prisma models
+- [x] Extend AuditRun with optional projectId/organizationId
+- [x] Auth helpers: password hashing (scrypt), session management
+- [x] API routes: /api/auth/{signup,login,logout,me}
+- [x] Project CRUD: /api/projects + /api/projects/[id]/audit
+- [x] Dashboard shell: /app layout, projects, project detail
+- [x] Login/signup pages
+- [x] Free plan usage limits (1 project, 3 audits/month)
+- [x] CSRF token delivery endpoint and client wiring
+- [x] Logout CSRF protection
+- [x] 210 tests passing
+
+## Sprint 2 — Dashboard & Billing Prep
+Status: Done (2026-07-04) | PR #6, #7, #8, #9 merged
+
+- [x] Dashboard v2: usage stats, latest audit status, CTAs
+- [x] Audit detail page: /app/projects/[projectId]/audits/[runId]
+- [x] Billing prep page: /app/billing with plan comparison
+- [x] Centralized plans/usage system (free/starter/pro)
+- [x] Auth rate limiting (15 min window, 10 attempts per email)
+- [x] Password strength validation (8-128 chars, upper+lower+digit)
+- [x] Session/job cleanup helpers and script
+- [x] Operations docs: backup/rollback, smoke checklist
+- [x] Smoke script: scripts/smoke-public-routes.sh
+- [x] DX: CONTRIBUTING.md, dev-check.sh, coverage config
+- [x] 278 tests passing (41 new)
+
+## Sprint 3 — Billing & Subscription (Planned)
+Status: planned
+
+- [ ] Subscription model (Plan, Subscription, Invoice)
+- [ ] Payment provider integration (Zarinpal/Stripe)
+- [ ] Checkout flow with plan selection
+- [ ] Invoice generation and history
+- [ ] Usage metering and overage handling
+- [ ] Plan upgrade/downgrade flow
+- [ ] Subscription management page
+- [ ] Webhook handling for payment events
+- [ ] Email notifications for billing events
+- [ ] Trial period support
+
+## Sprint 4 — Team & Collaboration (Planned)
+Status: planned
+
+- [ ] Team invitations with email flow
+- [ ] Role-based access control (OWNER/ADMIN/MEMBER/VIEWER)
+- [ ] Team management page
+- [ ] Shared projects across team
+- [ ] Activity log for team actions
+- [ ] Permission enforcement in API and UI
+- [ ] Audit assignment to team members
+- [ ] Comment system on findings
+- [ ] Export sharing with team
+
+## Sprint 5 — Advanced Features (Planned)
+Status: planned
+
+- [ ] Scheduled audits (cron-based)
+- [ ] Audit comparison across time
+- [ ] PDF export for reports
+- [ ] White-label report customization
+- [ ] API keys for programmatic access
+- [ ] Webhook notifications for audit completion
+- [ ] Custom audit rules engine
+- [ ] Alert system for critical findings
+- [ ] Integration with popular CMS platforms
+- [ ] Mobile-responsive dashboard improvements
