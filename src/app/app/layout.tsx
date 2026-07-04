@@ -23,6 +23,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         </Link>
         <nav style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
           <Link href="/app/projects" style={{ textDecoration: "none", color: "#374151" }}>Projects</Link>
+          <Link href="/app/billing" style={{ textDecoration: "none", color: "#374151" }}>Billing</Link>
           <span style={{ color: "#6b7280", fontSize: "0.875rem" }}>{user.email}</span>
           <LogoutButton />
         </nav>
