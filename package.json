@@ -11,12 +11,14 @@
     "lint": "eslint . --max-warnings=0",
     "gpu:lint": "../../../scripts/gpu-run.sh pnpm run lint",
     "check": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build",
+    "dev:check": "bash scripts/dev-check.sh",
     "gpu:check": "../../../scripts/gpu-run.sh pnpm run check",
     "typecheck": "tsc --noEmit",
     "gpu:typecheck": "../../../scripts/gpu-run.sh pnpm run typecheck",
     "test": "vitest run",
     "gpu:test": "../../../scripts/gpu-run.sh pnpm run test",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "worker:dev": "tsx src/worker/index.ts",
@@ -34,6 +36,8 @@
     "payment:zarinpal:smoke": "tsx src/scripts/zarinpal-smoke.ts",
     "automation:run": "tsx src/scripts/automation-master.ts --strict",
     "smoke:audit-flow": "node scripts/deploy/smoke-audit-flow.cjs",
+    "smoke:routes": "bash scripts/smoke-public-routes.sh",
+    "cleanup": "tsx src/scripts/cleanup.ts",
     "lighthouse:local": "tsx src/scripts/lighthouse-local.ts",
     "deploy:check:hosting": "bash scripts/deploy/check-hosting-sync.sh --strict",
     "deploy:readiness": "bash scripts/deploy/run-readiness-suite.sh --strict",
@@ -42,26 +46,5 @@
     "vps:deploy": "bash scripts/vps-deploy.sh deploy production",
     "vps:status": "bash scripts/vps-deploy.sh status",
     "gpu:lighthouse:local": "../../../scripts/gpu-browser-run.sh pnpm run lighthouse:local"
-  },
-  "dependencies": {
-    "@prisma/client": "^6.19.3",
-    "cheerio": "^1.2.0",
-    "next": "^16.2.9",
-    "pdf-lib": "^1.17.1",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7"
-  },
-  "devDependencies": {
-    "@eslint/eslintrc": "^3.3.5",
-    "@types/node": "^25.9.3",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
-    "eslint": "^9.39.4",
-    "eslint-config-next": "^15.5.18",
-    "prisma": "^6.19.3",
-    "tsx": "^4.22.4",
-    "typescript": "^6.0.3",
-    "vite": "^8.0.16",
-    "vitest": "^4.1.9"
   }
 }

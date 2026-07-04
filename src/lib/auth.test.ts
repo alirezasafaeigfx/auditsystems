@@ -24,4 +24,39 @@ describe("password hashing", () => {
     expect(verifyPassword("", hash)).toBe(true);
     expect(verifyPassword("x", hash)).toBe(false);
   });
+
+  it("hash format is salt:hash", () => {
+    const hash = hashPassword("test");
+    const parts = hash.split(":");
+    expect(parts.length).toBe(2);
+    expect(parts[0].length).toBe(32);
+    expect(parts[1].length).toBe(128);
+  });
+
+  it("handles very long password", () => {
+    const longPass = "a".repeat(10000);
+    const hash = hashPassword(longPass);
+    expect(verifyPassword(longPass, hash)).toBe(true);
+  });
+
+  it("handles unicode password", () => {
+    const unicode = "pässwörd\u00e9\u00e8";
+    const hash = hashPassword(unicode);
+    expect(verifyPassword(unicode, hash)).toBe(true);
+  });
+
+  it("verifyPassword returns false for malformed hash", () => {
+    expect(verifyPassword("test", "no-colon")).toBe(false);
+    expect(verifyPassword("test", "")).toBe(false);
+    expect(verifyPassword("test", ":")).toBe(false);
+  });
+
+  it("rejects password with wrong salt but same hash length", () => {
+    const hash1 = hashPassword("password1");
+    const hash2 = hashPassword("password2");
+    const [, hashPart2] = hash2.split(":");
+    const salt1 = hash1.split(":")[0];
+    const recombined = `${salt1}:${hashPart2}`;
+    expect(verifyPassword("password1", recombined)).toBe(false);
+  });
 });
