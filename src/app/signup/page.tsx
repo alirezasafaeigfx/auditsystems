@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { fetchCSRFHeaders } from "../../lib/csrf-client";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -18,9 +19,10 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
+      const csrf = await fetchCSRFHeaders();
       const res = await fetch("/api/auth/signup", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...csrf },
         body: JSON.stringify({ name: name.trim(), email: email.trim(), password })
       });
 
@@ -31,6 +33,8 @@ export default function SignupPage() {
           setError("An account with this email already exists.");
         } else if (data.error === "PASSWORD_TOO_SHORT") {
           setError("Password must be at least 8 characters.");
+        } else if (data.error === "FORBIDDEN") {
+          setError("Security check failed. Please refresh and try again.");
         } else {
           setError("Signup failed. Please try again.");
         }

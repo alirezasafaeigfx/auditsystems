@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { fetchCSRFHeaders } from "../../lib/csrf-client";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,16 +18,23 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      const csrf = await fetchCSRFHeaders();
       const res = await fetch("/api/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...csrf },
         body: JSON.stringify({ email: email.trim(), password })
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error === "INVALID_CREDENTIALS" ? "Invalid email or password" : "Login failed. Please try again.");
+        if (data.error === "INVALID_CREDENTIALS") {
+          setError("Invalid email or password");
+        } else if (data.error === "FORBIDDEN") {
+          setError("Security check failed. Please refresh and try again.");
+        } else {
+          setError("Login failed. Please try again.");
+        }
         return;
       }
 

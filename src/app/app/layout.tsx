@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { validateSession } from "../../lib/auth";
+import { LogoutButton } from "../../components/LogoutButton";
 
 export const metadata = {
   title: "Dashboard",
@@ -23,11 +24,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         <nav style={{ display: "flex", gap: "1.5rem", alignItems: "center" }}>
           <Link href="/app/projects" style={{ textDecoration: "none", color: "#374151" }}>Projects</Link>
           <span style={{ color: "#6b7280", fontSize: "0.875rem" }}>{user.email}</span>
-          <form action="/api/auth/logout" method="POST">
-            <button type="submit" style={{ background: "none", border: "1px solid #d1d5db", borderRadius: "0.375rem", padding: "0.25rem 0.75rem", cursor: "pointer", fontSize: "0.875rem" }}>
-              Logout
-            </button>
-          </form>
+          <LogoutButton />
         </nav>
       </header>
       <main style={{ flex: 1, padding: "2rem 1.5rem", maxWidth: "64rem", margin: "0 auto", width: "100%" }}>

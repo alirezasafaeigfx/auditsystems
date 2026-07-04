@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { fetchCSRFHeaders } from "../../../../lib/csrf-client";
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -16,16 +17,21 @@ export default function NewProjectPage() {
     setLoading(true);
 
     try {
+      const csrf = await fetchCSRFHeaders();
       const res = await fetch("/api/projects", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...csrf },
         body: JSON.stringify({ name: name.trim(), url: url.trim() })
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Failed to create project");
+        if (data.error === "FORBIDDEN") {
+          setError("Security check failed. Please refresh and try again.");
+        } else {
+          setError(data.error || "Failed to create project");
+        }
         return;
       }
 

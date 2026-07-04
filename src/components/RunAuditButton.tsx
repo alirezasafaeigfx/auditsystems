@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { fetchCSRFHeaders } from "../lib/csrf-client";
 
 type Props = {
   projectId: string;
@@ -21,15 +22,20 @@ export function RunAuditButton({ projectId, monthlyAudits, limit }: Props) {
     setSuccess(false);
 
     try {
+      const csrf = await fetchCSRFHeaders();
       const res = await fetch(`/api/projects/${projectId}/audit`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json", ...csrf }
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Failed to start audit");
+        if (data.error === "FORBIDDEN") {
+          setError("Security check failed. Please refresh and try again.");
+        } else {
+          setError(data.error || "Failed to start audit");
+        }
         return;
       }
 
