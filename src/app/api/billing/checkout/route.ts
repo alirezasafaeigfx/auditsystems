@@ -6,6 +6,7 @@ import { getPlan, type PlanCode, isPaidPlan } from "../../../../lib/plans";
 import { createInvoice } from "../../../../lib/subscription";
 import { createRequestId, logEvent, respondJson } from "../../../../lib/observability";
 import { csrfProtection } from "../../../../lib/csrf";
+import { checkAuthRateLimit } from "../../../../lib/authRateLimit";
 import crypto from "node:crypto";
 
 export async function POST(request: NextRequest) {
@@ -21,6 +22,11 @@ export async function POST(request: NextRequest) {
     const { error, user, membership } = await requireBillingAuth();
     if (error) {
       return respondJson({ error, requestId }, requestId, { status: error === "UNAUTHORIZED" ? 401 : 400, headers: { "Cache-Control": "no-store" } });
+    }
+
+    const rateCheck = checkAuthRateLimit(`billing:checkout:${user.id}`);
+    if (!rateCheck.allowed) {
+      return respondJson({ error: "RATE_LIMITED", requestId }, requestId, { status: 429, headers: { "Cache-Control": "no-store" } });
     }
 
     const body = await request.json().catch(() => ({}));
