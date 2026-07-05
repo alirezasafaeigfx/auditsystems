@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "../../../../lib/db";
 import { validateSession, getOrganizationForUser } from "../../../../lib/auth";
 import { RunAuditButton } from "../../../../components/RunAuditButton";
-import { getUsageStats } from "../../../../lib/usage";
+import { ScheduleManager } from "../../../../components/ScheduleManager";
+import { getUsageStats, canScheduleAudit } from "../../../../lib/usage";
 
 type Props = { params: Promise<{ projectId: string }> };
 
@@ -77,6 +78,14 @@ export default async function ProjectDetailPage({ params }: Props) {
           projectId={project.id}
           monthlyAudits={usage.auditCount}
           limit={usage.auditLimit}
+        />
+      </div>
+
+      <div style={{ marginBottom: "2rem" }}>
+        <h2 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "0.75rem" }}>ممیزی زمان‌بندی شده</h2>
+        <ScheduleManager
+          projectId={project.id}
+          canSchedule={(await canScheduleAudit(orgId)).allowed}
         />
       </div>
 
