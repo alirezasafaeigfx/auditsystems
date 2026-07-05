@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "../../lib/db";
 import { validateSession, getOrganizationForUser } from "../../lib/auth";
 import { getUsageStats } from "../../lib/usage";
+import { formatPriceToman, isPaidPlan, type PlanCode } from "../../lib/plans";
 
 export default async function AppDashboardPage() {
   const user = await validateSession();
@@ -13,6 +14,16 @@ export default async function AppDashboardPage() {
 
   const usage = await getUsageStats(org.id);
 
+  const subscription = await prisma.subscription.findFirst({
+    where: {
+      organizationId: org.id,
+      status: "ACTIVE",
+      currentPeriodEnd: { gt: new Date() }
+    },
+    include: { plan: true },
+    orderBy: { createdAt: "desc" }
+  });
+
   const recentAudits = await prisma.auditRun.findMany({
     where: { organizationId: org.id },
     orderBy: { createdAt: "desc" },
@@ -23,6 +34,7 @@ export default async function AppDashboardPage() {
       status: true,
       createdAt: true,
       finishedAt: true,
+      summary: true,
       project: { select: { id: true, name: true } },
       shares: { select: { token: true }, take: 1 }
     }
@@ -30,6 +42,32 @@ export default async function AppDashboardPage() {
 
   const latestAudit = recentAudits[0];
   const latestStatus = latestAudit?.status;
+  const latestSummary = latestAudit?.summary as { score?: number } | null;
+  const latestScore = latestSummary?.score;
+
+  const criticalFindings = await prisma.auditFinding.count({
+    where: {
+      run: { organizationId: org.id },
+      severity: { in: ["HIGH", "CRITICAL"] }
+    }
+  });
+
+  const scheduledCount = await prisma.scheduledAudit.count({
+    where: { organizationId: org.id, enabled: true }
+  });
+
+  const nextScheduled = await prisma.scheduledAudit.findFirst({
+    where: {
+      organizationId: org.id,
+      enabled: true,
+      nextRunAt: { gt: new Date() }
+    },
+    orderBy: { nextRunAt: "asc" },
+    include: { project: { select: { name: true } } }
+  });
+
+  const currentPlanCode = subscription?.plan.code ?? "free";
+  const currentPlan = subscription?.plan ?? null;
 
   return (
     <div>
@@ -38,10 +76,13 @@ export default async function AppDashboardPage() {
           <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.25rem" }}>Dashboard</h1>
           <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
             {org.name} · Plan: <strong>{usage.plan.name}</strong>
+            {currentPlan && (
+              <span> · {formatPriceToman(currentPlan.priceMonthlyToman)}/mo</span>
+            )}
           </p>
         </div>
         <Link href="/app/billing" style={{ color: "#0f7a66", textDecoration: "none", fontSize: "0.875rem", fontWeight: 600 }}>
-          View Plans →
+          {isPaidPlan(currentPlanCode as PlanCode) ? "Manage Plan →" : "Upgrade Plan →"}
         </Link>
       </div>
 
@@ -59,6 +100,9 @@ export default async function AppDashboardPage() {
           <div style={{ color: "#6b7280", fontSize: "0.75rem", marginBottom: "0.25rem" }}>Audits this month</div>
           <div style={{ fontSize: "1.25rem", fontWeight: 700 }}>
             {usage.auditCount} <span style={{ fontSize: "0.875rem", fontWeight: 400, color: "#9ca3af" }}>/ {usage.auditLimit}</span>
+          </div>
+          <div style={{ height: "4px", background: "#e5e7eb", borderRadius: "2px", marginTop: "4px" }}>
+            <div style={{ height: "100%", background: usage.canRunAudit ? "#0f7a66" : "#f59e0b", borderRadius: "2px", width: `${Math.min(100, (usage.auditCount / usage.auditLimit) * 100)}%` }} />
           </div>
           {!usage.canRunAudit && (
             <Link href="/app/billing" style={{ color: "#f59e0b", fontSize: "0.75rem", textDecoration: "none" }}>Limit reached — Upgrade</Link>
@@ -82,8 +126,62 @@ export default async function AppDashboardPage() {
               <span style={{ color: "#d1d5db" }}>—</span>
             )}
           </div>
+          {latestScore != null && (
+            <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>
+              Score: {latestScore}/100
+            </div>
+          )}
+        </div>
+        <div style={{ border: "1px solid #e5e7eb", borderRadius: "0.5rem", padding: "1rem" }}>
+          <div style={{ color: "#6b7280", fontSize: "0.75rem", marginBottom: "0.25rem" }}>Open Issues</div>
+          <div style={{ fontSize: "1.25rem", fontWeight: 700 }}>
+            {criticalFindings > 0 ? (
+              <span style={{ color: criticalFindings > 5 ? "#dc2626" : "#f59e0b" }}>{criticalFindings}</span>
+            ) : (
+              <span style={{ color: "#059669" }}>0</span>
+            )}
+          </div>
+          {criticalFindings > 0 && (
+            <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>critical/high</div>
+          )}
         </div>
       </div>
+
+      {(nextScheduled || scheduledCount > 0 || !isPaidPlan(currentPlanCode as PlanCode)) && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
+          {nextScheduled && (
+            <div style={{ border: "1px solid #bbf7d0", borderRadius: "0.5rem", padding: "1rem", background: "#f0fdf4" }}>
+              <div style={{ color: "#065f46", fontSize: "0.75rem", marginBottom: "0.25rem", fontWeight: 600 }}>Next Scheduled Audit</div>
+              <div style={{ fontWeight: 600 }}>{nextScheduled.project.name}</div>
+              <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+                {new Date(nextScheduled.nextRunAt).toLocaleDateString()} · {nextScheduled.frequency}
+              </div>
+            </div>
+          )}
+          {!isPaidPlan(currentPlanCode as PlanCode) && (
+            <div style={{ border: "1px solid #fde68a", borderRadius: "0.5rem", padding: "1rem", background: "#fffbeb" }}>
+              <div style={{ color: "#92400e", fontSize: "0.75rem", marginBottom: "0.25rem", fontWeight: 600 }}>Upgrade Reminder</div>
+              <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>Unlock more audits, scheduled scans, and PDF reports.</div>
+              <Link href="/app/billing" style={{ display: "inline-block", marginTop: "0.5rem", color: "#0f7a66", fontWeight: 600, fontSize: "0.875rem" }}>
+                View Plans →
+              </Link>
+            </div>
+          )}
+          <div style={{ border: "1px solid #e5e7eb", borderRadius: "0.5rem", padding: "1rem" }}>
+            <div style={{ color: "#6b7280", fontSize: "0.75rem", marginBottom: "0.25rem" }}>Billing</div>
+            <div style={{ fontWeight: 600 }}>
+              {subscription ? (
+                <span style={{ color: "#059669" }}>Active — {subscription.plan.name}</span>
+              ) : (
+                <span>Free Plan</span>
+              )}
+            </div>
+            <Link href="/app/billing" style={{ display: "inline-block", marginTop: "0.5rem", color: "#0f7a66", fontWeight: 600, fontSize: "0.875rem" }}>
+              Manage →
+            </Link>
+          </div>
+        </div>
+      )}
 
       {usage.projectCount === 0 ? (
         <div style={{ textAlign: "center", padding: "3rem", border: "2px dashed #d1d5db", borderRadius: "0.5rem" }}>
