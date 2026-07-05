@@ -1,8 +1,35 @@
+import { prisma } from "../../../lib/db";
 import { validateSession, getOrganizationForUser } from "../../../lib/auth";
 import { getUsageStats } from "../../../lib/usage";
-import { PLANS, getPlanComparison } from "../../../lib/plans";
+import { PLANS, getPlanComparison, formatPriceToman, isPaidPlan, type PlanCode } from "../../../lib/plans";
 
-export default async function BillingPage() {
+async function getActiveSubscription(organizationId: string) {
+  return prisma.subscription.findFirst({
+    where: {
+      organizationId,
+      status: "ACTIVE",
+      currentPeriodEnd: { gt: new Date() }
+    },
+    include: { plan: true },
+    orderBy: { createdAt: "desc" }
+  });
+}
+
+async function getRecentInvoices(organizationId: string) {
+  return prisma.invoice.findMany({
+    where: { organizationId },
+    include: { plan: true },
+    orderBy: { createdAt: "desc" },
+    take: 5
+  });
+}
+
+export default async function BillingPage({
+  searchParams
+}: {
+  searchParams: Promise<{ status?: string }>
+}) {
+  const params = await searchParams;
   const user = await validateSession();
   if (!user) return null;
 
@@ -11,28 +38,61 @@ export default async function BillingPage() {
   if (!org) return null;
 
   const usage = await getUsageStats(org.id);
+  const subscription = await getActiveSubscription(org.id);
+  const invoices = await getRecentInvoices(org.id);
   const comparison = getPlanComparison();
+
+  const currentPlanCode = subscription?.plan.code ?? "free";
+  const currentPlan = PLANS[currentPlanCode as PlanCode] ?? PLANS.free;
 
   return (
     <div>
       <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "1.5rem" }}>Billing & Plans</h1>
 
+      {params.status === "success" && (
+        <div style={{ padding: "1rem", background: "#d1fae5", border: "1px solid #6ee7b7", borderRadius: "0.5rem", marginBottom: "1.5rem", color: "#065f46" }}>
+          Payment successful! Your plan has been activated.
+        </div>
+      )}
+      {params.status === "failed" && (
+        <div style={{ padding: "1rem", background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: "0.5rem", marginBottom: "1.5rem", color: "#991b1b" }}>
+          Payment was not confirmed. Please try again or contact support.
+        </div>
+      )}
+
       <div style={{ padding: "1.5rem", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "0.5rem", marginBottom: "2rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
           <div>
             <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>Current Plan</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>{usage.plan.name}</div>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>{currentPlan.name}</div>
+            {!isPaidPlan(currentPlanCode as PlanCode) && (
+              <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>Free — no payment required</div>
+            )}
+            {isPaidPlan(currentPlanCode as PlanCode) && subscription && (
+              <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+                Renews {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+              </div>
+            )}
           </div>
-          <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>No payment required</div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: "1.25rem", fontWeight: 700 }}>{formatPriceToman(currentPlan.priceMonthlyToman)}</div>
+            <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>per month</div>
+          </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
           <div>
             <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>Projects</div>
             <div style={{ fontWeight: 600 }}>{usage.projectCount} / {usage.projectLimit}</div>
+            <div style={{ height: "4px", background: "#e5e7eb", borderRadius: "2px", marginTop: "4px" }}>
+              <div style={{ height: "100%", background: "#0f7a66", borderRadius: "2px", width: `${Math.min(100, (usage.projectCount / usage.projectLimit) * 100)}%` }} />
+            </div>
           </div>
           <div>
             <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>Audits this month</div>
             <div style={{ fontWeight: 600 }}>{usage.auditCount} / {usage.auditLimit}</div>
+            <div style={{ height: "4px", background: "#e5e7eb", borderRadius: "2px", marginTop: "4px" }}>
+              <div style={{ height: "100%", background: "#0f7a66", borderRadius: "2px", width: `${Math.min(100, (usage.auditCount / usage.auditLimit) * 100)}%` }} />
+            </div>
           </div>
         </div>
       </div>
@@ -49,6 +109,12 @@ export default async function BillingPage() {
             </tr>
           </thead>
           <tbody>
+            <tr style={{ borderBottom: "1px solid #f3f4f6" }}>
+              <td style={{ padding: "0.75rem" }}>Price / month</td>
+              {comparison.map((p) => (
+                <td key={p.plan} style={{ textAlign: "center", padding: "0.75rem" }}>{formatPriceToman(p.price)}</td>
+              ))}
+            </tr>
             <tr style={{ borderBottom: "1px solid #f3f4f6" }}>
               <td style={{ padding: "0.75rem" }}>Projects</td>
               {comparison.map((p) => (
@@ -77,9 +143,9 @@ export default async function BillingPage() {
         </table>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
         {Object.values(PLANS).map((plan) => {
-          const isCurrent = plan.code === usage.plan.code;
+          const isCurrent = plan.code === currentPlanCode;
           return (
             <div key={plan.code} style={{
               border: isCurrent ? "2px solid #0f7a66" : "1px solid #e5e7eb",
@@ -92,28 +158,80 @@ export default async function BillingPage() {
                   Current Plan
                 </span>
               )}
-              <div style={{ fontWeight: 700, fontSize: "1.125rem", marginBottom: "0.5rem" }}>{plan.name}</div>
+              <div style={{ fontWeight: 700, fontSize: "1.125rem", marginBottom: "0.25rem" }}>{plan.name}</div>
+              <div style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.75rem" }}>{formatPriceToman(plan.priceMonthlyToman)}</div>
               <ul style={{ listStyle: "none", padding: 0, margin: 0, fontSize: "0.875rem", color: "#6b7280" }}>
                 <li style={{ marginBottom: "0.25rem" }}>{plan.projectLimit} project{plan.projectLimit > 1 ? "s" : ""}</li>
                 <li style={{ marginBottom: "0.25rem" }}>{plan.monthlyAuditLimit} audits/month</li>
                 <li style={{ marginBottom: "0.25rem" }}>PDF export: {plan.pdfExport ? "✓" : "—"}</li>
                 <li>Scheduled audits: {plan.scheduledAudits ? "✓" : "—"}</li>
               </ul>
-              <div style={{ marginTop: "1rem", fontSize: "0.75rem", color: "#9ca3af" }}>{plan.billingNote}</div>
+              {!isCurrent && isPaidPlan(plan.code) && (
+                <form action="/api/billing/checkout" method="POST" style={{ marginTop: "1rem" }}>
+                  <input type="hidden" name="planCode" value={plan.code} />
+                  <button type="submit" style={{
+                    width: "100%",
+                    padding: "0.5rem",
+                    background: "#0f7a66",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "0.375rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontSize: "0.875rem"
+                  }}>
+                    {plan.upgradeCta}
+                  </button>
+                </form>
+              )}
+              {isCurrent && (
+                <div style={{ marginTop: "1rem", padding: "0.5rem", background: "#f0fdf4", borderRadius: "0.375rem", textAlign: "center", fontSize: "0.875rem", color: "#065f46", fontWeight: 600 }}>
+                  Active
+                </div>
+              )}
             </div>
           );
         })}
       </div>
 
-      <div style={{ marginTop: "2rem", padding: "1.5rem", border: "1px solid #e5e7eb", borderRadius: "0.5rem", textAlign: "center" }}>
-        <p style={{ fontWeight: 600, marginBottom: "0.5rem" }}>Ready to upgrade?</p>
-        <p style={{ color: "#6b7280", fontSize: "0.875rem", marginBottom: "1rem" }}>
-          Paid plans are coming soon. Contact us to get early access.
-        </p>
-        <a href="mailto:team@alirezasafaeisystems.ir" style={{ display: "inline-block", background: "#0f7a66", color: "#fff", padding: "0.5rem 1.5rem", borderRadius: "0.375rem", textDecoration: "none", fontWeight: 600 }}>
-          Contact Us
-        </a>
-      </div>
+      {invoices.length > 0 && (
+        <>
+          <h2 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "1rem" }}>Invoice History</h2>
+          <div style={{ border: "1px solid #e5e7eb", borderRadius: "0.5rem", overflow: "hidden", marginBottom: "2rem" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid #e5e7eb", background: "#f9fafb" }}>
+                  <th style={{ textAlign: "left", padding: "0.75rem", fontWeight: 600 }}>Date</th>
+                  <th style={{ textAlign: "left", padding: "0.75rem", fontWeight: 600 }}>Plan</th>
+                  <th style={{ textAlign: "left", padding: "0.75rem", fontWeight: 600 }}>Amount</th>
+                  <th style={{ textAlign: "left", padding: "0.75rem", fontWeight: 600 }}>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoices.map((inv) => (
+                  <tr key={inv.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                    <td style={{ padding: "0.75rem" }}>{new Date(inv.createdAt).toLocaleDateString()}</td>
+                    <td style={{ padding: "0.75rem" }}>{inv.plan.name}</td>
+                    <td style={{ padding: "0.75rem" }}>{formatPriceToman(inv.amountToman)}</td>
+                    <td style={{ padding: "0.75rem" }}>
+                      <span style={{
+                        padding: "0.125rem 0.5rem",
+                        borderRadius: "9999px",
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        background: inv.status === "PAID" ? "#d1fae5" : inv.status === "FAILED" ? "#fee2e2" : "#fef3c7",
+                        color: inv.status === "PAID" ? "#065f46" : inv.status === "FAILED" ? "#991b1b" : "#92400e"
+                      }}>
+                        {inv.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }
