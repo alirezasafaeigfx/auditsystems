@@ -228,6 +228,15 @@ pnpm typecheck
 - **Documentation**: `pnpm docs:generate`
 - **Payment**: `pnpm payment:preflight`
 
+### Sprint 3 Scripts
+- **Seed Plans**: `pnpm plans:seed`
+- **Scheduled Audits**: `pnpm scheduled:run`
+- **Auth Cleanup**: `pnpm auth:cleanup`
+- **Subscription Expiry**: `pnpm subscriptions:expire`
+- **Deploy**: `pnpm deploy:production`
+- **PM2 Start**: `pm2 start ecosystem.config.cjs`
+- **Cron Setup**: `bash scripts/setup-cron.sh`
+
 ---
 
 ## 🔄 Continuous Improvement
