@@ -20,3 +20,22 @@ export async function cleanupStaleJobs(): Promise<number> {
   });
   return result.count;
 }
+
+export async function cleanupExpiredTokens(): Promise<number> {
+  const result = await prisma.emailVerificationToken.deleteMany({
+    where: {
+      expiresAt: { lt: new Date() }
+    }
+  });
+  return result.count;
+}
+
+export async function cleanupOldUsageLedger(): Promise<number> {
+  const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  const result = await prisma.usageLedger.deleteMany({
+    where: {
+      createdAt: { lt: cutoff }
+    }
+  });
+  return result.count;
+}
