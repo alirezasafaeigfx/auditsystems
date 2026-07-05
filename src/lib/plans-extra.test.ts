@@ -8,9 +8,9 @@ describe("getPlanComparison — data consistency", () => {
     expect(first).toEqual(second);
   });
 
-  it("returns exactly 3 plans", () => {
+  it("returns exactly 4 plans", () => {
     const comparison = getPlanComparison();
-    expect(comparison).toHaveLength(3);
+    expect(comparison).toHaveLength(4);
   });
 
   it("plan names are unique", () => {
