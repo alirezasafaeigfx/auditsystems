@@ -5,7 +5,7 @@ import { fetchCSRFHeaders } from "../lib/csrf-client";
 
 type Props = {
   planCode: string;
-  label: string;
+  label?: string;
 };
 
 export function CheckoutButton({ planCode, label }: Props) {
@@ -41,19 +41,14 @@ export function CheckoutButton({ planCode, label }: Props) {
     <button
       onClick={handleCheckout}
       disabled={loading}
+      className="button"
       style={{
         width: "100%",
-        padding: "0.5rem",
-        background: loading ? "#9ca3af" : "#0f7a66",
-        color: "#fff",
-        border: "none",
-        borderRadius: "0.375rem",
-        fontWeight: 600,
         cursor: loading ? "not-allowed" : "pointer",
-        fontSize: "0.875rem"
+        opacity: loading ? 0.6 : 1
       }}
     >
-      {loading ? "Processing..." : label}
+      {loading ? "در حال پردازش..." : (label ?? "ارتقای پلن")}
     </button>
   );
 }

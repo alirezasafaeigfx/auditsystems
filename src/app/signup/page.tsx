@@ -30,20 +30,20 @@ export default function SignupPage() {
 
       if (!res.ok) {
         if (data.error === "EMAIL_TAKEN") {
-          setError("An account with this email already exists.");
+          setError("حساب کاربری با این ایمیل قبلاً ثبت شده است.");
         } else if (data.error === "PASSWORD_TOO_SHORT") {
-          setError("Password must be at least 8 characters.");
+          setError("رمز عبور باید حداقل ۸ کاراکتر باشد.");
         } else if (data.error === "FORBIDDEN") {
-          setError("Security check failed. Please refresh and try again.");
+          setError("خطای امنیتی. لطفاً صفحه را رفرش کنید و دوباره تلاش کنید.");
         } else {
-          setError("Signup failed. Please try again.");
+          setError("خطا در ثبت‌نام. لطفاً دوباره تلاش کنید.");
         }
         return;
       }
 
       router.push("/app");
     } catch {
-      setError("Network error. Please try again.");
+      setError("خطای شبکه. لطفاً دوباره تلاش کنید.");
     } finally {
       setLoading(false);
     }
@@ -51,27 +51,27 @@ export default function SignupPage() {
 
   return (
     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "80vh" }}>
-      <div style={{ width: "100%", maxWidth: "24rem", padding: "2rem", border: "1px solid #e5e7eb", borderRadius: "0.5rem" }}>
-        <h1 style={{ fontSize: "1.5rem", fontWeight: 700, textAlign: "center", marginBottom: "1.5rem" }}>Create Account</h1>
+      <div className="card" style={{ width: "100%", maxWidth: "24rem", padding: "2rem" }}>
+        <h1 style={{ fontSize: "1.5rem", fontWeight: 700, textAlign: "center", marginBottom: "1.5rem" }}>ایجاد حساب کاربری</h1>
 
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <div>
             <label htmlFor="name" style={{ display: "block", fontWeight: 600, marginBottom: "0.375rem", fontSize: "0.875rem" }}>
-              Name
+              نام
             </label>
             <input
               id="name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Your name"
-              style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: "0.375rem", padding: "0.5rem 0.75rem", fontSize: "0.875rem" }}
+              placeholder="نام خود را وارد کنید"
+              style={{ width: "100%", border: "1px solid var(--border, #d1d5db)", borderRadius: "0.375rem", padding: "0.5rem 0.75rem", fontSize: "0.875rem", background: "var(--surface, #fff)", color: "var(--text, #111827)" }}
             />
           </div>
 
           <div>
             <label htmlFor="email" style={{ display: "block", fontWeight: 600, marginBottom: "0.375rem", fontSize: "0.875rem" }}>
-              Email
+              ایمیل
             </label>
             <input
               id="email"
@@ -80,28 +80,28 @@ export default function SignupPage() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               required
-              style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: "0.375rem", padding: "0.5rem 0.75rem", fontSize: "0.875rem" }}
+              style={{ width: "100%", border: "1px solid var(--border, #d1d5db)", borderRadius: "0.375rem", padding: "0.5rem 0.75rem", fontSize: "0.875rem", background: "var(--surface, #fff)", color: "var(--text, #111827)" }}
             />
           </div>
 
           <div>
             <label htmlFor="password" style={{ display: "block", fontWeight: 600, marginBottom: "0.375rem", fontSize: "0.875rem" }}>
-              Password
+              رمز عبور
             </label>
             <input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 8 characters"
+              placeholder="حداقل ۸ کاراکتر"
               required
               minLength={8}
-              style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: "0.375rem", padding: "0.5rem 0.75rem", fontSize: "0.875rem" }}
+              style={{ width: "100%", border: "1px solid var(--border, #d1d5db)", borderRadius: "0.375rem", padding: "0.5rem 0.75rem", fontSize: "0.875rem", background: "var(--surface, #fff)", color: "var(--text, #111827)" }}
             />
           </div>
 
           {error && (
-            <div style={{ color: "#dc2626", fontSize: "0.875rem", padding: "0.75rem", background: "#fef2f2", borderRadius: "0.375rem" }}>
+            <div style={{ color: "var(--danger, #dc2626)", fontSize: "0.875rem", padding: "0.75rem", background: "var(--danger-bg, #fef2f2)", borderRadius: "0.375rem" }}>
               {error}
             </div>
           )}
@@ -109,23 +109,18 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
+            className="button"
             style={{
-              background: "#0f7a66",
-              color: "#fff",
-              padding: "0.5rem 1.5rem",
-              borderRadius: "0.375rem",
-              border: "none",
-              fontWeight: 600,
               cursor: loading ? "not-allowed" : "pointer",
               opacity: loading ? 0.6 : 1
             }}
           >
-            {loading ? "Creating account..." : "Sign Up"}
+            {loading ? "در حال ایجاد حساب..." : "ثبت‌نام"}
           </button>
         </form>
 
-        <p style={{ textAlign: "center", marginTop: "1rem", fontSize: "0.875rem", color: "#6b7280" }}>
-          Already have an account? <Link href="/login" style={{ color: "#0f7a66", textDecoration: "none" }}>Login</Link>
+        <p style={{ textAlign: "center", marginTop: "1rem", fontSize: "0.875rem", color: "var(--muted, #6b7280)" }}>
+          قبلاً حساب دارید؟ <Link href="/login" style={{ color: "var(--brand, #0f7a66)", textDecoration: "none" }}>ورود</Link>
         </p>
       </div>
     </div>

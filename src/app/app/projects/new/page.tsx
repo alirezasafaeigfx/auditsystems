@@ -28,16 +28,18 @@ export default function NewProjectPage() {
 
       if (!res.ok) {
         if (data.error === "FORBIDDEN") {
-          setError("Security check failed. Please refresh and try again.");
+          setError("خطای امنیتی. لطفاً صفحه را رفرش کنید و دوباره تلاش کنید.");
+        } else if (data.error === "PROJECT_LIMIT_REACHED") {
+          setError("سقف پروژه‌ها رسیده. لطفاً اشتراک خود را ارتقا دهید.");
         } else {
-          setError(data.error || "Failed to create project");
+          setError(data.error || "خطا در ایجاد پروژه");
         }
         return;
       }
 
       router.push(`/app/projects/${data.projectId}`);
     } catch {
-      setError("Network error. Please try again.");
+      setError("خطای شبکه. لطفاً دوباره تلاش کنید.");
     } finally {
       setLoading(false);
     }
@@ -45,27 +47,27 @@ export default function NewProjectPage() {
 
   return (
     <div style={{ maxWidth: "32rem" }}>
-      <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "1.5rem" }}>Add Project</h1>
+      <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "1.5rem" }}>افزودن پروژه</h1>
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         <div>
           <label htmlFor="name" style={{ display: "block", fontWeight: 600, marginBottom: "0.375rem", fontSize: "0.875rem" }}>
-            Project Name
+            نام پروژه
           </label>
           <input
             id="name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="My Website"
+            placeholder="مثلاً وب‌سایت شرکت من"
             required
-            style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: "0.375rem", padding: "0.5rem 0.75rem", fontSize: "0.875rem" }}
+            style={{ width: "100%", border: "1px solid var(--border, #d1d5db)", borderRadius: "0.375rem", padding: "0.5rem 0.75rem", fontSize: "0.875rem", background: "var(--surface, #fff)", color: "var(--text, #111827)" }}
           />
         </div>
 
         <div>
           <label htmlFor="url" style={{ display: "block", fontWeight: 600, marginBottom: "0.375rem", fontSize: "0.875rem" }}>
-            Website URL
+            آدرس وب‌سایت
           </label>
           <input
             id="url"
@@ -74,12 +76,12 @@ export default function NewProjectPage() {
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://example.com"
             required
-            style={{ width: "100%", border: "1px solid #d1d5db", borderRadius: "0.375rem", padding: "0.5rem 0.75rem", fontSize: "0.875rem" }}
+            style={{ width: "100%", border: "1px solid var(--border, #d1d5db)", borderRadius: "0.375rem", padding: "0.5rem 0.75rem", fontSize: "0.875rem", background: "var(--surface, #fff)", color: "var(--text, #111827)" }}
           />
         </div>
 
         {error && (
-          <div style={{ color: "#dc2626", fontSize: "0.875rem", padding: "0.75rem", background: "#fef2f2", borderRadius: "0.375rem" }}>
+          <div style={{ color: "var(--danger, #dc2626)", fontSize: "0.875rem", padding: "0.75rem", background: "var(--danger-bg, #fef2f2)", borderRadius: "0.375rem" }}>
             {error}
           </div>
         )}
@@ -87,19 +89,14 @@ export default function NewProjectPage() {
         <button
           type="submit"
           disabled={loading}
+          className="button"
           style={{
-            background: "#0f7a66",
-            color: "#fff",
-            padding: "0.5rem 1.5rem",
-            borderRadius: "0.375rem",
-            border: "none",
-            fontWeight: 600,
             cursor: loading ? "not-allowed" : "pointer",
             opacity: loading ? 0.6 : 1,
             alignSelf: "start"
           }}
         >
-          {loading ? "Creating..." : "Create Project"}
+          {loading ? "در حال ایجاد..." : "ایجاد پروژه"}
         </button>
       </form>
     </div>
