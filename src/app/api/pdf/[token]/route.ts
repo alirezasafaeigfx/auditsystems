@@ -4,6 +4,7 @@ import { observeApiRequest } from "../../../../lib/metrics";
 import { createRequestId, respondJson } from "../../../../lib/observability";
 import { buildAuditReportPdf } from "../../../../lib/pdf";
 import { isReportShareAccessible } from "../../../../lib/reportShare";
+import { getCurrentPlan } from "../../../../lib/usage";
 import { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest, context: { params: Promise<{ token: string }> }) {
@@ -53,6 +54,17 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tok
         status: statusCode,
         headers: { "Cache-Control": "no-store" }
       });
+    }
+
+    if (share.run.organizationId) {
+      const plan = await getCurrentPlan(share.run.organizationId);
+      if (!plan.pdfExport) {
+        statusCode = 403;
+        return respondJson({ error: "PLAN_NO_PDF", requestId }, requestId, {
+          status: statusCode,
+          headers: { "Cache-Control": "no-store" }
+        });
+      }
     }
 
     const pdfBytes = await buildAuditReportPdf({

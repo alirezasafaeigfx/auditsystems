@@ -51,9 +51,9 @@ describe("getPlan", () => {
 });
 
 describe("getPlanComparison", () => {
-  it("returns array with 3 plans", () => {
+  it("returns array with 4 plans", () => {
     const comparison = getPlanComparison();
-    expect(comparison).toHaveLength(3);
+    expect(comparison).toHaveLength(4);
   });
 
   it("each plan has required fields", () => {

@@ -18,8 +18,9 @@ model User {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  memberships Membership[]
-  sessions    Session[]
+  memberships        Membership[]
+  sessions           Session[]
+  emailVerifications EmailVerificationToken[]
 }
 
 model Organization {
@@ -29,17 +30,21 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  memberships Membership[]
-  projects    Project[]
-  auditRuns   AuditRun[]
+  memberships     Membership[]
+  projects        Project[]
+  auditRuns       AuditRun[]
+  subscriptions   Subscription[]
+  usageLedgers    UsageLedger[]
+  invoices        Invoice[]
+  scheduledAudits ScheduledAudit[]
 }
 
 model Membership {
-  id             String       @id @default(cuid())
+  id             String   @id @default(cuid())
   userId         String
   organizationId String
-  role           String       @default("OWNER")
-  createdAt      DateTime     @default(now())
+  role           String   @default("OWNER")
+  createdAt      DateTime @default(now())
 
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -49,11 +54,11 @@ model Membership {
 }
 
 model Session {
-  id             String   @id @default(cuid())
-  userId         String
-  token          String   @unique
-  expiresAt      DateTime
-  createdAt      DateTime @default(now())
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -70,10 +75,9 @@ model Project {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  auditRuns    AuditRun[]
-
-  @@index([organizationId])
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  auditRuns       AuditRun[]
+  scheduledAudits ScheduledAudit[]
 }
 
 // ─── Existing Models ───────────────────────────────────────────
@@ -192,12 +196,12 @@ model AuditFinding {
 }
 
 model AuditResource {
-  id           String  @id @default(cuid())
+  id           String   @id @default(cuid())
   runId        String
   kind         String
   url          String
   host         String?
-  isThirdParty Boolean @default(false)
+  isThirdParty Boolean  @default(false)
   inHead       Boolean?
   attrs        Json?
   riskTag      String?
@@ -212,10 +216,10 @@ model AuditResource {
 }
 
 model ReportShare {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   runId     String
-  token     String   @unique
-  createdAt DateTime @default(now())
+  token     String    @unique
+  createdAt DateTime  @default(now())
   expiresAt DateTime?
   revokedAt DateTime?
 
@@ -253,7 +257,7 @@ model AuditOrder {
   providerRef String?
   callbackRef String?
 
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
   paidAt     DateTime?
   canceledAt DateTime?
 
@@ -278,24 +282,128 @@ model AuditOrderEvent {
 }
 
 model Job {
-  id           String    @id @default(cuid())
-  type         JobType
-  status       JobStatus @default(QUEUED)
-  payload      Json
-  attempt      Int       @default(0)
-  maxAttempts  Int       @default(3)
-  timeoutMs    Int       @default(45000)
-  availableAt  DateTime  @default(now())
-  lockedAt     DateTime?
-  leasedUntil  DateTime?
-  workerId     String?
-  lastError    String?
-  startedAt    DateTime?
-  finishedAt   DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id          String    @id @default(cuid())
+  type        JobType
+  status      JobStatus @default(QUEUED)
+  payload     Json
+  attempt     Int       @default(0)
+  maxAttempts Int       @default(3)
+  timeoutMs   Int       @default(45000)
+  availableAt DateTime  @default(now())
+  lockedAt    DateTime?
+  leasedUntil DateTime?
+  workerId    String?
+  lastError   String?
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([status, availableAt])
   @@index([type, status])
   @@index([leasedUntil])
+}
+
+// ─── Sprint 3: Revenue + Retention Models ───────────────────────
+
+model Plan {
+  id                String   @id @default(cuid())
+  code              String   @unique
+  name              String
+  priceMonthlyToman Int      @default(0)
+  projectLimit      Int      @default(1)
+  monthlyAuditLimit Int      @default(3)
+  pdfExport         Boolean  @default(false)
+  scheduledAudits   Boolean  @default(false)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  subscriptions Subscription[]
+  invoices      Invoice[]
+}
+
+model Subscription {
+  id                 String   @id @default(cuid())
+  organizationId     String
+  planId             String
+  status             String   @default("ACTIVE") // ACTIVE | PENDING | PAST_DUE | CANCELED
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan         Plan         @relation(fields: [planId], references: [id])
+  invoices     Invoice[]
+
+  @@index([organizationId, status])
+  @@index([planId])
+}
+
+model UsageLedger {
+  id             String   @id @default(cuid())
+  organizationId String
+  type           String // AUDIT_RUN | PDF_EXPORT | API_CALL | SCHEDULED_AUDIT
+  quantity       Int      @default(1)
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, type, createdAt])
+}
+
+model Invoice {
+  id             String          @id @default(cuid())
+  organizationId String
+  subscriptionId String?
+  planId         String
+  amountToman    Int
+  status         String          @default("PENDING") // PENDING | PAID | FAILED | CANCELED
+  provider       PaymentProvider @default(MOCK)
+  providerRef    String?
+  callbackRef    String?
+  paidAt         DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id])
+  plan         Plan          @relation(fields: [planId], references: [id])
+
+  @@index([organizationId, status])
+  @@index([callbackRef])
+}
+
+model ScheduledAudit {
+  id             String    @id @default(cuid())
+  organizationId String
+  projectId      String
+  frequency      String // WEEKLY | MONTHLY
+  enabled        Boolean   @default(true)
+  nextRunAt      DateTime
+  lastRunAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, enabled])
+  @@index([nextRunAt, enabled])
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@index([userId, createdAt])
 }

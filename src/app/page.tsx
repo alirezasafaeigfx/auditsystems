@@ -12,8 +12,8 @@ export const metadata: Metadata = buildPageMetadata({
   locale: "fa",
   path: "/",
   title: "چک کردن سایت - مشکلات و راه حل",
-  description: "آدرس سایت خود را وارد کنید و ببینید چه مشکلاتی دارد و چطور می‌توانید آن‌ها را حل کنید.",
-  keywords: ["ارزیابی سایت", "سئو فنی", "امنیت سایت", "core web vitals"]
+  description: "آدرس سایت خود را وارد کنید و ببینید چه مشکلاتی دارد و چطور می‌توانید آن‌ها را حل کنید. ممیزی فنی، سئو و امنیت در کمتر از ۲ دقیقه.",
+  keywords: ["ارزیابی سایت", "سئو فنی", "امنیت سایت", "core web vitals", "ممیزی فنی سایت", "بررسی سرعت سایت"],
 });
 
 export default function HomePage() {
@@ -34,32 +34,13 @@ export default function HomePage() {
         </ul>
         <div className="hero-actions">
           <Link className="button" href="/audit">
-            شروع ارزیابی جدید
+            شروع ارزیابی رایگان
           </Link>
-          <Link className="button secondary" href="/guides">
-            راهنماها
-          </Link>
-          <Link className="button secondary" href="/faq">
-            سوالات متداول
+          <Link className="button secondary" href="/pricing">
+            مشاهده پلن‌ها
           </Link>
           <Link className="button secondary" href="/sample-report">
             نمونه گزارش
-          </Link>
-          <Link
-            className="button secondary"
-            href="https://alirezasafaeisystems.ir/?utm_source=audit&utm_medium=cross_site&utm_campaign=alireza_safaei_network&utm_content=hero_contact"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            مشاوره و ارتباط مستقیم
-          </Link>
-          <Link
-            className="button secondary"
-            href="https://persiantoolbox.ir/?utm_source=audit&utm_medium=cross_site&utm_campaign=alireza_safaei_network&utm_content=hero_toolbox"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            ابزارهای فارسی PersianToolbox
           </Link>
         </div>
       </section>
@@ -129,21 +110,32 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="card" aria-labelledby="upsell-heading">
-        <h2 id="upsell-heading">سه سطح خروجی</h2>
+      <section className="card" aria-labelledby="subscription-heading">
+        <h2 id="subscription-heading">پایش مستمر با اشتراک</h2>
+        <p style={{ color: "var(--muted)", marginBottom: "1.5rem" }}>
+          با اشتراک ماهانه، سایت شما به صورت مستمر پایش می‌شود و مشکلات جدید به موقع شناسایی می‌شوند.
+        </p>
         <div className="kpi-grid">
           <article className="kpi" style={{ textAlign: "center" }}>
-            <strong style={{ color: "var(--brand)" }}>گزارش اولیه رایگان</strong>
-            <p>۵ مشکل اصلی + امتیاز کلی</p>
+            <strong style={{ color: "var(--brand)" }}>پایش ماهانه</strong>
+            <p>ممیزی خودکار سئو، عملکرد و امنیت</p>
           </article>
           <article className="kpi" style={{ textAlign: "center" }}>
-            <strong style={{ color: "var(--brand)" }}>گزارش کامل PDF</strong>
-            <p>راهکار مرحله‌ای + اولویت‌بندی + راهنمای اجرا</p>
+            <strong style={{ color: "var(--brand)" }}>گزارش PDF</strong>
+            <p>خروجی قابل چاپ و اشتراک‌گذاری</p>
           </article>
           <article className="kpi" style={{ textAlign: "center" }}>
-            <strong style={{ color: "var(--brand)" }}>مشاوره یا اصلاح فنی</strong>
-            <p>جلسه ۳۰ دقیقه‌ای بررسی نتیجه و اجرای تغییرات</p>
+            <strong style={{ color: "var(--brand)" }}>ممیزی زمان‌بندی شده</strong>
+            <p>بررسی خودکار هفتگی یا ماهانه</p>
           </article>
+        </div>
+        <div className="hero-actions" style={{ justifyContent: "center", marginTop: "1.5rem" }}>
+          <Link href="/pricing" className="button">
+            مشاهده پلن‌ها و قیمت‌ها
+          </Link>
+          <Link href="/signup" className="button secondary">
+            ثبت‌نام رایگان
+          </Link>
         </div>
       </section>
 
@@ -152,25 +144,6 @@ export default function HomePage() {
       <NewsletterSignup locale="fa" />
 
       <Testimonials />
-
-      <section className="kpi-grid">
-        <article className="kpi">
-          <strong>22/22</strong>
-          <p>عبور کامل چک‌های فازهای Done در اتوماسیون</p>
-        </article>
-        <article className="kpi">
-          <strong>10</strong>
-          <p>مسیر API عملیاتی و مستند</p>
-        </article>
-        <article className="kpi">
-          <strong>20+</strong>
-          <p>صفحه سئو-آماده در دو زبان فارسی و انگلیسی</p>
-        </article>
-        <article className="kpi">
-          <strong>4</strong>
-          <p>پایپلاین CI برای roadmap، docs، readiness و main gate</p>
-        </article>
-      </section>
 
       <section className="section-head">
         <h2>چطور این سرویس کمک می‌کند؟</h2>

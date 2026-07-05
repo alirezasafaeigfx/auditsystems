@@ -54,9 +54,14 @@ export default function SecurityAuditLanding() {
       <section className="card" style={{ textAlign: "center", padding: "2rem", marginTop: "2rem" }}>
         <h2>امنیت سایت خود را همین حالا بررسی کنید</h2>
         <p style={{ marginBottom: "1rem" }}>ارزیابی رایگان است و نیازی به ثبت‌نام ندارد.</p>
-        <Link href="/audit" className="button">
-          شروع ارزیابی امنیت
-        </Link>
+        <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}>
+          <Link href="/audit" className="button">
+            شروع ارزیابی امنیت
+          </Link>
+          <Link href="/pricing" className="button secondary">
+            پایش مستمر با اشتراک
+          </Link>
+        </div>
       </section>
     </main>
   );

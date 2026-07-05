@@ -5,7 +5,7 @@ import { enqueueJob } from "../../../../../worker/queue";
 import { createReportToken } from "../../../../../lib/token";
 import { createRequestId, logEvent, respondJson } from "../../../../../lib/observability";
 import { csrfProtection } from "../../../../../lib/csrf";
-import { canRunAudit } from "../../../../../lib/usage";
+import { canRunAudit, recordAuditUsage } from "../../../../../lib/usage";
 
 type RouteParams = { projectId: string };
 
@@ -74,6 +74,8 @@ export async function POST(
       type: "AUDIT_RUN",
       payload: { runId: run.id }
     });
+
+    await recordAuditUsage(orgId, run.id);
 
     logEvent("info", "project_audit_created", { requestId, runId: run.id, projectId: project.id });
     return respondJson({ runId: run.id, token: share.token, status: run.status, requestId }, requestId, {

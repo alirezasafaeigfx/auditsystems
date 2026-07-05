@@ -1,117 +1,113 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { buildPageMetadata } from "../../lib/seoMeta";
+import { PLANS, formatPriceToman } from "../../lib/plans";
 
 export const metadata: Metadata = buildPageMetadata({
   locale: "fa",
   path: "/pricing",
-  title: "قیمت‌گذاری - سطوح ارزیابی سایت",
-  description: "سه سطح ارزیابی سایت: رایگان، حرفه‌ای و سازمانی. قیمت‌گذاری شفاف و بازگشت وجه.",
-  keywords: ["قیمت ارزیابی سایت", "هزینه سئو", "قیمت ممیزی فنی", "audit pricing"],
+  title: "قیمت‌گذاری اشتراک سیستم ممیزی",
+  description: "چهار سطح اشتراک: رایگان، استارتر، پرو و آژانس. پایش سئو، عملکرد و امنیت وب‌سایت با قیمت‌گذاری شفاف ماهانه.",
+  keywords: ["قیمت اشتراک سایت", "هزینه پایش سئو", "قیمت ممیزی فنی", "audit subscription pricing", "پایش مستمر سایت"],
 });
 
-type PricingTier = {
-  name: string;
-  price: string;
-  period: string;
-  description: string;
-  features: string[];
-  highlighted?: boolean;
-  cta: string;
-  ctaHref: string;
-};
-
-const tiers: PricingTier[] = [
+const planDetails = [
   {
-    name: "گزارش اولیه",
-    price: "رایگان",
-    period: "",
-    description: "برای آشنایی با وضعیت سایتتان",
+    code: "free" as const,
+    badge: null as string | null,
     features: [
-      "ارزیابی خودکار سایت",
-      "۵ مشکل اصلی",
+      "پایش خودکار سایت",
+      "۱ پروژه",
+      "۳ ممیزی در ماه",
+      "گزارش مشکلات اصلی",
       "امتیاز کلی از ۱۰۰",
-      "راهنمای اولویت‌بندی",
-      "تحویل فوری",
     ],
     cta: "شروع رایگان",
-    ctaHref: "/audit",
+    ctaHref: "/signup",
   },
   {
-    name: "گزارش کامل",
-    price: "۲۹۹,۰۰۰",
-    period: "تومان",
-    description: "برای تیم‌های فنی و مدیران محصول",
+    code: "starter" as const,
+    badge: null as string | null,
     features: [
-      "همه موارد گزارش اولیه",
-      "تمام مشکلات فنی و امنیتی",
-      "راهنمای اجرای گام به گام",
-      "اولویت‌بندی بر اساس تاثیر",
-      "گزارش PDF قابل چاپ",
-      "پشتیبانی ۷ روزه",
+      "همه موارد رایگان",
+      "۳ پروژه",
+      "۲۰ ممیزی در ماه",
+      "گزارش کامل با تمام مشکلات",
+      "خروجی PDF",
+      "پشتیبانی ایمیلی",
     ],
-    highlighted: true,
-    cta: "خرید گزارش کامل",
-    ctaHref: "/audit",
+    cta: "خرید استارتر",
+    ctaHref: "/signup",
   },
   {
-    name: "مشاوره تخصصی",
-    price: "۵۹۹,۰۰۰",
-    period: "تومان",
-    description: "برای کسب‌وکارهای جدی در رشد",
+    code: "pro" as const,
+    badge: "محبوب‌ترین",
     features: [
-      "همه موارد گزارش کامل",
-      "جلسه ۳۰ دقیقه‌ای مشاوره",
-      "بررسی اختصاصی سایت شما",
-      "طرح اقدام شخصی‌سازی شده",
-      "پیگیری ۳۰ روزه",
-      "اولویت در پشتیبانی",
+      "همه موارد استارتر",
+      "۱۰ پروژه",
+      "۱۰۰ ممیزی در ماه",
+      "ممیزی زمان‌بندی شده هفتگی/ماهانه",
+      "خروجی PDF",
+      "پشتیبانی اولویت‌دار",
     ],
-    cta: "رزرو مشاوره",
-    ctaHref: "/audit",
+    cta: "خرید پرو",
+    ctaHref: "/signup",
+  },
+  {
+    code: "agency" as const,
+    badge: null as string | null,
+    features: [
+      "همه موارد پرو",
+      "۵۰ پروژه",
+      "۵۰۰ ممیزی در ماه",
+      "ممیزی زمان‌بندی شده",
+      "خروجی PDF",
+      "پشتیبانی اختصاصی",
+    ],
+    cta: "تماس با ما",
+    ctaHref: "mailto:team@alirezasafaeisystems.ir",
   },
 ];
-
-function PricingCard({ tier }: { tier: PricingTier }) {
-  return (
-    <article className={`pricing-card ${tier.highlighted ? "pricing-highlighted" : ""}`}>
-      <div className="pricing-header">
-        <h3 className="pricing-name">{tier.name}</h3>
-        <div className="pricing-price">
-          <span className="pricing-amount">{tier.price}</span>
-          {tier.period && <span className="pricing-period">{tier.period}</span>}
-        </div>
-        <p className="pricing-description">{tier.description}</p>
-      </div>
-      <ul className="pricing-features">
-        {tier.features.map((feature, i) => (
-          <li key={i}>
-            <span className="pricing-check">✓</span>
-            {feature}
-          </li>
-        ))}
-      </ul>
-      <div className="pricing-action">
-        <Link href={tier.ctaHref} className={`button ${tier.highlighted ? "" : "secondary"}`}>
-          {tier.cta}
-        </Link>
-      </div>
-    </article>
-  );
-}
 
 export default function PricingPage() {
   return (
     <main className="container page-shell">
       <section className="section-head">
         <h1>قیمت‌گذاری ساده و شفاف</h1>
-        <p>از ارزیابی رایگان شروع کنید و در صورت نیاز، سرویس پیشرفته‌تر دریافت کنید.</p>
+        <p>از پایش رایگان شروع کنید و متناسب با رشد کسب‌وکارتان ارتقا دهید.</p>
       </section>
 
-      <section className="pricing-grid">
-        {tiers.map((tier) => (
-          <PricingCard key={tier.name} tier={tier} />
-        ))}
+      <section className="pricing-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+        {planDetails.map((plan) => {
+          const planConfig = PLANS[plan.code];
+          const isPopular = plan.code === "pro";
+          return (
+            <article key={plan.code} className={`pricing-card ${isPopular ? "pricing-highlighted" : ""}`}>
+              <div className="pricing-header">
+                {plan.badge && <span className="badge" style={{ background: "var(--brand)", color: "#fff", marginBottom: "0.5rem" }}>{plan.badge}</span>}
+                <h3 className="pricing-name">{planConfig.name}</h3>
+                <div className="pricing-price">
+                  <span className="pricing-amount">{formatPriceToman(planConfig.priceMonthlyToman)}</span>
+                  {planConfig.priceMonthlyToman > 0 && <span className="pricing-period">/ماه</span>}
+                </div>
+                <p className="pricing-description">{planConfig.billingNote}</p>
+              </div>
+              <ul className="pricing-features">
+                {plan.features.map((feature, i) => (
+                  <li key={i}>
+                    <span className="pricing-check">✓</span>
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+              <div className="pricing-action">
+                <Link href={plan.ctaHref} className={`button ${isPopular ? "" : "secondary"}`}>
+                  {plan.cta}
+                </Link>
+              </div>
+            </article>
+          );
+        })}
       </section>
 
       <section className="card" style={{ overflowX: "auto" }}>
@@ -120,65 +116,54 @@ export default function PricingPage() {
           <thead>
             <tr>
               <th>ویژگی</th>
-              <th>گزارش اولیه</th>
-              <th>گزارش کامل</th>
-              <th>مشاوره تخصصی</th>
+              <th>رایگان</th>
+              <th>استارتر</th>
+              <th>پرو</th>
+              <th>آژانس</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>ارزیابی خودکار سایت</td>
-              <td>✓</td>
-              <td>✓</td>
-              <td>✓</td>
-            </tr>
-            <tr>
-              <td>تعداد مشکلات</td>
-              <td>۵ مشکل</td>
-              <td>نامحدود</td>
-              <td>نامحدود</td>
-            </tr>
-            <tr>
-              <td>امتیاز کلی</td>
-              <td>✓</td>
-              <td>✓</td>
-              <td>✓</td>
-            </tr>
-            <tr>
-              <td>راهنمای اجرای گام به گام</td>
-              <td>—</td>
-              <td>✓</td>
-              <td>✓</td>
-            </tr>
-            <tr>
-              <td>گزارش PDF</td>
-              <td>—</td>
-              <td>✓</td>
-              <td>✓</td>
-            </tr>
-            <tr>
-              <td>جلسه مشاوره</td>
-              <td>—</td>
-              <td>—</td>
-              <td>۳۰ دقیقه</td>
-            </tr>
-            <tr>
-              <td>طرح اقدام شخصی</td>
-              <td>—</td>
-              <td>—</td>
-              <td>✓</td>
-            </tr>
-            <tr>
-              <td>پیگیری</td>
-              <td>—</td>
-              <td>۷ روز</td>
-              <td>۳۰ روز</td>
-            </tr>
-            <tr>
-              <td>قیمت</td>
+              <td>قیمت ماهانه</td>
               <td>رایگان</td>
-              <td>۲۹۹,۰۰۰ تومان</td>
-              <td>۵۹۹,۰۰۰ تومان</td>
+              <td>{formatPriceToman(PLANS.starter.priceMonthlyToman)}</td>
+              <td>{formatPriceToman(PLANS.pro.priceMonthlyToman)}</td>
+              <td>{formatPriceToman(PLANS.agency.priceMonthlyToman)}</td>
+            </tr>
+            <tr>
+              <td>پروژه‌ها</td>
+              <td>{PLANS.free.projectLimit}</td>
+              <td>{PLANS.starter.projectLimit}</td>
+              <td>{PLANS.pro.projectLimit}</td>
+              <td>{PLANS.agency.projectLimit}</td>
+            </tr>
+            <tr>
+              <td>ممیزی در ماه</td>
+              <td>{PLANS.free.monthlyAuditLimit}</td>
+              <td>{PLANS.starter.monthlyAuditLimit}</td>
+              <td>{PLANS.pro.monthlyAuditLimit}</td>
+              <td>{PLANS.agency.monthlyAuditLimit}</td>
+            </tr>
+            <tr>
+              <td>خروجی PDF</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>ممیزی زمان‌بندی شده</td>
+              <td>—</td>
+              <td>—</td>
+              <td>✓</td>
+              <td>✓</td>
+            </tr>
+            <tr>
+              <td>پشتیبانی</td>
+              <td>—</td>
+              <td>ایمیلی</td>
+              <td>اولویت‌دار</td>
+              <td>اختصاصی</td>
             </tr>
           </tbody>
         </table>
@@ -188,29 +173,29 @@ export default function PricingPage() {
         <h2>سوالات متداول درباره قیمت</h2>
         <div className="pricing-faq-grid">
           <div className="pricing-faq-item">
-            <h4>آیا ارزیابی اولیه واقعاً رایگان است؟</h4>
-            <p>بله. ارزیابی اولیه کاملاً رایگان است و نیازی به ثبت‌نام یا وارد کردن اطلاعات پرداخت ندارد.</p>
+            <h4>آیا پایش اولیه واقعاً رایگان است؟</h4>
+            <p>بله. با پلن رایگان می‌توانید ۱ پروژه و ۳ ممیزی در ماه داشته باشید بدون هیچ هزینه‌ای.</p>
           </div>
           <div className="pricing-faq-item">
-            <h4>تفاوت گزارش رایگان و کامل چیست؟</h4>
-            <p>گزارش رایگان ۵ مشکل اصلی را نشان می‌دهد. گزارش کامل تمام مشکلات را با راهنمای اجرای گام به گام ارائه می‌دهد.</p>
+            <h4>تفاوت پلن‌های مختلف چیست؟</h4>
+            <p>هر پلن تعداد پروژه‌ها، ممیزی‌های ماهانه و امکاناتی مثل PDF و ممیزی زمان‌بندی شده را افزایش می‌دهد.</p>
           </div>
           <div className="pricing-faq-item">
-            <h4>آیا امکان بازگشت وجه وجود دارد؟</h4>
-            <p>بله. تا ۷ روز پس از خرید، در صورت عدم رضایت، وجه کامل بازگردانده می‌شود.</p>
+            <h4>آیا می‌توانم هر زمان اشتراک را لغو کنم؟</h4>
+            <p>بله. اشتراک شما ماهانه تمدید می‌شود و هر زمان می‌توانید آن را لغو کنید.</p>
           </div>
           <div className="pricing-faq-item">
-            <h4>مشاوره تخصصی شامل چه مواردی است؟</h4>
-            <p>جلسه ۳۰ دقیقه‌ای ویدیویی، بررسی اختصاصی سایت، طرح اقدام شخصی و پیگیری ۳۰ روزه.</p>
+            <h4>ممیزی زمان‌بندی شده چیست؟</h4>
+            <p>با پلن پرو و بالاتر، می‌توانید ممیزی خودکار هفتگی یا ماهانه را برای پروژه‌هایتان فعال کنید.</p>
           </div>
         </div>
       </section>
 
       <section className="card" style={{ textAlign: "center", padding: "2rem" }}>
-        <h2>هنوز سوال دارید؟</h2>
-        <p style={{ marginBottom: "1rem" }}>با ما تماس بگیرید تا بهترین پلن را برای نیاز شما پیشنهاد دهیم.</p>
+        <h2>نیاز به پلن اختصاصی دارید؟</h2>
+        <p style={{ marginBottom: "1rem" }}>برای سازمان‌ها و تیم‌های بزرگ، پلن اختصاصی با امکانات ویژه ارائه می‌دهیم.</p>
         <Link href="mailto:team@alirezasafaeisystems.ir" className="button">
-          ارسال پیام
+          تماس با ما
         </Link>
       </section>
     </main>

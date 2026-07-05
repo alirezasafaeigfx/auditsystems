@@ -27,16 +27,14 @@ export function LogoutButton() {
     <button
       onClick={handleLogout}
       disabled={loading}
+      className="button secondary"
       style={{
-        background: "none",
-        border: "1px solid #d1d5db",
-        borderRadius: "0.375rem",
         padding: "0.25rem 0.75rem",
-        cursor: loading ? "not-allowed" : "pointer",
-        fontSize: "0.875rem"
+        fontSize: "0.875rem",
+        cursor: loading ? "not-allowed" : "pointer"
       }}
     >
-      {loading ? "Logging out..." : "Logout"}
+      {loading ? "در حال خروج..." : "خروج"}
     </button>
   );
 }

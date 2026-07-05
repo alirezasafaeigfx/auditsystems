@@ -54,9 +54,14 @@ export default function SpeedOptimizationLanding() {
       <section className="card" style={{ textAlign: "center", padding: "2rem", marginTop: "2rem" }}>
         <h2>سرعت سایت خود را همین حالا بررسی کنید</h2>
         <p style={{ marginBottom: "1rem" }}>ارزیابی رایگان است و نتیجه فوری دریافت می‌کنید.</p>
-        <Link href="/audit" className="button">
-          شروع ارزیابی سرعت
-        </Link>
+        <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}>
+          <Link href="/audit" className="button">
+            شروع ارزیابی سرعت
+          </Link>
+          <Link href="/pricing" className="button secondary">
+            پایش مستمر با اشتراک
+          </Link>
+        </div>
       </section>
     </main>
   );
