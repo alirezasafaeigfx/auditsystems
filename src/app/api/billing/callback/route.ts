@@ -3,6 +3,7 @@ import { prisma } from "../../../../lib/db";
 import { verifyCheckout } from "../../../../lib/payments";
 import { activateInvoice, createSubscription } from "../../../../lib/subscription";
 import { createRequestId, logEvent, respondJson } from "../../../../lib/observability";
+import { csrfProtection } from "../../../../lib/csrf";
 import { PaymentProvider } from "@prisma/client";
 
 function asProvider(value: string | null): PaymentProvider {
@@ -18,6 +19,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const csrfCheck = await csrfProtection(request);
+  if (!csrfCheck.valid) {
+    return respondJson({ error: "FORBIDDEN" }, createRequestId(), { status: 403, headers: { "Cache-Control": "no-store" } });
+  }
   return handleBillingCallback(request);
 }
 

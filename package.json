@@ -41,6 +41,7 @@
     "plans:seed": "tsx src/scripts/seed-plans.ts",
     "scheduled:run": "tsx src/scripts/run-scheduled-audits.ts",
     "auth:cleanup": "tsx src/scripts/cleanup-auth.ts",
+    "subscriptions:expire": "tsx src/scripts/expire-subscriptions.ts",
     "lighthouse:local": "tsx src/scripts/lighthouse-local.ts",
     "deploy:check:hosting": "bash scripts/deploy/check-hosting-sync.sh --strict",
     "deploy:readiness": "bash scripts/deploy/run-readiness-suite.sh --strict",

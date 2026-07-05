@@ -1,5 +1,6 @@
 import { prisma } from "../lib/db";
 import { createReportToken } from "../lib/token";
+import { enqueueJob } from "../worker/queue";
 
 async function runScheduledAudits() {
   console.log("Checking for due scheduled audits...");
@@ -44,6 +45,11 @@ async function runScheduledAudits() {
           runId: run.id,
           token: createReportToken()
         }
+      });
+
+      await enqueueJob({
+        type: "AUDIT_RUN",
+        payload: { runId: run.id }
       });
 
       await prisma.scheduledAudit.update({
