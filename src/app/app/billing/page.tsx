@@ -2,6 +2,7 @@ import { prisma } from "../../../lib/db";
 import { validateSession, getOrganizationForUser } from "../../../lib/auth";
 import { getUsageStats } from "../../../lib/usage";
 import { PLANS, getPlanComparison, formatPriceToman, isPaidPlan, type PlanCode } from "../../../lib/plans";
+import { CheckoutButton } from "../../../components/CheckoutButton";
 
 async function getActiveSubscription(organizationId: string) {
   return prisma.subscription.findFirst({
@@ -167,22 +168,9 @@ export default async function BillingPage({
                 <li>Scheduled audits: {plan.scheduledAudits ? "✓" : "—"}</li>
               </ul>
               {!isCurrent && isPaidPlan(plan.code) && (
-                <form action="/api/billing/checkout" method="POST" style={{ marginTop: "1rem" }}>
-                  <input type="hidden" name="planCode" value={plan.code} />
-                  <button type="submit" style={{
-                    width: "100%",
-                    padding: "0.5rem",
-                    background: "#0f7a66",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "0.375rem",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    fontSize: "0.875rem"
-                  }}>
-                    {plan.upgradeCta}
-                  </button>
-                </form>
+                <div style={{ marginTop: "1rem" }}>
+                  <CheckoutButton planCode={plan.code} label={plan.upgradeCta} />
+                </div>
               )}
               {isCurrent && (
                 <div style={{ marginTop: "1rem", padding: "0.5rem", background: "#f0fdf4", borderRadius: "0.375rem", textAlign: "center", fontSize: "0.875rem", color: "#065f46", fontWeight: 600 }}>
