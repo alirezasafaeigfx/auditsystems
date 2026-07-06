@@ -7,6 +7,8 @@ export type SeoEventName =
   | "seo_audit_page_view"
   | "seo_audit_start"
   | "seo_audit_run_created"
+  | "seo_audit_error"
+  | "seo_audit_retry"
   | "seo_unlock_page_view"
   | "seo_unlock_started"
   | "seo_payment_success"
