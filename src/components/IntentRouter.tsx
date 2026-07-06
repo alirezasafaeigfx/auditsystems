@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { trackSeoEvent } from "../lib/analytics";
+import { trackIntentRouterCtaClick } from "../lib/intent-router-cta";
 
 type Locale = "fa" | "en";
 type IntentKey = "audit" | "execution" | "toolbox";
@@ -148,6 +149,7 @@ export default function IntentRouter({ locale }: { locale: Locale }) {
                 target={item.external ? "_blank" : undefined}
                 rel={item.external ? "noopener noreferrer" : undefined}
                 onClick={() => {
+                  trackIntentRouterCtaClick(item.key, locale, variant);
                   trackSeoEvent("seo_intent_router_click", {
                     locale,
                     variant,

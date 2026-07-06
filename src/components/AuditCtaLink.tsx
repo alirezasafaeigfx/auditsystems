@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { trackSeoEvent } from "../lib/analytics";
 import {
   buildAuditCtaHref,
   getAuditCta,
   type AuditCtaEntry,
 } from "../lib/audit-cta-registry";
+import { trackAuditCtaClick } from "../lib/audit-cta-tracking";
 import type { SampleLocale } from "../lib/sample-report/types";
 
 type AuditCtaLinkProps = {
@@ -37,12 +37,7 @@ export default function AuditCtaLink({
   const classes = className ?? buttonClass(resolved);
 
   function onClick() {
-    trackSeoEvent("seo_cta_click", {
-      cta_id: resolved.id,
-      intent: resolved.intent,
-      surface: resolved.surface,
-      locale,
-    });
+    trackAuditCtaClick(resolved, locale, { prefillUrl });
   }
 
   if (entry.external) {
