@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { buildPageMetadata } from "../lib/seoMeta";
+import AuditCtaLink from "../components/AuditCtaLink";
 import SeoPageEvent from "../components/SeoPageEvent";
 import IntentRouter from "../components/IntentRouter";
 import HeroAuditForm from "../components/HeroAuditForm";
@@ -33,15 +34,9 @@ export default function HomePage() {
           <li>راه حل گام به گام برای هر مشکل</li>
         </ul>
         <div className="hero-actions">
-          <Link className="button" href="/audit">
-            شروع ارزیابی رایگان
-          </Link>
-          <Link className="button secondary" href="/pricing">
-            مشاهده پلن‌ها
-          </Link>
-          <Link className="button secondary" href="/sample-report">
-            نمونه گزارش
-          </Link>
+          <AuditCtaLink ctaId="audit_landing_start" locale="fa" />
+          <AuditCtaLink ctaId="audit_landing_pricing" locale="fa" />
+          <AuditCtaLink ctaId="audit_landing_sample_report" locale="fa" />
         </div>
       </section>
 
@@ -104,9 +99,7 @@ export default function HomePage() {
           </article>
         </div>
         <div className="hero-actions" style={{ justifyContent: "center" }}>
-          <Link href="/sample-report" className="button secondary">
-            مشاهده نمونه گزارش کامل
-          </Link>
+          <AuditCtaLink ctaId="audit_landing_sample_report_full" locale="fa" />
         </div>
       </section>
 

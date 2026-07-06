@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { buildPageMetadata } from "../../lib/seoMeta";
+import AuditCtaLink from "../../components/AuditCtaLink";
 import SeoPageEvent from "../../components/SeoPageEvent";
 import IntentRouter from "../../components/IntentRouter";
 import HeroAuditForm from "../../components/HeroAuditForm";
@@ -103,7 +104,7 @@ export default function HomePageEn() {
         <article className="card feature">
           <h3>Core Flows</h3>
           <p>Audit request intake, queue processing, secure report link, and structured handoff for your team.</p>
-          <Link href="/en/sample-report">View Sample Report</Link>
+          <AuditCtaLink ctaId="audit_landing_sample_report" locale="en" />
         </article>
         <article className="card feature">
           <h3>Operational Tooling</h3>

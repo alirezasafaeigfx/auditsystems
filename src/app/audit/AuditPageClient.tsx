@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
+import AuditCtaLink from "../../components/AuditCtaLink";
 import { trackSeoEvent } from "../../lib/analytics";
+import { fetchCSRFHeaders } from "../../lib/csrf-client";
 
 export default function AuditPageClient() {
   const [url, setUrl] = useState("https://example.com");
@@ -63,9 +65,10 @@ export default function AuditPageClient() {
     setReportPath(null);
 
     try {
+      const csrf = await fetchCSRFHeaders();
       const response = await fetch("/api/audit/runs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...csrf },
         body: JSON.stringify({ url: normalizedUrl, depth })
       });
 
@@ -138,9 +141,7 @@ export default function AuditPageClient() {
               <button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "در حال ثبت..." : "ثبت ارزیابی"}
               </button>
-              <Link href="/sample-report" className="button secondary">
-                مشاهده نمونه خروجی
-              </Link>
+              <AuditCtaLink ctaId="audit_home_sample_report" locale="fa" />
             </div>
           </form>
         </section>

@@ -11,7 +11,8 @@ export type SeoEventName =
   | "seo_unlock_started"
   | "seo_payment_success"
   | "seo_intent_router_view"
-  | "seo_intent_router_click";
+  | "seo_intent_router_click"
+  | "seo_cta_click";
 
 type SeoEventParams = Record<string, string | number | boolean | null | undefined>;
 
