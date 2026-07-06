@@ -31,6 +31,7 @@ export type SampleReportCopy = {
   difficultyLabels: Record<SampleDifficulty, string>;
   trustTitle: string;
   trustBody: string;
+  trustDetails: string[];
   ctaTitle: string;
   ctaLead: string;
   severitySrPrefix: string;
@@ -91,6 +92,12 @@ const copyFa: SampleReportCopy = {
   trustTitle: "درباره این گزارش",
   trustBody:
     "این صفحه نمونه آموزشی است. امتیاز و یافته‌ها از بررسی فنی anonymized گرفته شده‌اند. هیچ تضمین رتبه، درآمد یا نتیجه قطعی ارائه نمی‌شود.",
+  trustDetails: [
+    "دامنه نمونه: anonymous-example.ir (غیرواقعی)",
+    "امتیاز ۵۸/D صرفاً نمایشی است",
+    "یافته‌ها بر اساس بررسی فنی استاندارد هستند",
+    "هیچ اطلاعات مشتری واقعی نمایش داده نمی‌شود",
+  ],
   ctaTitle: "گزارش سایت خود را بگیرید",
   ctaLead: "ارزیابی اولیه رایگان است. آدرس سایت را وارد کنید و مسیر اصلاح را ببینید.",
   severitySrPrefix: "شدت: ",
@@ -151,6 +158,12 @@ const copyEn: SampleReportCopy = {
   trustTitle: "About this report",
   trustBody:
     "This page is an educational sample. Scores and findings come from anonymized technical checks. No ranking, revenue, or outcome guarantees are implied.",
+  trustDetails: [
+    "Sample domain: anonymous-example.ir (fictional)",
+    "Score 58/D is illustrative only",
+    "Findings are based on standard technical checks",
+    "No real customer data is displayed",
+  ],
   ctaTitle: "Get a report for your site",
   ctaLead: "The initial assessment is free. Enter your URL and see a prioritized fix path.",
   severitySrPrefix: "Severity: ",
