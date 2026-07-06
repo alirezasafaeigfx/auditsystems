@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { trackSeoEvent } from "../../../lib/analytics";
+import { fetchCSRFHeaders } from "../../../lib/csrf-client";
 
 export default function AuditPageClientEn() {
   const [url, setUrl] = useState("https://example.com");
@@ -63,9 +64,10 @@ export default function AuditPageClientEn() {
     setReportPath(null);
 
     try {
+      const csrf = await fetchCSRFHeaders();
       const response = await fetch("/api/audit/runs", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...csrf },
         body: JSON.stringify({ url: normalizedUrl, depth })
       });
 
