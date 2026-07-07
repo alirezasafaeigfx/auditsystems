@@ -7,6 +7,8 @@ import { csrfProtection } from "../../../../lib/csrf";
 import { createSlug } from "../../../../lib/organization";
 import { checkAuthRateLimit } from "../../../../lib/authRateLimit";
 import { validatePasswordStrength } from "../../../../lib/passwordValidation";
+import { logSecurityEvent } from "../../../../lib/security-log";
+import { hashClientIp, getClientIp } from "../../../../lib/security";
 
 export async function POST(request: NextRequest) {
   const requestId = createRequestId();
@@ -81,6 +83,7 @@ export async function POST(request: NextRequest) {
 
     await createSession(user.id);
 
+    logSecurityEvent({ event: "session_created", userId: user.id, email, ipHash: hashClientIp(getClientIp(request)), requestId });
     logEvent("info", "signup_success", { requestId, userId: user.id });
     return respondJson({ ok: true, requestId }, requestId, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {

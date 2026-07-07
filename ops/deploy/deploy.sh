@@ -94,13 +94,18 @@ export PORT
 pnpm prisma migrate deploy
 pnpm run build
 
+cp -r .next/static .next/standalone/.next/
+cp -r public .next/standalone/
+
+NODE_BIN="$(command -v node)"
+
 cat > ecosystem.config.cjs <<ECOSYSTEM
 module.exports = {
   apps: [
     {
       name: '$APP_WEB_NAME',
       cwd: '$RELEASE_DIR',
-      script: 'node',
+      script: '$NODE_BIN',
       args: '.next/standalone/server.js',
       env_file: '$ENV_FILE',
       env: {
@@ -135,11 +140,15 @@ module.exports = {
 };
 ECOSYSTEM
  
-if pm2 describe "$APP_WEB_NAME" >/dev/null 2>&1 || pm2 describe "$APP_WORKER_NAME" >/dev/null 2>&1; then
-  pm2 startOrReload ecosystem.config.cjs --update-env
-else
-  pm2 start ecosystem.config.cjs --update-env
-fi
+pm2 delete "$APP_WEB_NAME" >/dev/null 2>&1 || true
+pm2 delete "$APP_WORKER_NAME" >/dev/null 2>&1 || true
+
+set -a
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+set +a
+
+pm2 start ecosystem.config.cjs --update-env
 pm2 save >/dev/null 2>&1 || true
 
 ln -sfn "$RELEASE_DIR" "$CURRENT_LINK"

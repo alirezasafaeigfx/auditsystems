@@ -57,6 +57,14 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
     );
   }
 
+  await prisma.reportShare.update({
+    where: { token },
+    data: {
+      viewCount: { increment: 1 },
+      lastViewedAt: new Date()
+    }
+  });
+
   const summary = (share.run.summary as Summary) ?? {};
   const score = summary.score;
   const grade = summary.grade;
@@ -73,6 +81,9 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
         <p>هدف: {share.run.normalizedUrl ?? share.run.url}</p>
         <div className="hero-actions">
           <span className={`badge ${statusClass(share.run.status)}`}>{share.run.status}</span>
+          <span className="badge" style={{ backgroundColor: "#f3f4f6", color: "#374151" }}>
+            {share.viewCount + 1} بازدید
+          </span>
           <Link className="button secondary" href={`/audit/r/${token}/unlock`}>
             فعال‌سازی تحویل کامل
           </Link>

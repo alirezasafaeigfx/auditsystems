@@ -1,5 +1,50 @@
 # Changelog
 
+## v0.5.0 - 2026-07-07
+### Roadmap Execution — Phases 2-6 Complete
+
+#### Phase 2: Audit Engine Trust and Accuracy
+- Created `src/lib/finding-registry.ts` — single source of truth for all 31 finding codes with metadata, severity, recommendations, business impact
+- Created `src/lib/scoring.ts` — scoring system (0-100 overall + category scores + grade levels)
+- Created `src/fixtures/audit/index.ts` — 6 test fixtures (good, average, bad, WordPress, ecommerce, Persian)
+- Created `src/lib/__tests__/rules.regression.test.ts` — 115 regression tests for all 31 finding codes
+- Integrated scoring into `src/worker/audit.handler.ts` — scores calculated on audit completion
+
+#### Phase 3: Report UX and Conversion
+- Added executive summary to report page with score, grade, category scores, critical issues
+- Created `src/lib/action-plan.ts` — effort/impact matrix with 4 quadrants (Quick Wins, Major Projects, Fill-ins, Thankless)
+- Added action plan section to report page
+- Created `src/components/EmailCapture.tsx` — email capture form for lead generation
+- Created `src/app/api/reports/[token]/capture/route.ts` — email capture API endpoint
+- Created `src/app/app/reports/page.tsx` — report history page with pagination
+
+#### Phase 4: SaaS Foundation Hardening
+- Created error pages: 404 (`not-found.tsx`), 500 (`error.tsx`), 403 (`forbidden.tsx`), 429 (`rate-limited.tsx`)
+- Enhanced dashboard with usage stats widgets, quick actions, score display, color-coded progress bars
+- Added social proof section to homepage: audit count, trust signals, how-it-works visual
+
+#### Phase 5: Billing and Subscription
+- Added `upgradeSubscription`, `downgradeSubscription`, `reactivateSubscription` to subscription.ts
+- Created `src/lib/__tests__/payment-flow.test.ts` — 10 end-to-end payment smoke tests
+
+#### Phase 6: Scheduled Audits and Retention
+- Created `src/components/ScheduleManager.tsx` — schedule UI component with frequency toggle
+- Created `src/app/app/projects/[projectId]/schedule/page.tsx` — schedule page
+
+#### Automation and Performance
+- Created `scripts/automation-master.sh` — master orchestrator (quality, deploy, monitor, report, sync)
+- Created `scripts/monitor-platform.sh` — platform health monitor (3 sites + SSL + VPS)
+- Created `scripts/setup-hermes-cron.sh` — Hermes cron job activation
+- Created `scripts/daily-summary.sh` — daily status report
+- Created `scripts/cpu-governor.sh` — CPU governor manager
+- Enhanced `scripts/gpu-run.sh` — V8 flags, memory tuning, process priority
+- Enhanced `scripts/gpu-browser-run.sh` — browser GPU acceleration
+- Added `auto:*` and `perf:*` npm scripts to package.json
+
+### Testing
+- 48 test files, 567 tests (was 396, added 171 new tests)
+- All tests pass, lint clean, typecheck clean
+
 ## v0.4.0 - 2026-07-02
 ### Growth Roadmap Execution
 - Added SocialProofCounter component with live audit count from database

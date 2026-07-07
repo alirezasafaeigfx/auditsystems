@@ -222,6 +222,9 @@ model ReportShare {
   createdAt DateTime  @default(now())
   expiresAt DateTime?
   revokedAt DateTime?
+  viewCount Int       @default(0)
+  lastViewedAt DateTime?
+  passwordHash String?
 
   run AuditRun @relation(fields: [runId], references: [id], onDelete: Cascade)
 
