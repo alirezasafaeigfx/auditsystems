@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import AuditCtaLink from "../../components/AuditCtaLink";
 import { trackSeoEvent } from "../../lib/analytics";
 import { fetchCSRFHeaders } from "../../lib/csrf-client";
+
+const RETRYABLE_ERRORS = new Set(["RATE_LIMITED", "DNS_LOOKUP_FAILED", "RATE_LIMIT_BACKEND_REQUIRED"]);
 
 export default function AuditPageClient() {
   const [url, setUrl] = useState("https://example.com");
@@ -12,6 +14,8 @@ export default function AuditPageClient() {
   const [message, setMessage] = useState("");
   const [reportPath, setReportPath] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     trackSeoEvent("seo_audit_page_view", { locale: "fa", path: "/audit" });
@@ -22,15 +26,15 @@ export default function AuditPageClient() {
     }
   }, []);
 
-  function toUserMessage(errorCode: string): string {
-    if (errorCode === "RATE_LIMITED") return "تعداد درخواست‌ها زیاد است. چند دقیقه بعد دوباره تلاش کنید.";
-    if (errorCode === "DNS_LOOKUP_FAILED") return "بررسی دامنه به سرویس DNS نیاز دارد؛ لطفاً کمی بعد تلاش کنید.";
-    if (errorCode === "RATE_LIMIT_BACKEND_REQUIRED") return "سرویس محدودسازی توزیع‌شده موقتاً در دسترس نیست. کمی بعد دوباره تلاش کنید.";
-    if (errorCode === "INVALID_URL_EMPTY") return "آدرس وارد نشده است.";
-    if (errorCode === "INVALID_URL_TOO_LONG") return "آدرس خیلی طولانی است.";
-    if (errorCode.startsWith("INVALID_URL_")) return "آدرس معتبر نیست. لطفا URL کامل و عمومی وارد کنید.";
-    if (errorCode.startsWith("SSRF_BLOCKED_")) return "این آدرس قابل بررسی نیست. لطفا یک دامنه عمومی و در دسترس وارد کنید.";
-    return "ثبت درخواست با خطا روبه‌رو شد. دوباره تلاش کنید.";
+  function toUserMessage(errorCode: string): { text: string; retryable: boolean } {
+    if (errorCode === "RATE_LIMITED") return { text: "تعداد درخواست‌ها زیاد است. چند دقیقه بعد دوباره تلاش کنید.", retryable: true };
+    if (errorCode === "DNS_LOOKUP_FAILED") return { text: "بررسی دامنه به سرویس DNS نیاز دارد؛ لطفاً کمی بعد تلاش کنید.", retryable: true };
+    if (errorCode === "RATE_LIMIT_BACKEND_REQUIRED") return { text: "سرویس محدودسازی توزیع‌شده موقتاً در دسترس نیست. کمی بعد دوباره تلاش کنید.", retryable: true };
+    if (errorCode === "INVALID_URL_EMPTY") return { text: "آدرس وارد نشده است.", retryable: false };
+    if (errorCode === "INVALID_URL_TOO_LONG") return { text: "آدرس خیلی طولانی است.", retryable: false };
+    if (errorCode.startsWith("INVALID_URL_")) return { text: "آدرس معتبر نیست. لطفا URL کامل و عمومی وارد کنید.", retryable: false };
+    if (errorCode.startsWith("SSRF_BLOCKED_")) return { text: "این آدرس قابل بررسی نیست. لطفا یک دامنه عمومی و در دسترس وارد کنید.", retryable: false };
+    return { text: "ثبت درخواست با خطا روبه‌رو شد. دوباره تلاش کنید.", retryable: true };
   }
 
   function normalizeUrl(raw: string): string {
@@ -38,6 +42,52 @@ export default function AuditPageClient() {
     if (!cleaned) return "";
     if (/^https?:\/\//i.test(cleaned)) return cleaned;
     return `https://${cleaned}`;
+  }
+
+  const executeAudit = useCallback(async (targetUrl: string, auditDepth: "QUICK" | "DEEP") => {
+    setIsSubmitting(true);
+    setMessage("در حال ثبت درخواست ارزیابی...");
+    setReportPath(null);
+    setLastError(null);
+
+    try {
+      const csrf = await fetchCSRFHeaders();
+      const response = await fetch("/api/audit/runs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...csrf },
+        body: JSON.stringify({ url: targetUrl, depth: auditDepth })
+      });
+
+      const body = await response.json();
+      if (!response.ok) {
+        const errorInfo = toUserMessage(String(body.error ?? ""));
+        setMessage(errorInfo.text);
+        setLastError(String(body.error ?? ""));
+        trackSeoEvent("seo_audit_error", { locale: "fa", error_code: String(body.error ?? ""), retryable: errorInfo.retryable });
+        return;
+      }
+
+      const nextPath = `/audit/r/${body.token}`;
+      setReportPath(nextPath);
+      setLastError(null);
+      setRetryCount(0);
+      setMessage(`درخواست ثبت شد. شناسه ارزیابی: ${body.runId}`);
+      trackSeoEvent("seo_audit_run_created", { locale: "fa", depth: auditDepth, run_status: String(body.status ?? "QUEUED") });
+    } catch {
+      setMessage("ارتباط با سرور برقرار نشد. دوباره تلاش کنید.");
+      setLastError("NETWORK_ERROR");
+      trackSeoEvent("seo_audit_error", { locale: "fa", error_code: "NETWORK_ERROR", retryable: true });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, []);
+
+  function handleRetry() {
+    const normalizedUrl = normalizeUrl(url);
+    if (!normalizedUrl) return;
+    setRetryCount((c) => c + 1);
+    trackSeoEvent("seo_audit_retry", { locale: "fa", retry_count: retryCount + 1 });
+    executeAudit(normalizedUrl, depth);
   }
 
   async function onSubmit(event: FormEvent) {
@@ -59,35 +109,13 @@ export default function AuditPageClient() {
       return;
     }
 
-    trackSeoEvent("seo_audit_start", { locale: "fa", depth });
-    setIsSubmitting(true);
-    setMessage("در حال ثبت درخواست ارزیابی...");
-    setReportPath(null);
-
-    try {
-      const csrf = await fetchCSRFHeaders();
-      const response = await fetch("/api/audit/runs", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...csrf },
-        body: JSON.stringify({ url: normalizedUrl, depth })
-      });
-
-      const body = await response.json();
-      if (!response.ok) {
-        setMessage(toUserMessage(String(body.error ?? "")));
-        return;
-      }
-
-      const nextPath = `/audit/r/${body.token}`;
-      setReportPath(nextPath);
-      setMessage(`درخواست ثبت شد. شناسه ارزیابی: ${body.runId}`);
-      trackSeoEvent("seo_audit_run_created", { locale: "fa", depth, run_status: String(body.status ?? "QUEUED") });
-    } catch {
-      setMessage("ارتباط با سرور برقرار نشد. دوباره تلاش کنید.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    trackSeoEvent("seo_audit_start", { locale: "fa", depth, has_url: !!normalizedUrl });
+    executeAudit(normalizedUrl, depth);
   }
+
+  const isRetryable = lastError !== null && (
+    RETRYABLE_ERRORS.has(lastError) || lastError === "NETWORK_ERROR"
+  );
 
   const statusTone = reportPath
     ? "is-success"
@@ -155,6 +183,11 @@ export default function AuditPageClient() {
             <Link href={reportPath} className="button">
               باز کردن گزارش
             </Link>
+          ) : null}
+          {isRetryable && !isSubmitting && !reportPath ? (
+            <button type="button" onClick={handleRetry} className="button retry-button">
+              {retryCount > 0 ? `تلاش مجدد (${retryCount + 1})` : "تلاش مجدد"}
+            </button>
           ) : null}
 
           <div className="status-steps">
