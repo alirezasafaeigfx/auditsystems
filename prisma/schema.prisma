@@ -30,6 +30,12 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Brand Settings
+  brandName        String?
+  brandLogoBase64  String?   @db.Text
+  primaryColor     String?
+  secondaryColor   String?
+
   memberships     Membership[]
   projects        Project[]
   auditRuns       AuditRun[]

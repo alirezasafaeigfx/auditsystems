@@ -4,8 +4,19 @@ import { observeApiRequest } from "../../../../lib/metrics";
 import { createRequestId, respondJson } from "../../../../lib/observability";
 import { buildAuditReportPdf } from "../../../../lib/pdf";
 import { isReportShareAccessible } from "../../../../lib/reportShare";
+import { calculateScore } from "../../../../lib/scoring";
 import { getCurrentPlan } from "../../../../lib/usage";
 import { NextRequest } from "next/server";
+
+function hexToRgb(hex: string): [number, number, number] {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return [0.02, 0.59, 0.41];
+  return [
+    parseInt(result[1], 16) / 255,
+    parseInt(result[2], 16) / 255,
+    parseInt(result[3], 16) / 255
+  ];
+}
 
 export async function GET(request: NextRequest, context: { params: Promise<{ token: string }> }) {
   const requestId = createRequestId();
@@ -67,18 +78,59 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tok
       }
     }
 
+    const findingsData = share.run.findings.map((finding) => ({
+      code: finding.code,
+      title: finding.title,
+      severity: finding.severity,
+      recommendation: finding.recommendation,
+      category: finding.category
+    }));
+
+    const score = calculateScore(
+      share.run.findings.map((f) => ({
+        category: f.category,
+        severity: f.severity
+      }))
+    );
+
+    let agencyName: string | undefined;
+    let agencyLogo: string | undefined;
+    let primaryColor: [number, number, number] | undefined;
+    let secondaryColor: [number, number, number] | undefined;
+
+    if (share.run.organizationId) {
+      const org = await prisma.organization.findUnique({
+        where: { id: share.run.organizationId },
+        select: { brandName: true, name: true, brandLogoBase64: true, primaryColor: true, secondaryColor: true }
+      });
+      agencyName = org?.brandName ?? org?.name ?? undefined;
+      agencyLogo = org?.brandLogoBase64 ?? undefined;
+      if (org?.primaryColor) {
+        primaryColor = hexToRgb(org.primaryColor);
+      }
+      if (org?.secondaryColor) {
+        secondaryColor = hexToRgb(org.secondaryColor);
+      }
+    }
+
     const pdfBytes = await buildAuditReportPdf({
       reportTitle: "Iran Readiness Audit Report",
       targetUrl: share.run.normalizedUrl ?? share.run.url,
       status: share.run.status,
-      findings: share.run.findings.map((finding) => ({
-        code: finding.code,
-        title: finding.title,
-        severity: finding.severity,
-        recommendation: finding.recommendation
-      })),
+      findings: findingsData,
       generatedAt: new Date().toISOString(),
-      locale: share.run.locale ?? "en"
+      locale: share.run.locale ?? "en",
+      score: {
+        overall: score.overall,
+        grade: score.grade,
+        categories: score.categories,
+        severityCounts: score.severityCounts,
+        totalFindings: score.totalFindings
+      },
+      agencyName,
+      agencyLogo,
+      primaryColor,
+      secondaryColor
     });
 
     return new Response(Buffer.from(pdfBytes), {

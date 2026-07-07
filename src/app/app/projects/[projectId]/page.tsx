@@ -4,6 +4,7 @@ import { prisma } from "../../../../lib/db";
 import { validateSession, getOrganizationForUser } from "../../../../lib/auth";
 import { RunAuditButton } from "../../../../components/RunAuditButton";
 import { ScheduleManager } from "../../../../components/ScheduleManager";
+import { ScoreTrend } from "../../../../components/ScoreTrend";
 import { getUsageStats, canScheduleAudit } from "../../../../lib/usage";
 
 type Props = { params: Promise<{ projectId: string }> };
@@ -102,6 +103,17 @@ export default async function ProjectDetailPage({ params }: Props) {
           </div>
         </div>
       )}
+
+      <ScoreTrend
+        audits={audits
+          .filter((a) => a.status === "SUCCEEDED" && a.summary)
+          .slice(0, 12)
+          .reverse()
+          .map((a) => ({
+            score: (a.summary as Record<string, unknown> | null)?.score as number ?? 0,
+            createdAt: a.createdAt.toISOString(),
+          }))}
+      />
 
       <h2 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "1rem" }}>تاریخچه ممیزی</h2>
 
