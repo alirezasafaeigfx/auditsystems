@@ -1,51 +1,33 @@
-import { NextRequest, NextResponse } from "next/server";
-import { validateAdminSession } from "@/lib/admin-auth";
-import { getBillingEvents, type BillingEventType } from "@/lib/billing-events";
-
-const VALID_EVENT_TYPES = new Set([
-  "checkout_created",
-  "payment_success",
-  "payment_failed",
-  "subscription_created",
-  "subscription_upgraded",
-  "subscription_downgraded",
-  "subscription_canceled",
-  "subscription_reactivated",
-  "invoice_created",
-  "invoice_paid",
-  "invoice_failed",
-]);
+import { NextRequest } from "next/server";
+import { validateSession } from "../../../../lib/auth";
+import { getBillingEvents, type BillingEventType } from "../../../../lib/billing-events";
+import { createRequestId, logEvent, respondJson } from "../../../../lib/observability";
 
 export async function GET(request: NextRequest) {
-  const isAuthenticated = await validateAdminSession();
-  if (!isAuthenticated) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const requestId = createRequestId();
+
+  try {
+    const user = await validateSession();
+    if (!user) {
+      return respondJson({ error: "UNAUTHORIZED", requestId }, requestId, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const eventType = searchParams.get("eventType") as BillingEventType | null;
+    const limit = parseInt(searchParams.get("limit") ?? "50", 10);
+    const offset = parseInt(searchParams.get("offset") ?? "0", 10);
+
+    const result = await getBillingEvents({
+      organizationId: user.id,
+      eventType: eventType ?? undefined,
+      limit,
+      offset,
+    });
+
+    logEvent("info", "billing_events_listed", { requestId, userId: user.id, count: result.total });
+    return respondJson({ events: result.events, total: result.total, requestId }, requestId);
+  } catch (error) {
+    logEvent("error", "billing_events_failed", { requestId, error: error instanceof Error ? error.message : String(error) });
+    return respondJson({ error: "INTERNAL_ERROR", requestId }, requestId, { status: 500 });
   }
-
-  const query = request.nextUrl.searchParams;
-  const organizationId = query.get("organizationId");
-  if (!organizationId) {
-    return NextResponse.json({ error: "organizationId required" }, { status: 400 });
-  }
-
-  const eventType = query.get("eventType");
-  if (eventType && !VALID_EVENT_TYPES.has(eventType)) {
-    return NextResponse.json({ error: "Invalid eventType" }, { status: 400 });
-  }
-
-  const from = query.get("from") ? new Date(query.get("from")!) : undefined;
-  const to = query.get("to") ? new Date(query.get("to")!) : undefined;
-  const limit = Math.min(parseInt(query.get("limit") ?? "50", 10), 200);
-  const offset = parseInt(query.get("offset") ?? "0", 10);
-
-  const result = await getBillingEvents({
-    organizationId,
-    eventType: eventType as BillingEventType | undefined,
-    from,
-    to,
-    limit,
-    offset,
-  });
-
-  return NextResponse.json(result);
 }

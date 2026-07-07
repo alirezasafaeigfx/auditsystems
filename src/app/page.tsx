@@ -40,20 +40,35 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="trust-strip">
-        <article>
-          <strong>سریع و آسان</strong>
-          <p>فقط آدرس سایت را بدهید، بقیه‌اش با ماست</p>
-        </article>
-        <article>
-          <strong>راه حل مشخص</strong>
-          <p>برای هر مشکل، دقیقاً می‌گوییم چکار کنید</p>
-        </article>
-        <article>
-          <strong>قابل اعتماد</strong>
-          <p>روی سیستم‌های واقعی تست شده</p>
-        </article>
+      <section className="social-proof-section">
         <SocialProofCounter />
+        <div className="uptime-badge" aria-label="وضعیت سرویس: فعال">
+          <span className="uptime-dot" />
+          <span>سرویس فعال — ۹۹٪ آپتایم</span>
+        </div>
+      </section>
+
+      <section className="how-it-works" aria-label="نحوه کار">
+        <h2>در ۳ مرحله ساده</h2>
+        <div className="how-steps">
+          <div className="how-step">
+            <span className="how-step-num">۱</span>
+            <strong>آدرس سایت را وارد کنید</strong>
+            <p>فقط لینک سایت خود را در فرم بالا قرار دهید</p>
+          </div>
+          <div className="how-step-connector" aria-hidden="true" />
+          <div className="how-step">
+            <span className="how-step-num">۲</span>
+            <strong>ارزیابی خودکار اجرا می‌شود</strong>
+            <p>سیستم ما سئو، امنیت و سرعت سایت را بررسی می‌کند</p>
+          </div>
+          <div className="how-step-connector" aria-hidden="true" />
+          <div className="how-step">
+            <span className="how-step-num">۳</span>
+            <strong>گزارش کامل با راه حل</strong>
+            <p>مشکلات را به ترتیب اولویت می‌بینید و دقیقاً می‌دانید چکار کنید</p>
+          </div>
+        </div>
       </section>
 
       <section className="trust-signals" aria-label="اطلاعات اعتماد">

@@ -7,6 +7,9 @@ import { csrfProtection } from "../../../../lib/csrf";
 import { createSlug } from "../../../../lib/organization";
 import { checkAuthRateLimit } from "../../../../lib/authRateLimit";
 import { validatePasswordStrength } from "../../../../lib/passwordValidation";
+import { logSecurityEvent } from "../../../../lib/security-log";
+import { hashClientIp, getClientIp } from "../../../../lib/security";
+import { trackReferral } from "../../../../lib/referral";
 
 export async function POST(request: NextRequest) {
   const requestId = createRequestId();
@@ -29,7 +32,8 @@ export async function POST(request: NextRequest) {
       return respondJson({ error: "INVALID_PAYLOAD", requestId }, requestId, { status: 400, headers: { "Cache-Control": "no-store" } });
     }
 
-    const payload = body as { email?: unknown; password?: unknown; name?: unknown };
+    const payload = body as { email?: unknown; password?: unknown; name?: unknown; ref?: unknown };
+    const referralCode = typeof payload.ref === "string" ? payload.ref.trim().toUpperCase() : null;
 
     let email: string;
     try {
@@ -81,6 +85,11 @@ export async function POST(request: NextRequest) {
 
     await createSession(user.id);
 
+    if (referralCode) {
+      await trackReferral(referralCode, user.id).catch(() => {});
+    }
+
+    logSecurityEvent({ event: "session_created", userId: user.id, email, ipHash: hashClientIp(getClientIp(request)), requestId });
     logEvent("info", "signup_success", { requestId, userId: user.id });
     return respondJson({ ok: true, requestId }, requestId, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {

@@ -6,19 +6,30 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "gpu:build": "../../../scripts/gpu-browser-run.sh pnpm run build",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
-    "gpu:lint": "../../../scripts/gpu-run.sh pnpm run lint",
-    "check": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build",
-    "dev:check": "bash scripts/dev-check.sh",
-    "gpu:check": "../../../scripts/gpu-run.sh pnpm run check",
     "typecheck": "tsc --noEmit",
-    "gpu:typecheck": "../../../scripts/gpu-run.sh pnpm run typecheck",
     "test": "vitest run",
-    "gpu:test": "../../../scripts/gpu-run.sh pnpm run test",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "check": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build",
+    "dev:check": "bash scripts/dev-check.sh",
+
+    "perf:build": "PERF_MODE=full ../../../scripts/gpu-browser-run.sh pnpm run build",
+    "perf:lint": "PERF_MODE=full ../../../scripts/gpu-run.sh pnpm run lint",
+    "perf:typecheck": "PERF_MODE=full ../../../scripts/gpu-run.sh pnpm run typecheck",
+    "perf:test": "PERF_MODE=full ../../../scripts/gpu-run.sh pnpm run test",
+    "perf:check": "PERF_MODE=full ../../../scripts/gpu-run.sh pnpm run check",
+    "perf:coverage": "PERF_MODE=full ../../../scripts/gpu-run.sh pnpm run test:coverage",
+    "perf:lighthouse": "PERF_MODE=full ../../../scripts/gpu-browser-run.sh pnpm run lighthouse:local",
+
+    "gpu:build": "PERF_MODE=full ../../../scripts/gpu-browser-run.sh pnpm run build",
+    "gpu:lint": "PERF_MODE=full ../../../scripts/gpu-run.sh pnpm run lint",
+    "gpu:typecheck": "PERF_MODE=full ../../../scripts/gpu-run.sh pnpm run typecheck",
+    "gpu:test": "PERF_MODE=full ../../../scripts/gpu-run.sh pnpm run test",
+    "gpu:check": "PERF_MODE=full ../../../scripts/gpu-run.sh pnpm run check",
+    "gpu:lighthouse:local": "PERF_MODE=full ../../../scripts/gpu-browser-run.sh pnpm run lighthouse:local",
+
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
     "worker:dev": "tsx src/worker/index.ts",
@@ -44,12 +55,48 @@
     "subscriptions:expire": "tsx src/scripts/expire-subscriptions.ts",
     "deploy:production": "bash scripts/deploy-production.sh",
     "lighthouse:local": "tsx src/scripts/lighthouse-local.ts",
+    "reports:monthly": "tsx src/scripts/generate-monthly-reports.ts",
     "deploy:check:hosting": "bash scripts/deploy/check-hosting-sync.sh --strict",
     "deploy:readiness": "bash scripts/deploy/run-readiness-suite.sh --strict",
     "vps:prepare": "bash scripts/vps-deploy.sh prepare",
     "vps:sync-env": "bash scripts/vps-deploy.sh sync-env",
     "vps:deploy": "bash scripts/vps-deploy.sh deploy production",
     "vps:status": "bash scripts/vps-deploy.sh status",
-    "gpu:lighthouse:local": "../../../scripts/gpu-browser-run.sh pnpm run lighthouse:local"
+    "auto:quality": "bash ../../../scripts/automation-master.sh quality",
+    "auto:deploy": "bash ../../../scripts/automation-master.sh deploy",
+    "auto:monitor": "bash ../../../scripts/automation-master.sh monitor",
+    "auto:report": "bash ../../../scripts/automation-master.sh report",
+    "auto:full": "bash ../../../scripts/automation-master.sh full",
+    "auto:sync": "bash ../../../scripts/automation-master.sh sync"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "cheerio": "^1.2.0",
+    "next": "^16.2.9",
+    "pdf-lib": "^1.17.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
+    "@types/node": "^25.9.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^15.5.18",
+    "prisma": "^6.19.3",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.9"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "esbuild",
+      "sharp"
+    ]
   }
 }

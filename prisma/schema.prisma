@@ -15,12 +15,34 @@ model User {
   name            String?
   passwordHash    String
   emailVerifiedAt DateTime?
+  referralCode    String?   @unique
+  referredBy      String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   memberships        Membership[]
   sessions           Session[]
   emailVerifications EmailVerificationToken[]
+  referralsGiven     Referral[]           @relation("ReferralGiven")
+  referralsReceived  Referral[]           @relation("ReferralReferred")
+  teamInvites        TeamMemberInvite[]   @relation("TeamInviteUser")
+}
+
+model Referral {
+  id          String   @id @default(cuid())
+  referrerId  String
+  referredId  String
+  code        String
+  convertedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  referrer  User @relation("ReferralGiven", fields: [referrerId], references: [id], onDelete: Cascade)
+  referred  User @relation("ReferralReferred", fields: [referredId], references: [id], onDelete: Cascade)
+
+  @@unique([referrerId, referredId])
+  @@index([referrerId])
+  @@index([referredId])
+  @@index([code])
 }
 
 model Organization {
@@ -30,13 +52,22 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  memberships     Membership[]
-  projects        Project[]
-  auditRuns       AuditRun[]
-  subscriptions   Subscription[]
-  usageLedgers    UsageLedger[]
-  invoices        Invoice[]
-  scheduledAudits ScheduledAudit[]
+  // Brand Settings
+  brandName        String?
+  brandLogoBase64  String?   @db.Text
+  primaryColor     String?
+  secondaryColor   String?
+
+  memberships            Membership[]
+  teamInvites            TeamMemberInvite[]   @relation("TeamInviteOrganization")
+  projects               Project[]
+  auditRuns              AuditRun[]
+  subscriptions          Subscription[]
+  usageLedgers           UsageLedger[]
+  invoices               Invoice[]
+  scheduledAudits        ScheduledAudit[]
+  notificationPreference NotificationPreference?
+  notificationHistory    NotificationHistory[]
 }
 
 model Membership {
@@ -222,6 +253,9 @@ model ReportShare {
   createdAt DateTime  @default(now())
   expiresAt DateTime?
   revokedAt DateTime?
+  viewCount Int       @default(0)
+  lastViewedAt DateTime?
+  passwordHash String?
 
   run AuditRun @relation(fields: [runId], references: [id], onDelete: Cascade)
 
@@ -394,6 +428,25 @@ model ScheduledAudit {
   @@index([nextRunAt, enabled])
 }
 
+model TeamMemberInvite {
+  id             String   @id @default(cuid())
+  organizationId String
+  email          String
+  role           String   @default("VIEWER")
+  tokenHash      String   @unique
+  invitedById    String
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime @default(now())
+
+  organization  Organization @relation("TeamInviteOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy     User         @relation("TeamInviteUser", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([tokenHash])
+  @@unique([organizationId, email])
+}
+
 model EmailVerificationToken {
   id        String    @id @default(cuid())
   userId    String
@@ -406,4 +459,30 @@ model EmailVerificationToken {
 
   @@index([tokenHash])
   @@index([userId, createdAt])
+}
+
+model NotificationPreference {
+  id             String   @id @default(cuid())
+  organizationId String   @unique
+  emailEnabled   Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+model NotificationHistory {
+  id             String   @id @default(cuid())
+  organizationId String
+  type           String   // AUDIT_COMPLETE
+  subject        String
+  body           String
+  email          String
+  sentAt         DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, sentAt])
 }

@@ -76,6 +76,9 @@ export default async function AppDashboardPage() {
     QUEUED: "در صف"
   };
 
+  const projectProgress = Math.min(100, (usage.projectCount / usage.projectLimit) * 100);
+  const auditProgress = Math.min(100, (usage.auditCount / usage.auditLimit) * 100);
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "1.5rem" }}>
@@ -93,62 +96,96 @@ export default async function AppDashboardPage() {
         </Link>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
         <div className="card" style={{ padding: "1rem" }}>
-          <div style={{ color: "var(--muted, #6b7280)", fontSize: "0.75rem", marginBottom: "0.25rem" }}>پروژه‌ها</div>
-          <div style={{ fontSize: "1.25rem", fontWeight: 700 }}>
-            {usage.projectCount} <span style={{ fontSize: "0.875rem", fontWeight: 400, color: "var(--muted, #9ca3af)" }}>/ {usage.projectLimit}</span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+            <span style={{ color: "var(--muted, #6b7280)", fontSize: "0.75rem" }}>پروژه‌ها</span>
+            <span style={{ fontSize: "1.25rem", fontWeight: 700 }}>
+              {usage.projectCount}<span style={{ fontSize: "0.875rem", fontWeight: 400, color: "var(--muted, #9ca3af)" }}>/{usage.projectLimit}</span>
+            </span>
+          </div>
+          <div style={{ height: "6px", background: "var(--border, #e5e7eb)", borderRadius: "3px", overflow: "hidden" }}>
+            <div style={{ height: "100%", background: projectProgress >= 100 ? "var(--warn, #f59e0b)" : "var(--brand, #0f7a66)", borderRadius: "3px", width: `${projectProgress}%`, transition: "width 0.3s" }} />
           </div>
           {!usage.canCreateProject && (
-            <Link href="/app/billing" style={{ color: "var(--warn, #f59e0b)", fontSize: "0.75rem", textDecoration: "none" }}>سقف رسید — ارتقا دهید</Link>
+            <Link href="/app/billing" style={{ color: "var(--warn, #f59e0b)", fontSize: "0.75rem", textDecoration: "none", marginTop: "0.25rem", display: "inline-block" }}>سقف رسید — ارتقا دهید</Link>
           )}
         </div>
+
         <div className="card" style={{ padding: "1rem" }}>
-          <div style={{ color: "var(--muted, #6b7280)", fontSize: "0.75rem", marginBottom: "0.25rem" }}>ممیزی این ماه</div>
-          <div style={{ fontSize: "1.25rem", fontWeight: 700 }}>
-            {usage.auditCount} <span style={{ fontSize: "0.875rem", fontWeight: 400, color: "var(--muted, #9ca3af)" }}>/ {usage.auditLimit}</span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+            <span style={{ color: "var(--muted, #6b7280)", fontSize: "0.75rem" }}>ممیزی این ماه</span>
+            <span style={{ fontSize: "1.25rem", fontWeight: 700 }}>
+              {usage.auditCount}<span style={{ fontSize: "0.875rem", fontWeight: 400, color: "var(--muted, #9ca3af)" }}>/{usage.auditLimit}</span>
+            </span>
           </div>
-          <div style={{ height: "4px", background: "var(--border, #e5e7eb)", borderRadius: "2px", marginTop: "4px" }}>
-            <div style={{ height: "100%", background: usage.canRunAudit ? "var(--brand, #0f7a66)" : "var(--warn, #f59e0b)", borderRadius: "2px", width: `${Math.min(100, (usage.auditCount / usage.auditLimit) * 100)}%` }} />
+          <div style={{ height: "6px", background: "var(--border, #e5e7eb)", borderRadius: "3px", overflow: "hidden" }}>
+            <div style={{ height: "100%", background: auditProgress >= 100 ? "var(--danger, #dc2626)" : auditProgress >= 80 ? "var(--warn, #f59e0b)" : "var(--brand, #0f7a66)", borderRadius: "3px", width: `${auditProgress}%`, transition: "width 0.3s" }} />
           </div>
           {!usage.canRunAudit && (
-            <Link href="/app/billing" style={{ color: "var(--warn, #f59e0b)", fontSize: "0.75rem", textDecoration: "none" }}>سقف رسید — ارتقا دهید</Link>
+            <Link href="/app/billing" style={{ color: "var(--warn, #f59e0b)", fontSize: "0.75rem", textDecoration: "none", marginTop: "0.25rem", display: "inline-block" }}>سقف رسید — ارتقا دهید</Link>
           )}
         </div>
+
         <div className="card" style={{ padding: "1rem" }}>
-          <div style={{ color: "var(--muted, #6b7280)", fontSize: "0.75rem", marginBottom: "0.25rem" }}>آخرین ممیزی</div>
-          <div style={{ fontSize: "1.25rem", fontWeight: 700 }}>
-            {latestStatus ? (
-              <span className={`badge ${latestStatus === "SUCCEEDED" ? "sev-low" : latestStatus === "FAILED" ? "sev-critical" : ""}`}>
-                {statusLabels[latestStatus] ?? latestStatus}
-              </span>
-            ) : (
-              <span style={{ color: "var(--muted, #d1d5db)" }}>—</span>
-            )}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+            <span style={{ color: "var(--muted, #6b7280)", fontSize: "0.75rem" }}>آخرین ممیزی</span>
+            <span style={{ fontSize: "1.25rem", fontWeight: 700 }}>
+              {latestStatus ? (
+                <span className={`badge ${latestStatus === "SUCCEEDED" ? "sev-low" : latestStatus === "FAILED" ? "sev-critical" : ""}`}>
+                  {statusLabels[latestStatus] ?? latestStatus}
+                </span>
+              ) : (
+                <span style={{ color: "var(--muted, #d1d5db)" }}>—</span>
+              )}
+            </span>
           </div>
           {latestScore != null && (
-            <div style={{ fontSize: "0.75rem", color: "var(--muted, #6b7280)", marginTop: "0.25rem" }}>
+            <div style={{ fontSize: "0.75rem", color: "var(--muted, #6b7280)" }}>
               امتیاز: {latestScore}/۱۰۰
             </div>
           )}
+          {latestAudit?.createdAt && (
+            <div style={{ fontSize: "0.75rem", color: "var(--muted, #9ca3af)", marginTop: "0.125rem" }}>
+              {new Date(latestAudit.createdAt).toLocaleDateString("fa-IR")}
+            </div>
+          )}
         </div>
+
         <div className="card" style={{ padding: "1rem" }}>
-          <div style={{ color: "var(--muted, #6b7280)", fontSize: "0.75rem", marginBottom: "0.25rem" }}>مشکلات باز</div>
-          <div style={{ fontSize: "1.25rem", fontWeight: 700 }}>
-            {criticalFindings > 0 ? (
-              <span style={{ color: criticalFindings > 5 ? "var(--danger, #dc2626)" : "var(--warn, #f59e0b)" }}>{criticalFindings}</span>
-            ) : (
-              <span style={{ color: "var(--brand, #059669)" }}>۰</span>
-            )}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+            <span style={{ color: "var(--muted, #6b7280)", fontSize: "0.75rem" }}>مشکلات باز</span>
+            <span style={{ fontSize: "1.25rem", fontWeight: 700 }}>
+              {criticalFindings > 0 ? (
+                <span style={{ color: criticalFindings > 5 ? "var(--danger, #dc2626)" : "var(--warn, #f59e0b)" }}>{criticalFindings}</span>
+              ) : (
+                <span style={{ color: "var(--brand, #059669)" }}>۰</span>
+              )}
+            </span>
           </div>
           {criticalFindings > 0 && (
-            <div style={{ fontSize: "0.75rem", color: "var(--muted, #6b7280)", marginTop: "0.25rem" }}>بحرانی/بالا</div>
+            <div style={{ fontSize: "0.75rem", color: "var(--muted, #6b7280)" }}>بحرانی/بالا</div>
           )}
         </div>
       </div>
 
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "0.75rem", marginBottom: "1.5rem" }}>
+        <Link href="/app/projects/new" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem", padding: "1rem", borderRadius: "0.5rem", border: "1px solid var(--border, #e5e7eb)", background: "var(--surface, #f9fafb)", textDecoration: "none", color: "inherit", textAlign: "center", transition: "border-color 0.15s" }}>
+          <span style={{ fontSize: "1.5rem" }}>＋</span>
+          <span style={{ fontSize: "0.8125rem", fontWeight: 600 }}>ممیزی جدید</span>
+        </Link>
+        <Link href="/app/projects" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem", padding: "1rem", borderRadius: "0.5rem", border: "1px solid var(--border, #e5e7eb)", background: "var(--surface, #f9fafb)", textDecoration: "none", color: "inherit", textAlign: "center", transition: "border-color 0.15s" }}>
+          <span style={{ fontSize: "1.5rem" }}>📁</span>
+          <span style={{ fontSize: "0.8125rem", fontWeight: 600 }}>پروژه‌ها</span>
+        </Link>
+        <Link href="/app/billing" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.375rem", padding: "1rem", borderRadius: "0.5rem", border: "1px solid var(--border, #e5e7eb)", background: "var(--surface, #f9fafb)", textDecoration: "none", color: "inherit", textAlign: "center", transition: "border-color 0.15s" }}>
+          <span style={{ fontSize: "1.5rem" }}>💳</span>
+          <span style={{ fontSize: "0.8125rem", fontWeight: 600 }}>صورتحساب</span>
+        </Link>
+      </div>
+
       {(nextScheduled || !isPaidPlan(currentPlanCode as PlanCode)) && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
           {nextScheduled && (
             <div className="card" style={{ padding: "1rem", border: "1px solid #bbf7d0", background: "var(--brand-bg, #f0fdf4)" }}>
               <div style={{ color: "var(--brand-strong, #065f46)", fontSize: "0.75rem", marginBottom: "0.25rem", fontWeight: 600 }}>ممیزی زمان‌بندی شده بعدی</div>
@@ -219,34 +256,42 @@ export default async function AppDashboardPage() {
                     <th style={{ textAlign: "right", padding: "0.75rem", fontWeight: 600 }}>آدرس</th>
                     <th style={{ textAlign: "right", padding: "0.75rem", fontWeight: 600 }}>پروژه</th>
                     <th style={{ textAlign: "right", padding: "0.75rem", fontWeight: 600 }}>وضعیت</th>
+                    <th style={{ textAlign: "right", padding: "0.75rem", fontWeight: 600 }}>امتیاز</th>
                     <th style={{ textAlign: "right", padding: "0.75rem", fontWeight: 600 }}>تاریخ</th>
                     <th style={{ textAlign: "right", padding: "0.75rem", fontWeight: 600 }}>گزارش</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {recentAudits.map((audit) => (
-                    <tr key={audit.id} style={{ borderBottom: "1px solid var(--border, #f3f4f6)" }}>
-                      <td style={{ padding: "0.75rem", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{audit.url}</td>
-                      <td style={{ padding: "0.75rem", color: "var(--muted, #6b7280)" }}>{audit.project?.name || "—"}</td>
-                      <td style={{ padding: "0.75rem" }}>
-                        <span className={`badge ${audit.status === "SUCCEEDED" ? "sev-low" : audit.status === "FAILED" ? "sev-critical" : ""}`}>
-                          {statusLabels[audit.status] ?? audit.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: "0.75rem", color: "var(--muted, #6b7280)" }}>
-                        {new Date(audit.createdAt).toLocaleDateString("fa-IR")}
-                      </td>
-                      <td style={{ padding: "0.75rem" }}>
-                        {audit.shares[0]?.token ? (
-                          <a href={`/audit/r/${audit.shares[0].token}`} target="_blank" rel="noopener noreferrer" style={{ color: "var(--brand, #0f7a66)", textDecoration: "none" }}>
-                            مشاهده
-                          </a>
-                        ) : (
-                          <span style={{ color: "var(--muted, #d1d5db)" }}>-</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {recentAudits.map((audit) => {
+                    const auditSummary = audit.summary as { score?: number } | null;
+                    const score = auditSummary?.score;
+                    return (
+                      <tr key={audit.id} style={{ borderBottom: "1px solid var(--border, #f3f4f6)" }}>
+                        <td style={{ padding: "0.75rem", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{audit.url}</td>
+                        <td style={{ padding: "0.75rem", color: "var(--muted, #6b7280)" }}>{audit.project?.name || "—"}</td>
+                        <td style={{ padding: "0.75rem" }}>
+                          <span className={`badge ${audit.status === "SUCCEEDED" ? "sev-low" : audit.status === "FAILED" ? "sev-critical" : ""}`}>
+                            {statusLabels[audit.status] ?? audit.status}
+                          </span>
+                        </td>
+                        <td style={{ padding: "0.75rem", fontWeight: 600, color: score != null ? (score >= 80 ? "var(--brand, #059669)" : score >= 50 ? "var(--warn, #f59e0b)" : "var(--danger, #dc2626)") : "var(--muted, #d1d5db)" }}>
+                          {score != null ? `${score}/۱۰۰` : "—"}
+                        </td>
+                        <td style={{ padding: "0.75rem", color: "var(--muted, #6b7280)" }}>
+                          {new Date(audit.createdAt).toLocaleDateString("fa-IR")}
+                        </td>
+                        <td style={{ padding: "0.75rem" }}>
+                          {audit.shares[0]?.token ? (
+                            <a href={`/audit/r/${audit.shares[0].token}`} target="_blank" rel="noopener noreferrer" style={{ color: "var(--brand, #0f7a66)", textDecoration: "none" }}>
+                              مشاهده
+                            </a>
+                          ) : (
+                            <span style={{ color: "var(--muted, #d1d5db)" }}>-</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
