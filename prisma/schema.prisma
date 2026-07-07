@@ -486,3 +486,19 @@ model NotificationHistory {
 
   @@index([organizationId, sentAt])
 }
+
+model BillingEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  entityType     String
+  entityId       String
+  eventType      String
+  actor          String?
+  details        Json?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, eventType])
+}
