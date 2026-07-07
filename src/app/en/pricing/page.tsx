@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import AuditCtaLink from "../../../components/AuditCtaLink";
 import { buildPageMetadata } from "../../../lib/seoMeta";
 
 export const metadata: Metadata = buildPageMetadata({
@@ -133,6 +134,17 @@ export default function PricingPageEn() {
             <h4>What does expert consultation include?</h4>
             <p>30-minute video call, personalized site review, custom action plan, and 30-day follow-up.</p>
           </div>
+        </div>
+      </section>
+
+      <section className="card" style={{ textAlign: "center", padding: "2rem" }}>
+        <h2>Not sure yet?</h2>
+        <p style={{ marginBottom: "1rem" }}>
+          Review the sample report or start a free assessment on your own site.
+        </p>
+        <div className="hero-actions" style={{ justifyContent: "center", marginBottom: "1.5rem" }}>
+          <AuditCtaLink ctaId="pricing_page_sample_report" locale="en" />
+          <AuditCtaLink ctaId="pricing_page_audit_start" locale="en" />
         </div>
       </section>
 

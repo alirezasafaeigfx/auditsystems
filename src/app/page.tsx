@@ -123,12 +123,8 @@ export default function HomePage() {
           </article>
         </div>
         <div className="hero-actions" style={{ justifyContent: "center", marginTop: "1.5rem" }}>
-          <Link href="/pricing" className="button">
-            مشاهده پلن‌ها و قیمت‌ها
-          </Link>
-          <Link href="/signup" className="button secondary">
-            ثبت‌نام رایگان
-          </Link>
+          <AuditCtaLink ctaId="audit_landing_pricing_plans" locale="fa" />
+          <AuditCtaLink ctaId="audit_landing_signup_free" locale="fa" />
         </div>
       </section>
 
@@ -147,12 +143,12 @@ export default function HomePage() {
         <article className="card feature">
           <h3>جریان‌های اصلی</h3>
           <p>ثبت درخواست ارزیابی، اجرای worker در صف، لینک گزارش امن و تحویل خروجی برای تیم شما.</p>
-          <Link href="/sample-report">مشاهده نمونه گزارش</Link>
+          <AuditCtaLink ctaId="audit_landing_feature_sample" locale="fa" className="" />
         </article>
         <article className="card feature">
           <h3>ابزارهای عملیاتی</h3>
           <p>اتوماسیون roadmap، تولید مستندات، preflight پرداخت و workflow آماده‌سازی Production یکپارچه شده است.</p>
-          <Link href="/pillar/iran-readiness-audit">مطالعه چارچوب ارزیابی</Link>
+          <AuditCtaLink ctaId="audit_landing_feature_pillar" locale="fa" className="" />
           <Link href="/standards">تعریف خروجی و intent map فارسی</Link>
         </article>
       </section>

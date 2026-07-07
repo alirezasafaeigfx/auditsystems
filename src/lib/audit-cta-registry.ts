@@ -128,7 +128,130 @@ const entries: AuditCtaEntry[] = [
     analyticsEvent: "seo_cta_click",
     variant: "secondary",
   },
+  {
+    id: "audit_landing_pricing_plans",
+    intent: "pricing_view",
+    surface: "audit_landing",
+    label: { fa: "مشاهده پلن‌ها و قیمت‌ها", en: "View plans and pricing" },
+    path: "/pricing",
+    analyticsEvent: "seo_cta_click",
+    variant: "primary",
+  },
+  {
+    id: "audit_landing_signup_free",
+    intent: "signup",
+    surface: "audit_landing",
+    label: { fa: "ثبت‌نام رایگان", en: "Free signup" },
+    path: "/signup",
+    analyticsEvent: "seo_cta_click",
+    variant: "secondary",
+  },
+  {
+    id: "audit_landing_feature_sample",
+    intent: "sample_report",
+    surface: "audit_landing",
+    label: { fa: "مشاهده نمونه گزارش", en: "View sample report" },
+    path: "/sample-report",
+    analyticsEvent: "seo_cta_click",
+    variant: "secondary",
+  },
+  {
+    id: "audit_landing_feature_pillar",
+    intent: "sample_report",
+    surface: "audit_landing",
+    label: { fa: "مطالعه چارچوب ارزیابی", en: "Read audit framework" },
+    path: "/pillar/iran-readiness-audit",
+    analyticsEvent: "seo_cta_click",
+    variant: "secondary",
+  },
+  {
+    id: "pricing_page_audit_start",
+    intent: "audit_start",
+    surface: "pricing_page",
+    label: { fa: "شروع ارزیابی رایگان", en: "Start free assessment" },
+    path: "/audit",
+    analyticsEvent: "seo_cta_click",
+    variant: "secondary",
+  },
+  {
+    id: "pricing_page_sample_report",
+    intent: "sample_report",
+    surface: "pricing_page",
+    label: { fa: "مشاهده نمونه گزارش", en: "View sample report" },
+    path: "/sample-report",
+    analyticsEvent: "seo_cta_click",
+    variant: "secondary",
+  },
+  {
+    id: "intent_router_audit_start",
+    intent: "audit_start",
+    surface: "audit_landing",
+    label: { fa: "شروع ارزیابی", en: "Start Audit" },
+    path: "/audit",
+    analyticsEvent: "seo_cta_click",
+    variant: "primary",
+  },
+  {
+    id: "intent_router_professional_review",
+    intent: "professional_review",
+    surface: "audit_landing",
+    label: { fa: "ورود به سایت Alireza Safaei", en: "Open Alireza Safaei Systems" },
+    path: "https://alirezasafaeisystems.ir/?utm_source=audit&utm_medium=intent_router&utm_campaign=asdev_audit&utm_content=execution_route",
+    external: true,
+    analyticsEvent: "seo_cta_click",
+    variant: "secondary",
+  },
+  {
+    id: "intent_router_toolbox",
+    intent: "agency_contact",
+    surface: "audit_landing",
+    label: { fa: "ورود به PersianToolbox", en: "Open PersianToolbox" },
+    path: "https://persiantoolbox.ir/?utm_source=audit&utm_medium=intent_router&utm_campaign=asdev_audit&utm_content=toolbox_route",
+    external: true,
+    analyticsEvent: "seo_cta_click",
+    variant: "secondary",
+  },
 ];
+
+/** Registry-backed surfaces. Nav/layout links remain ad-hoc until a later pass. */
+export const CTA_MIGRATION_STATUS = {
+  registryBacked: [
+    "sample_report",
+    "audit_home",
+    "audit_landing (hero + preview + features + subscription)",
+    "pricing_page (footer CTAs)",
+    "intent_router (via adapter)",
+  ],
+  adHocRemaining: [
+    "layout.tsx navigation links",
+    "pricing plan signup buttons (billing scope)",
+    "en/page.tsx hero external portfolio/toolbox links",
+    "faq/failed page retry links",
+  ],
+  unchangedByDesign: ["SeoPageEvent page views", "audit form submit events (seo_audit_start)"],
+} as const;
+
+export function validateAuditCtaRegistry(): string[] {
+  const errors: string[] = [];
+  for (const entry of entries) {
+    if (!entry.id || !entry.intent || !entry.surface) {
+      errors.push(`missing fields on ${entry.id || "unknown"}`);
+    }
+    if (!entry.label.fa || !entry.label.en) {
+      errors.push(`missing bilingual label on ${entry.id}`);
+    }
+    if (!entry.path) {
+      errors.push(`missing path on ${entry.id}`);
+    }
+    if (!entry.external && !entry.path.startsWith("/")) {
+      errors.push(`internal path must start with / on ${entry.id}`);
+    }
+    if (entry.external && !entry.path.startsWith("http")) {
+      errors.push(`external path must be absolute URL on ${entry.id}`);
+    }
+  }
+  return errors;
+}
 
 export function getAuditCta(id: string): AuditCtaEntry | undefined {
   return entries.find((e) => e.id === id);

@@ -1,0 +1,206 @@
+name: nightly-audit
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+env:
+  PUBLIC_URL: https://audit.alirezasafaeisystems.ir
+  VPS_BASE_DIR: /var/www/asdev-audit-ir
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Unit tests
+        env:
+          APP_BASE_URL: "http://localhost:3000"
+          DOWNLOAD_TOKEN_SECRET: "ci-nightly-download-secret-min-16"
+          PAYMENT_PROVIDER_DEFAULT: "MOCK"
+        run: pnpm test
+
+      - name: Build
+        env:
+          APP_BASE_URL: "http://localhost:3000"
+          DOWNLOAD_TOKEN_SECRET: "ci-nightly-download-secret-min-16"
+          PAYMENT_PROVIDER_DEFAULT: "MOCK"
+          REQUIRE_DISTRIBUTED_RATE_LIMIT: "false"
+        run: pnpm run build
+
+      - name: Local smoke test
+        run: |
+          PORT=3120 pnpm run start >/tmp/nightly-smoke.log 2>&1 &
+          APP_PID=$!
+          trap "kill $APP_PID >/dev/null 2>&1 || true" EXIT
+          for i in {1..40}; do
+            if curl -fsS http://127.0.0.1:3120/api/ready >/dev/null 2>&1; then
+              break
+            fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:3120/api/ready | grep -q '"status":"ready"\|"status":"degraded"'
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-build-${{ github.run_number }}
+          path: |
+            .next/standalone/
+            .next/static/
+            public/
+          retention-days: 3
+
+  production-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: quality-gate
+
+    steps:
+      - name: Production health check
+        run: |
+          echo "==> Checking production health..."
+          PASS=0
+          FAIL=0
+          check() {
+            local path="$1" expected="$2" desc="$3"
+            local url="${PUBLIC_URL}${path}"
+            local status
+            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$url" 2>/dev/null || echo "000")
+            if [ "$status" = "$expected" ]; then
+              echo "  ✓ ${desc} -> ${status}"
+              PASS=$((PASS + 1))
+            else
+              echo "  ✗ ${desc} -> ${status} (expected ${expected})"
+              FAIL=$((FAIL + 1))
+            fi
+          }
+
+          echo "Health & readiness..."
+          check "/api/ready" "200" "API ready"
+          check "/api/health" "200" "API health"
+          echo ""
+
+          echo "Core pages..."
+          check "/" "200" "Homepage"
+          check "/audit" "200" "Audit form"
+          check "/pricing" "200" "Pricing"
+          check "/sample-report" "200" "Sample report"
+          echo ""
+
+          echo "API security..."
+          check "/api/csrf" "200" "CSRF endpoint"
+          check "/api/billing/current" "401" "Billing (unauth)"
+          echo ""
+
+          echo "Results: ${PASS} passed, ${FAIL} failed"
+          if [ "$FAIL" -gt 0 ]; then
+            echo "::error::Production smoke test failed with ${FAIL} failures"
+            exit 1
+          fi
+
+  alert-on-failure:
+    runs-on: ubuntu-latest
+    needs: [quality-gate, production-smoke]
+    if: failure()
+
+    steps:
+      - name: Send failure alert
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -n "${TELEGRAM_BOT_TOKEN}" ] && [ -n "${TELEGRAM_CHAT_ID}" ]; then
+            MESSAGE="🚨 *Nightly Audit FAILED*%0A%0A"
+            MESSAGE+="Run: #${{ github.run_number }}%0A"
+            MESSAGE+="Ref: ${{ github.ref_name }}%0A"
+            MESSAGE+="Quality: ${{ needs.quality-gate.result }}%0A"
+            MESSAGE+="Smoke: ${{ needs.production-smoke.result }}%0A"
+            MESSAGE+="%0Ahttps://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+            curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              -d chat_id="${TELEGRAM_CHAT_ID}" \
+              -d text="${MESSAGE}" \
+              -d parse_mode="Markdown" \
+              --max-time 10 || echo "Failed to send Telegram alert"
+          else
+            echo "Telegram credentials not configured; skipping alert"
+          fi
+
+      - name: Create GitHub issue on failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🚨 Nightly Audit Failed — ${new Date().toISOString().split('T')[0]}`;
+            const body = [
+              '## Nightly Audit Failure',
+              '',
+              `| Check | Result |`,
+              `|-------|--------|`,
+              `| Quality Gate | ${context.payload.workflow_run?.conclusion || 'unknown'} |`,
+              `| Production Smoke | ${context.payload.workflow_run?.conclusion || 'unknown'} |`,
+              '',
+              `**Run**: [#${context.runNumber}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
+              `**Ref**: ${context.ref}`,
+              `**Date**: ${new Date().toISOString()}`,
+              '',
+              '---',
+              '*Auto-created by nightly-audit workflow*'
+            ].join('\n');
+
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['nightly-failure', 'automated']
+            });
+
+  nightly-report:
+    runs-on: ubuntu-latest
+    needs: [quality-gate, production-smoke]
+    if: always()
+
+    steps:
+      - name: Generate report
+        run: |
+          echo "## Nightly Audit Report" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Check | Result |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Quality Gate | \`${{ needs.quality-gate.result }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Production Smoke | \`${{ needs.production-smoke.result }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Date | $(date -u +%Y-%m-%dT%H:%M:%SZ) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "${{ needs.quality-gate.result }}" = "success" ] && [ "${{ needs.production-smoke.result }}" = "success" ]; then
+            echo "**Status: ALL PASS** ✅" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "**Status: FAILURES DETECTED** ❌" >> "$GITHUB_STEP_SUMMARY"
+          fi

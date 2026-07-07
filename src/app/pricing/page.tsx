@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import AuditCtaLink from "../../components/AuditCtaLink";
 import { buildPageMetadata } from "../../lib/seoMeta";
 import { PLANS, formatPriceToman } from "../../lib/plans";
 
@@ -188,6 +189,17 @@ export default function PricingPage() {
             <h4>ممیزی زمان‌بندی شده چیست؟</h4>
             <p>با پلن پرو و بالاتر، می‌توانید ممیزی خودکار هفتگی یا ماهانه را برای پروژه‌هایتان فعال کنید.</p>
           </div>
+        </div>
+      </section>
+
+      <section className="card" style={{ textAlign: "center", padding: "2rem" }}>
+        <h2>هنوز مطمئن نیستید؟</h2>
+        <p style={{ marginBottom: "1rem" }}>
+          نمونه گزارش را ببینید یا یک ارزیابی رایگان روی سایت خودتان شروع کنید.
+        </p>
+        <div className="hero-actions" style={{ justifyContent: "center", marginBottom: "1.5rem" }}>
+          <AuditCtaLink ctaId="pricing_page_sample_report" locale="fa" />
+          <AuditCtaLink ctaId="pricing_page_audit_start" locale="fa" />
         </div>
       </section>
 
