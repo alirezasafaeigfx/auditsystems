@@ -23,6 +23,11 @@ const mockPrisma = {
     findFirst: vi.fn().mockResolvedValue(null),
     update: vi.fn().mockResolvedValue({ id: "inv-1", status: "PAID" })
   },
+  billingEvent: {
+    create: vi.fn().mockResolvedValue({ id: "be-1" }),
+    findMany: vi.fn().mockResolvedValue([]),
+    count: vi.fn().mockResolvedValue(0)
+  },
   $transaction: vi.fn(async (fns: Array<() => Promise<unknown>>) => {
     for (const fn of fns) await fn();
   }),
@@ -33,7 +38,39 @@ vi.mock("./db", () => ({ prisma: mockPrisma }));
 
 describe("subscription library", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockPrisma.subscription.findFirst.mockReset();
+    mockPrisma.subscription.findFirst.mockResolvedValue(null);
+    mockPrisma.subscription.create.mockReset();
+    mockPrisma.subscription.create.mockResolvedValue({ id: "sub-1", status: "ACTIVE" });
+    mockPrisma.subscription.update.mockReset();
+    mockPrisma.subscription.update.mockResolvedValue({ id: "sub-1", status: "CANCELED" });
+    mockPrisma.subscription.deleteMany.mockReset();
+    mockPrisma.subscription.deleteMany.mockResolvedValue({ count: 0 });
+    mockPrisma.plan.findUnique.mockReset();
+    mockPrisma.plan.findUnique.mockResolvedValue(null);
+    mockPrisma.plan.findMany.mockReset();
+    mockPrisma.plan.findMany.mockResolvedValue([]);
+    mockPrisma.plan.upsert.mockReset();
+    mockPrisma.usageLedger.create.mockReset();
+    mockPrisma.usageLedger.create.mockResolvedValue({ id: "ul-1" });
+    mockPrisma.usageLedger.aggregate.mockReset();
+    mockPrisma.usageLedger.aggregate.mockResolvedValue({ _sum: { quantity: 0 } });
+    mockPrisma.usageLedger.deleteMany.mockReset();
+    mockPrisma.usageLedger.deleteMany.mockResolvedValue({ count: 0 });
+    mockPrisma.invoice.create.mockReset();
+    mockPrisma.invoice.create.mockResolvedValue({ id: "inv-1", status: "PENDING" });
+    mockPrisma.invoice.findMany.mockReset();
+    mockPrisma.invoice.findMany.mockResolvedValue([]);
+    mockPrisma.invoice.findFirst.mockReset();
+    mockPrisma.invoice.findFirst.mockResolvedValue(null);
+    mockPrisma.invoice.update.mockReset();
+    mockPrisma.invoice.update.mockResolvedValue({ id: "inv-1", status: "PAID" });
+    mockPrisma.billingEvent.create.mockReset();
+    mockPrisma.billingEvent.create.mockResolvedValue({ id: "be-1" });
+    mockPrisma.billingEvent.findMany.mockReset();
+    mockPrisma.billingEvent.findMany.mockResolvedValue([]);
+    mockPrisma.billingEvent.count.mockReset();
+    mockPrisma.billingEvent.count.mockResolvedValue(0);
   });
 
   describe("getActiveSubscription", () => {
@@ -113,7 +150,7 @@ describe("subscription library", () => {
 
   describe("cancelSubscription", () => {
     it("cancels active subscription", async () => {
-      mockPrisma.subscription.findFirst.mockResolvedValueOnce({ id: "sub-1", status: "ACTIVE" });
+      mockPrisma.subscription.findFirst.mockResolvedValueOnce({ id: "sub-1", status: "ACTIVE", plan: { code: "starter" }, planId: "plan-1" });
       const { cancelSubscription } = await import("./subscription");
       const result = await cancelSubscription("org-1");
       expect(result).not.toBeNull();
@@ -129,10 +166,11 @@ describe("subscription library", () => {
 
   describe("upgradeSubscription", () => {
     it("cancels current and creates new subscription", async () => {
-      mockPrisma.subscription.findFirst.mockResolvedValueOnce({ id: "sub-1", status: "ACTIVE" });
-      mockPrisma.plan.findUnique.mockResolvedValueOnce({ id: "plan-2", code: "pro" });
+      mockPrisma.subscription.findFirst
+        .mockResolvedValueOnce({ id: "sub-1", status: "ACTIVE", plan: { code: "starter" }, planId: "plan-1" })
+        .mockResolvedValueOnce({ id: "sub-2", status: "ACTIVE", plan: { code: "pro" }, planId: "plan-2" });
+      mockPrisma.plan.findUnique.mockResolvedValue({ id: "plan-2", code: "pro" });
       mockPrisma.subscription.update.mockResolvedValueOnce({ id: "sub-1", status: "CANCELED" });
-      mockPrisma.plan.findUnique.mockResolvedValueOnce({ id: "plan-2", code: "pro" });
       mockPrisma.subscription.create.mockResolvedValueOnce({ id: "sub-2", status: "ACTIVE" });
       const { upgradeSubscription } = await import("./subscription");
       const result = await upgradeSubscription("org-1", "pro");
@@ -142,7 +180,8 @@ describe("subscription library", () => {
 
   describe("reactivateSubscription", () => {
     it("reactivates canceled subscription", async () => {
-      mockPrisma.subscription.findFirst.mockResolvedValueOnce({ id: "sub-1", status: "CANCELED" });
+      mockPrisma.subscription.findFirst.mockResolvedValueOnce({ id: "sub-1", status: "CANCELED", planId: "plan-1" });
+      mockPrisma.plan.findUnique.mockResolvedValueOnce({ id: "plan-1", code: "starter" });
       const { reactivateSubscription } = await import("./subscription");
       const result = await reactivateSubscription("org-1");
       expect(result).not.toBeNull();

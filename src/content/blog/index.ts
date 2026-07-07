@@ -4,6 +4,11 @@ import websiteSpeedTest from "./website-speed-test";
 import securityAuditGuide from "./security-audit-guide";
 import wordpressSeo from "./wordpress-seo";
 import ecommerceAudit from "./ecommerce-audit";
+import coreWebVitalsGuide from "./core-web-vitals-guide";
+import technicalSeoIssues from "./technical-seo-issues";
+import seoChecklist from "./seo-checklist";
+import seoReportClient from "./seo-report-client";
+import websiteAuditGuide from "./website-audit-guide";
 
 export type BlogLocale = "fa" | "en";
 
@@ -39,7 +44,12 @@ const blogPosts: BlogPost[] = [
   websiteSpeedTest,
   securityAuditGuide,
   wordpressSeo,
-  ecommerceAudit
+  ecommerceAudit,
+  coreWebVitalsGuide,
+  technicalSeoIssues,
+  seoChecklist,
+  seoReportClient,
+  websiteAuditGuide
 ];
 
 function toBlogPostLocalized(post: BlogPost, locale: BlogLocale): BlogPostLocalized {

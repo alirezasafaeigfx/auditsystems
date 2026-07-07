@@ -18,6 +18,11 @@ vi.mock("../db", () => ({
     plan: {
       findUnique: vi.fn(),
     },
+    billingEvent: {
+      create: vi.fn(),
+      findMany: vi.fn(),
+      count: vi.fn(),
+    },
   },
 }));
 
