@@ -20,8 +20,9 @@ export default function SocialProofCounter() {
 
   return (
     <div className="social-proof-counter" aria-label={`${count} ارزیابی موفق انجام شده`}>
+      <span className="counter-live-dot" aria-hidden="true" />
       <strong className="counter-number">{count.toLocaleString("fa-IR")}+</strong>
-      <span className="counter-label">ارزیابی موفق انجام شده</span>
+      <span className="counter-label">ارزیابی موفق</span>
     </div>
   );
 }

@@ -63,6 +63,52 @@ export async function cancelSubscription(organizationId: string) {
   });
 }
 
+export async function upgradeSubscription(organizationId: string, newPlanCode: PlanCode) {
+  const current = await getActiveSubscription(organizationId);
+  const newPlan = await prisma.plan.findUnique({ where: { code: newPlanCode } });
+  if (!newPlan) throw new Error("PLAN_NOT_FOUND");
+
+  if (current) {
+    await prisma.subscription.update({
+      where: { id: current.id },
+      data: { status: "CANCELED" }
+    });
+  }
+
+  return createSubscription({ organizationId, planCode: newPlanCode });
+}
+
+export async function downgradeSubscription(organizationId: string, newPlanCode: PlanCode) {
+  const current = await getActiveSubscription(organizationId);
+  if (!current) throw new Error("NO_ACTIVE_SUBSCRIPTION");
+
+  const newPlan = await prisma.plan.findUnique({ where: { code: newPlanCode } });
+  if (!newPlan) throw new Error("PLAN_NOT_FOUND");
+
+  return prisma.subscription.update({
+    where: { id: current.id },
+    data: { planId: newPlan.id }
+  });
+}
+
+export async function reactivateSubscription(organizationId: string) {
+  const subscription = await prisma.subscription.findFirst({
+    where: {
+      organizationId,
+      status: "CANCELED",
+      currentPeriodEnd: { gt: new Date() }
+    },
+    orderBy: { createdAt: "desc" }
+  });
+
+  if (!subscription) return null;
+
+  return prisma.subscription.update({
+    where: { id: subscription.id },
+    data: { status: "ACTIVE" }
+  });
+}
+
 export async function recordUsage(input: {
   organizationId: string;
   type: string;

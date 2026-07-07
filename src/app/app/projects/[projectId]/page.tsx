@@ -85,6 +85,7 @@ export default async function ProjectDetailPage({ params }: Props) {
         <h2 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "0.75rem" }}>ممیزی زمان‌بندی شده</h2>
         <ScheduleManager
           projectId={project.id}
+          schedule={null}
           canSchedule={(await canScheduleAudit(orgId)).allowed}
         />
       </div>

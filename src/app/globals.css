@@ -1036,6 +1036,18 @@ html[dir="ltr"] .footer {
   color: #fff;
   border-radius: 12px;
   min-width: 120px;
+  position: relative;
+}
+
+.counter-live-dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #22c55e;
+  animation: pulse-dot 2s ease-in-out infinite;
 }
 
 .counter-number {
@@ -1079,6 +1091,113 @@ html[dir="ltr"] .footer {
   .trust-signals {
     flex-direction: column;
     align-items: center;
+  }
+}
+
+/* Social Proof Section */
+.social-proof-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding: 1rem 0;
+}
+
+.uptime-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 0.4rem 0.9rem;
+}
+
+.uptime-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* How It Works */
+.how-it-works {
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+.how-it-works h2 {
+  margin-bottom: 1.2rem;
+}
+
+.how-steps {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+}
+
+.how-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 200px;
+  text-align: center;
+}
+
+.how-step-num {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.3rem;
+}
+
+.how-step strong {
+  font-size: 0.92rem;
+}
+
+.how-step p {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.how-step-connector {
+  width: 40px;
+  height: 2px;
+  background: var(--line-strong);
+  margin-top: 18px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .how-steps {
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .how-step-connector {
+    width: 2px;
+    height: 24px;
+    margin-top: 0;
   }
 }
 

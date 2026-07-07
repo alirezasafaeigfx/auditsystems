@@ -5,6 +5,7 @@ import { normalizeAuditTargetUrl } from "../lib/normalizeAuditTargetUrl";
 import { evaluateAuditRules } from "../lib/rules";
 import { parseSeoBasics } from "../lib/seo";
 import { buildAuditSummaryV1 } from "../lib/summary";
+import { calculateScore } from "../lib/scoring";
 import { logEvent } from "../lib/observability";
 import { isDnsLookupFailure } from "../lib/security";
 
@@ -103,6 +104,8 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
       seo
     });
 
+    const score = calculateScore(findings);
+
     await prisma.$transaction([
       prisma.auditResource.deleteMany({ where: { runId: run.id } }),
       prisma.auditFinding.deleteMany({ where: { runId: run.id } }),
@@ -134,7 +137,13 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
         data: {
           status: "SUCCEEDED",
           finishedAt: new Date(),
-          summary: summary as Prisma.InputJsonValue
+          summary: {
+            ...(summary as Record<string, unknown>),
+            score: score.overall,
+            grade: score.grade,
+            categoryScores: score.categories,
+            severityCounts: score.severityCounts
+          } as Prisma.InputJsonValue
         }
       })
     ]);

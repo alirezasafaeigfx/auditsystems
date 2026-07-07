@@ -126,4 +126,33 @@ describe("subscription library", () => {
       expect(result).toBeNull();
     });
   });
+
+  describe("upgradeSubscription", () => {
+    it("cancels current and creates new subscription", async () => {
+      mockPrisma.subscription.findFirst.mockResolvedValueOnce({ id: "sub-1", status: "ACTIVE" });
+      mockPrisma.plan.findUnique.mockResolvedValueOnce({ id: "plan-2", code: "pro" });
+      mockPrisma.subscription.update.mockResolvedValueOnce({ id: "sub-1", status: "CANCELED" });
+      mockPrisma.plan.findUnique.mockResolvedValueOnce({ id: "plan-2", code: "pro" });
+      mockPrisma.subscription.create.mockResolvedValueOnce({ id: "sub-2", status: "ACTIVE" });
+      const { upgradeSubscription } = await import("./subscription");
+      const result = await upgradeSubscription("org-1", "pro");
+      expect(result.status).toBe("ACTIVE");
+    });
+  });
+
+  describe("reactivateSubscription", () => {
+    it("reactivates canceled subscription", async () => {
+      mockPrisma.subscription.findFirst.mockResolvedValueOnce({ id: "sub-1", status: "CANCELED" });
+      const { reactivateSubscription } = await import("./subscription");
+      const result = await reactivateSubscription("org-1");
+      expect(result).not.toBeNull();
+    });
+
+    it("returns null when no canceled subscription", async () => {
+      mockPrisma.subscription.findFirst.mockResolvedValueOnce(null);
+      const { reactivateSubscription } = await import("./subscription");
+      const result = await reactivateSubscription("org-1");
+      expect(result).toBeNull();
+    });
+  });
 });
