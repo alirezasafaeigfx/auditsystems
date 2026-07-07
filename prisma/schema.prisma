@@ -15,12 +15,34 @@ model User {
   name            String?
   passwordHash    String
   emailVerifiedAt DateTime?
+  referralCode    String?   @unique
+  referredBy      String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   memberships        Membership[]
   sessions           Session[]
   emailVerifications EmailVerificationToken[]
+  referralsGiven     Referral[]           @relation("ReferralGiven")
+  referralsReceived  Referral[]           @relation("ReferralReferred")
+  teamInvites        TeamMemberInvite[]   @relation("TeamInviteUser")
+}
+
+model Referral {
+  id          String   @id @default(cuid())
+  referrerId  String
+  referredId  String
+  code        String
+  convertedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  referrer  User @relation("ReferralGiven", fields: [referrerId], references: [id], onDelete: Cascade)
+  referred  User @relation("ReferralReferred", fields: [referredId], references: [id], onDelete: Cascade)
+
+  @@unique([referrerId, referredId])
+  @@index([referrerId])
+  @@index([referredId])
+  @@index([code])
 }
 
 model Organization {
@@ -37,6 +59,7 @@ model Organization {
   secondaryColor   String?
 
   memberships     Membership[]
+  teamInvites     TeamMemberInvite[]   @relation("TeamInviteOrganization")
   projects        Project[]
   auditRuns       AuditRun[]
   subscriptions   Subscription[]
@@ -401,6 +424,25 @@ model ScheduledAudit {
 
   @@index([organizationId, enabled])
   @@index([nextRunAt, enabled])
+}
+
+model TeamMemberInvite {
+  id             String   @id @default(cuid())
+  organizationId String
+  email          String
+  role           String   @default("VIEWER")
+  tokenHash      String   @unique
+  invitedById    String
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime @default(now())
+
+  organization  Organization @relation("TeamInviteOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy     User         @relation("TeamInviteUser", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([tokenHash])
+  @@unique([organizationId, email])
 }
 
 model EmailVerificationToken {

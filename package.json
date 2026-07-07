@@ -55,6 +55,7 @@
     "subscriptions:expire": "tsx src/scripts/expire-subscriptions.ts",
     "deploy:production": "bash scripts/deploy-production.sh",
     "lighthouse:local": "tsx src/scripts/lighthouse-local.ts",
+    "reports:monthly": "tsx src/scripts/generate-monthly-reports.ts",
     "deploy:check:hosting": "bash scripts/deploy/check-hosting-sync.sh --strict",
     "deploy:readiness": "bash scripts/deploy/run-readiness-suite.sh --strict",
     "vps:prepare": "bash scripts/vps-deploy.sh prepare",
