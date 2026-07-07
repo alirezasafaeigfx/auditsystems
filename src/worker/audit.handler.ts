@@ -6,8 +6,10 @@ import { evaluateAuditRules } from "../lib/rules";
 import { parseSeoBasics } from "../lib/seo";
 import { buildAuditSummaryV1 } from "../lib/summary";
 import { calculateScore } from "../lib/scoring";
-import { logEvent } from "../lib/observability";
+import { createAuditLogger } from "../lib/logger";
+import { createRequestId } from "../lib/observability";
 import { isDnsLookupFailure } from "../lib/security";
+import { sendAuditCompleteNotification } from "../lib/notifications";
 
 export type JobHandler = (job: Job, signal: AbortSignal) => Promise<void>;
 
@@ -147,6 +149,23 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
         }
       })
     ]);
+
+    if (run.organizationId) {
+      const membership = await prisma.membership.findFirst({
+        where: { organizationId: run.organizationId }
+      });
+      if (membership) {
+        sendAuditCompleteNotification(membership.userId, {
+          auditId: run.id,
+          url: run.url,
+          score: score.overall,
+          grade: score.grade,
+          totalFindings: score.totalFindings,
+          severityCounts: score.severityCounts as Record<string, number>,
+          categoryScores: score.categories as Record<string, number>
+        }).catch(() => {});
+      }
+    }
   } catch (error) {
     await prisma.auditRun.update({
       where: { id: run.id },
@@ -174,7 +193,9 @@ async function withResolvedAuditTarget(
     return await normalizeAuditTargetUrl(url, { verifyDnsPublicIp: verifyDns });
   } catch (error) {
     if (verifyDns && failOpenOnDnsLookupFailure && isDnsLookupFailure(error)) {
-      logEvent("warn", "worker_audit_dns_lookup_failed_fallback", { url, backend: "dns" });
+      const requestId = createRequestId();
+      const logger = createAuditLogger(requestId, "unknown");
+      logger.warn("worker_audit_dns_lookup_failed_fallback", { url, backend: "dns" });
       return normalizeAuditTargetUrl(url, { verifyDnsPublicIp: false });
     }
     throw error;

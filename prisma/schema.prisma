@@ -58,14 +58,16 @@ model Organization {
   primaryColor     String?
   secondaryColor   String?
 
-  memberships     Membership[]
-  teamInvites     TeamMemberInvite[]   @relation("TeamInviteOrganization")
-  projects        Project[]
-  auditRuns       AuditRun[]
-  subscriptions   Subscription[]
-  usageLedgers    UsageLedger[]
-  invoices        Invoice[]
-  scheduledAudits ScheduledAudit[]
+  memberships            Membership[]
+  teamInvites            TeamMemberInvite[]   @relation("TeamInviteOrganization")
+  projects               Project[]
+  auditRuns              AuditRun[]
+  subscriptions          Subscription[]
+  usageLedgers           UsageLedger[]
+  invoices               Invoice[]
+  scheduledAudits        ScheduledAudit[]
+  notificationPreference NotificationPreference?
+  notificationHistory    NotificationHistory[]
 }
 
 model Membership {
@@ -457,4 +459,30 @@ model EmailVerificationToken {
 
   @@index([tokenHash])
   @@index([userId, createdAt])
+}
+
+model NotificationPreference {
+  id             String   @id @default(cuid())
+  organizationId String   @unique
+  emailEnabled   Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
+
+model NotificationHistory {
+  id             String   @id @default(cuid())
+  organizationId String
+  type           String   // AUDIT_COMPLETE
+  subject        String
+  body           String
+  email          String
+  sentAt         DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, sentAt])
 }

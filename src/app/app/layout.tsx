@@ -25,6 +25,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           <Link href="/app/projects" style={{ textDecoration: "none", color: "var(--text)", fontSize: "0.875rem" }}>پروژه‌ها</Link>
           <Link href="/app/team" style={{ textDecoration: "none", color: "var(--text)", fontSize: "0.875rem" }}>تیم</Link>
           <Link href="/app/referrals" style={{ textDecoration: "none", color: "var(--text)", fontSize: "0.875rem" }}>معرفی</Link>
+          <Link href="/app/notifications" style={{ textDecoration: "none", color: "var(--text)", fontSize: "0.875rem" }}>اعلانات</Link>
           <Link href="/app/billing" style={{ textDecoration: "none", color: "var(--text)", fontSize: "0.875rem" }}>اشتراک و صورتحساب</Link>
           <span style={{ color: "var(--muted)", fontSize: "0.875rem" }}>{user.email}</span>
           <LogoutButton />

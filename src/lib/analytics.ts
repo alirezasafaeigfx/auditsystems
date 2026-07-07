@@ -14,7 +14,8 @@ export type SeoEventName =
   | "seo_payment_success"
   | "seo_intent_router_view"
   | "seo_intent_router_click"
-  | "seo_cta_click";
+  | "seo_cta_click"
+  | "seo_blog_view";
 
 type SeoEventParams = Record<string, string | number | boolean | null | undefined>;
 

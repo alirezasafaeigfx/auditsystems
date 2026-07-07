@@ -3,7 +3,8 @@ import { prisma } from "../../../../lib/db";
 import { normalizeAuditTargetUrl } from "../../../../lib/normalizeAuditTargetUrl";
 import { createReportToken } from "../../../../lib/token";
 import { observeApiRequest } from "../../../../lib/metrics";
-import { createRequestId, logEvent, respondJson } from "../../../../lib/observability";
+import { createRequestId, respondJson } from "../../../../lib/observability";
+import { createLogger } from "../../../../lib/logger";
 import { consumeDistributedRateLimit, isDistributedRateLimitRequired } from "../../../../lib/rateLimit";
 import { getClientIp, hashClientIp, isDnsLookupFailure, sanitizeApiError } from "../../../../lib/security";
 import { csrfProtection } from "../../../../lib/csrf";
@@ -14,6 +15,7 @@ const RATE_LIMIT_MAX_RUNS = 5;
 
 export async function POST(request: NextRequest) {
   const requestId = createRequestId();
+  const logger = createLogger({ requestId });
   const startedAt = Date.now();
   let statusCode = 200;
 
@@ -22,7 +24,7 @@ export async function POST(request: NextRequest) {
     const csrfCheck = await csrfProtection(request);
     if (!csrfCheck.valid) {
       statusCode = 403;
-      logEvent("warn", "audit_run_csrf_validation_failed", { requestId, error: csrfCheck.error });
+      logger.warn("audit_run_csrf_validation_failed", { error: csrfCheck.error });
       return respondJson({ error: "FORBIDDEN", requestId, details: csrfCheck.error }, requestId, { 
         status: statusCode, 
         headers: { "Cache-Control": "no-store" } 
@@ -74,8 +76,7 @@ export async function POST(request: NextRequest) {
     const useDatabaseFallback = distributed.backend !== "upstash-redis" && distributed.backend !== "local-redis";
 
     if (requireDistributed && useDatabaseFallback) {
-      logEvent("warn", "audit_run_rate_limit_backend_fallback", {
-        requestId,
+      logger.warn("audit_run_rate_limit_backend_fallback", {
         backend: distributed.backend,
         fallback: "database"
       });
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     if (!distributed.allowed) {
       statusCode = 429;
-      logEvent("warn", "audit_run_rate_limited_distributed", { requestId, ipHash, backend: distributed.backend });
+      logger.warn("audit_run_rate_limited_distributed", { ipHash, backend: distributed.backend });
       return respondJson(
         { error: "RATE_LIMITED", requestId },
         requestId,
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
       });
       if (recentRuns >= RATE_LIMIT_MAX_RUNS) {
         statusCode = 429;
-        logEvent("warn", "audit_run_rate_limited", { requestId, ipHash });
+        logger.warn("audit_run_rate_limited", { ipHash });
         return respondJson(
           { error: "RATE_LIMITED", requestId },
           requestId,
@@ -133,8 +134,7 @@ export async function POST(request: NextRequest) {
       normalized = await normalizeAuditTargetUrl(inputUrl, { verifyDnsPublicIp: verifyDns });
     } catch (error) {
       if (verifyDns && failOpenOnDnsLookupFailure && isDnsLookupFailure(error)) {
-        logEvent("warn", "audit_run_dns_lookup_failed_fallback", {
-          requestId,
+        logger.warn("audit_run_dns_lookup_failed_fallback", {
           url: normalizedUrlSafe(inputUrl),
           backend: "dns"
         });
@@ -170,15 +170,14 @@ export async function POST(request: NextRequest) {
       payload: { runId: run.id }
     });
 
-    logEvent("info", "audit_run_created", { requestId, runId: run.id, durationMs: Date.now() - startedAt, depth });
+    logger.info("audit_run_created", { runId: run.id, durationMs: Date.now() - startedAt, depth });
     return respondJson({ runId: run.id, token: share.token, status: run.status, requestId }, requestId, {
       headers: { "Cache-Control": "no-store" }
     });
   } catch (error) {
     const safeError = sanitizeApiError(error);
     statusCode = safeError.status;
-    logEvent("error", "audit_run_create_failed", {
-      requestId,
+    logger.error("audit_run_create_failed", {
       durationMs: Date.now() - startedAt,
       code: safeError.code
     });

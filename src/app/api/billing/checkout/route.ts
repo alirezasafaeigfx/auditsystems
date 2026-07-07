@@ -4,7 +4,8 @@ import { requireBillingAuth } from "../../../../lib/billing-auth";
 import { createCheckout, resolvePaymentProvider } from "../../../../lib/payments";
 import { getPlan, type PlanCode, isPaidPlan } from "../../../../lib/plans";
 import { createInvoice } from "../../../../lib/subscription";
-import { createRequestId, logEvent, respondJson } from "../../../../lib/observability";
+import { createRequestId, respondJson } from "../../../../lib/observability";
+import { createPaymentLogger } from "../../../../lib/logger";
 import { csrfProtection } from "../../../../lib/csrf";
 import { checkAuthRateLimit } from "../../../../lib/authRateLimit";
 import crypto from "node:crypto";
@@ -12,6 +13,7 @@ import crypto from "node:crypto";
 export async function POST(request: NextRequest) {
   const requestId = createRequestId();
   const startedAt = Date.now();
+  let paymentId: string | undefined;
 
   try {
     const csrfCheck = await csrfProtection(request);
@@ -87,8 +89,10 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    logEvent("info", "billing_checkout_created", {
-      requestId,
+    paymentId = invoice.id;
+    const paymentLogger = createPaymentLogger(requestId, invoice.id, user.id);
+
+    paymentLogger.info("billing_checkout_created", {
       invoiceId: invoice.id,
       planCode,
       organizationId: membership.organizationId,
@@ -104,8 +108,8 @@ export async function POST(request: NextRequest) {
       requestId
     }, requestId, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    logEvent("error", "billing_checkout_failed", {
-      requestId,
+    const logger = createPaymentLogger(requestId, paymentId || "unknown");
+    logger.error("billing_checkout_failed", {
       code: error instanceof Error ? error.message : String(error)
     });
     return respondJson({ error: "INTERNAL_ERROR", requestId }, requestId, { status: 500, headers: { "Cache-Control": "no-store" } });
