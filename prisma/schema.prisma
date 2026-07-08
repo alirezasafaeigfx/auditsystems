@@ -68,6 +68,7 @@ model Organization {
   scheduledAudits        ScheduledAudit[]
   notificationPreference NotificationPreference?
   notificationHistory    NotificationHistory[]
+  billingEvents          BillingEvent[]
 }
 
 model Membership {
