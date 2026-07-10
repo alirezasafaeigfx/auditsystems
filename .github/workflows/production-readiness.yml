@@ -37,6 +37,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ripgrep
 
+      - name: Scan tracked source for secrets
+        run: pnpm run scan:secrets
+
       - name: Quality + Roadmap + Docs + Payment preflight
         env:
           APP_BASE_URL: "https://audit.alirezasafaeisystems.ir"
