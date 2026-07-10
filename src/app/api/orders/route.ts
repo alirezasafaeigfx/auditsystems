@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
     const share = await prisma.reportShare.findUnique({
       where: { token },
-      include: { run: { select: { status: true } } }
+      include: { run: { select: { status: true, url: true, normalizedUrl: true } } }
     });
 
     if (!share || !isReportShareAccessible(share)) {
@@ -95,7 +95,20 @@ export async function POST(request: Request) {
       }));
 
     if (!existingPendingOrder) {
-      await prisma.auditLead.create({ data: { runId: share.runId, email } });
+      await prisma.auditLead.create({
+        data: {
+          runId: share.runId,
+          email,
+          domain: share.run.normalizedUrl ?? share.run.url,
+          normalizedUrl: share.run.normalizedUrl,
+          businessType: "unknown",
+          primaryConcern: "Report unlock or order request",
+          consentPrivacy: true,
+          leadSource: "report_unlock",
+          sourcePlacement: "orders_api",
+          sourceOffer: "pdf_export",
+        },
+      });
     }
 
     const callbackRef = crypto.randomUUID().replace(/-/g, "");

@@ -54,12 +54,13 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
 
   await prisma.auditRun.update({
     where: { id: run.id },
-    data: {
-      normalizedUrl: normalized.normalizedUrl,
-      status: "RUNNING",
-      startedAt: new Date(),
-      errorCode: null,
-      errorMessage: null
+      data: {
+        normalizedUrl: normalized.normalizedUrl,
+        status: "RUNNING",
+        reportStatus: "RUNNING",
+        startedAt: new Date(),
+        errorCode: null,
+        errorMessage: null
     }
   });
 
@@ -138,6 +139,7 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
         where: { id: run.id },
         data: {
           status: "SUCCEEDED",
+          reportStatus: "REVIEW",
           finishedAt: new Date(),
           summary: {
             ...(summary as Record<string, unknown>),
@@ -171,6 +173,7 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
       where: { id: run.id },
       data: {
         status: "FAILED",
+        reportStatus: "FAILED",
         finishedAt: new Date(),
         errorCode: "AUDIT_FAILED",
         errorMessage: error instanceof Error ? error.message : String(error)

@@ -41,7 +41,15 @@ export async function POST(
     data: {
       runId: share.runId,
       email,
-      name: body.name?.trim() || null
+      name: body.name?.trim() || null,
+      domain: share.run.normalizedUrl ?? share.run.url,
+      normalizedUrl: share.run.normalizedUrl,
+      businessType: "unknown",
+      primaryConcern: "Captured from report page",
+      consentPrivacy: true,
+      leadSource: "report_capture",
+      sourcePlacement: "report_page",
+      sourceOffer: "follow_up",
     }
   });
 
