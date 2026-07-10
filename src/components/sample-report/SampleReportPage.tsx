@@ -44,6 +44,23 @@ export default function SampleReportPage({ locale }: SampleReportPageProps) {
 
       <FindingsBySeverity findings={demoFindings} locale={locale} copy={copy} />
       <FindingsByCategory findings={demoFindings} locale={locale} copy={copy} />
+      <section className="card grid">
+        <h2>{copy.actionPlan}</h2>
+        <div className="grid-3">
+          <article>
+            <strong>{locale === "fa" ? "روز ۱ تا ۷" : "Days 1-7"}</strong>
+            <p>{locale === "fa" ? "ریسک‌های P0/P1 امنیت، canonical و خطاهای موبایل را اصلاح و دوباره بررسی کنید." : "Fix P0/P1 security, canonical, and mobile defects, then re-check evidence."}</p>
+          </article>
+          <article>
+            <strong>{locale === "fa" ? "روز ۸ تا ۲۰" : "Days 8-20"}</strong>
+            <p>{locale === "fa" ? "فرضیه‌های عملکرد را با lab/field data واقعی تایید کنید و اصلاحات LCP/CLS را اجرا کنید." : "Validate performance hypotheses with real lab/field data and implement LCP/CLS fixes."}</p>
+          </article>
+          <article>
+            <strong>{locale === "fa" ? "روز ۲۱ تا ۳۰" : "Days 21-30"}</strong>
+            <p>{locale === "fa" ? "گزارش قبل/بعد، مالک هر اصلاح و monitoring ماهانه را آماده کنید." : "Prepare before/after evidence, owners, and monthly monitoring."}</p>
+          </article>
+        </div>
+      </section>
       <SampleReportCtaBlock locale={locale} copy={copy} />
     </main>
   );

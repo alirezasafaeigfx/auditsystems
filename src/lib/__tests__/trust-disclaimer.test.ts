@@ -32,7 +32,7 @@ describe("sample report trust", () => {
       expect(copyFa.demoBadge).toBeDefined();
       expect(copyFa.executiveSummary).toBeDefined();
       expect(copyFa.overallScore).toBeDefined();
-      expect(copyFa.grade).toBeDefined();
+      expect(copyFa.evidenceStatus).toBeDefined();
       expect(copyFa.totalFindings).toBeDefined();
       expect(copyFa.nextSteps).toBeDefined();
     });

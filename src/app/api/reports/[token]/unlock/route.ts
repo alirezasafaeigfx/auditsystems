@@ -25,8 +25,15 @@ export async function POST(request: Request, context: { params: Promise<{ token:
     const { token } = await context.params;
     const body = await request.json();
     const email = normalizeEmail(body.email);
+    if (body.consentPrivacy !== true) {
+      statusCode = 400;
+      return respondJson({ error: "CONSENT_REQUIRED", requestId }, requestId, {
+        status: 400,
+        headers: { "Cache-Control": "no-store" }
+      });
+    }
 
-    const share = await prisma.reportShare.findUnique({ where: { token }, include: { run: { select: { status: true } } } });
+    const share = await prisma.reportShare.findUnique({ where: { token }, include: { run: { select: { status: true, url: true, normalizedUrl: true } } } });
     if (!share || !isReportShareAccessible(share)) {
       statusCode = 404;
       logEvent("warn", "unlock_not_found", { requestId, token });
@@ -55,7 +62,20 @@ export async function POST(request: Request, context: { params: Promise<{ token:
     }
 
     const [lead, order] = await prisma.$transaction([
-      prisma.auditLead.create({ data: { runId: share.runId, email } }),
+      prisma.auditLead.create({
+        data: {
+          runId: share.runId,
+          email,
+          domain: share.run.normalizedUrl ?? share.run.url,
+          normalizedUrl: share.run.normalizedUrl,
+          businessType: "unknown",
+          primaryConcern: "Report unlock checkout request",
+          consentPrivacy: body.consentPrivacy,
+          leadSource: "report_unlock",
+          sourcePlacement: "unlock_route",
+          sourceOffer: "pdf_export",
+        },
+      }),
       prisma.auditOrder.create({
         data: {
           runId: share.runId,

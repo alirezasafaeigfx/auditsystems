@@ -68,6 +68,10 @@ function isPrivateOrReservedIPv6(ip: string): boolean {
 }
 
 function assertPublicAddress(host: string): void {
+  if (process.env.NODE_ENV !== "production" && process.env.AUDIT_ALLOW_LOCAL_FIXTURE === "true") {
+    return;
+  }
+
   const normalizedHost = normalizeIpHost(host);
 
   if (isBlockedHostname(normalizedHost)) {

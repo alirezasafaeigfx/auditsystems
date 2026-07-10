@@ -47,6 +47,7 @@
     "payment:zarinpal:smoke": "tsx src/scripts/zarinpal-smoke.ts",
     "automation:run": "tsx src/scripts/automation-master.ts --strict",
     "smoke:audit-flow": "node scripts/deploy/smoke-audit-flow.cjs",
+    "smoke:lead-delivery": "tsx src/scripts/smoke-lead-delivery.ts",
     "smoke:routes": "bash scripts/smoke-public-routes.sh",
     "cleanup": "tsx src/scripts/cleanup.ts",
     "plans:seed": "tsx src/scripts/seed-plans.ts",

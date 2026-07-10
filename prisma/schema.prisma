@@ -121,6 +121,23 @@ enum AuditStatus {
   FAILED
 }
 
+enum AuditReportStatus {
+  QUEUED
+  RUNNING
+  REVIEW
+  DELIVERED
+  FAILED
+}
+
+enum LeadStatus {
+  NEW
+  QUALIFIED
+  CALL
+  PROPOSAL
+  WON
+  LOST
+}
+
 enum AuditDepth {
   QUICK
   DEEP
@@ -175,6 +192,7 @@ model AuditRun {
   normalizedUrl String?
   depth         AuditDepth  @default(QUICK)
   status        AuditStatus @default(QUEUED)
+  reportStatus  AuditReportStatus @default(QUEUED)
 
   projectId      String?
   organizationId String?
@@ -201,6 +219,7 @@ model AuditRun {
   shares    ReportShare[]
   leads     AuditLead[]
   orders    AuditOrder[]
+  funnelEvents FunnelEvent[]
 
   @@index([normalizedUrl, createdAt])
   @@index([status, createdAt])
@@ -264,20 +283,41 @@ model ReportShare {
 }
 
 model AuditLead {
-  id    String @id @default(cuid())
-  runId String
+  id    String  @id @default(cuid())
+  runId String?
 
-  email   String
-  name    String?
-  phone   String?
-  company String?
-  note    String?
+  domain         String
+  normalizedUrl  String?
+  email          String
+  name           String?
+  phone          String?
+  company        String?
+  businessType   String
+  primaryConcern String
+  consentPrivacy Boolean @default(false)
+  status         LeadStatus @default(NEW)
+  internalNote   String?
+  nextActionAt   DateTime?
+  lostReason     String?
+  leadSource     String @default("direct")
+  sourcePlacement String?
+  sourceOffer     String?
+  submitEventId   String?
+  qualifiedAt     DateTime?
+  wonAt           DateTime?
+  lostAt          DateTime?
+  note            String?
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  run AuditRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  run AuditRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+  funnelEvents FunnelEvent[]
 
   @@index([email, createdAt])
+  @@index([domain, createdAt])
+  @@index([status, createdAt])
+  @@index([leadSource, createdAt])
   @@index([runId, createdAt])
 }
 
@@ -314,6 +354,27 @@ model AuditOrderEvent {
   order AuditOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId, createdAt])
+}
+
+model FunnelEvent {
+  id        String  @id @default(cuid())
+  eventType String
+  leadId    String?
+  runId     String?
+  source    String?
+  placement String?
+  offer     String?
+  metadata  Json?
+
+  createdAt DateTime @default(now())
+
+  lead AuditLead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  run  AuditRun?  @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  @@index([eventType, createdAt])
+  @@index([leadId, createdAt])
+  @@index([runId, createdAt])
+  @@index([source, createdAt])
 }
 
 model Job {

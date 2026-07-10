@@ -48,21 +48,20 @@ describe("audit-cta-registry", () => {
     const entry = getAuditCta("sample_report_own_report");
     expect(entry).toBeDefined();
     const href = buildAuditCtaHref(entry!, "fa");
-    expect(href).toContain("/audit?url=");
+    expect(href).toContain("/qualification?url=");
     expect(href).toContain(encodeURIComponent(SAMPLE_DEMO_URL));
   });
 
   it("builds locale-aware internal paths", () => {
     const entry = getAuditCta("sample_report_pricing");
-    expect(buildAuditCtaHref(entry!, "en")).toBe("/en/pricing");
-    expect(buildAuditCtaHref(entry!, "fa")).toBe("/pricing");
+    expect(buildAuditCtaHref(entry!, "en")).toBe("/en/qualification");
+    expect(buildAuditCtaHref(entry!, "fa")).toBe("/qualification");
   });
 
   it("marks professional review as external with UTM params", () => {
     const entry = getAuditCta("sample_report_pro_review");
-    expect(entry?.external).toBe(true);
-    expect(entry?.path).toContain("utm_source=audit");
-    expect(entry?.path).toContain("utm_medium=cta_registry");
+    expect(entry?.external).toBeUndefined();
+    expect(entry?.path).toBe("/qualification");
   });
 
   it("returns audit_home CTAs for audit form surface", () => {
@@ -90,7 +89,7 @@ describe("audit-cta-registry", () => {
       cta_id: "audit_landing_start",
       intent: "audit_start",
       surface: "audit_landing",
-      destination: "/audit",
+      destination: "/qualification",
       locale: "fa",
     });
   });
@@ -100,7 +99,7 @@ describe("audit-cta-registry", () => {
     trackAuditCtaClick(entry!, "en");
 
     const payload = vi.mocked(trackSeoEvent).mock.calls[0]?.[1];
-    expect(payload?.destination).toContain("/en/audit?url=");
+    expect(payload?.destination).toContain("/en/qualification?url=");
     expect(String(payload?.destination)).toContain(encodeURIComponent(SAMPLE_DEMO_URL));
   });
 });
