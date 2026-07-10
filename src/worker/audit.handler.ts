@@ -10,6 +10,7 @@ import { createAuditLogger } from "../lib/logger";
 import { createRequestId } from "../lib/observability";
 import { isDnsLookupFailure } from "../lib/security";
 import { sendAuditCompleteNotification } from "../lib/notifications";
+import { recordFunnelEvent } from "../lib/funnel-events";
 
 export type JobHandler = (job: Job, signal: AbortSignal) => Promise<void>;
 
@@ -151,6 +152,8 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
         }
       })
     ]);
+
+    await recordFunnelEvent({ eventType: "report_review", runId: run.id });
 
     if (run.organizationId) {
       const membership = await prisma.membership.findFirst({

@@ -25,6 +25,13 @@ export async function POST(request: Request, context: { params: Promise<{ token:
     const { token } = await context.params;
     const body = await request.json();
     const email = normalizeEmail(body.email);
+    if (body.consentPrivacy !== true) {
+      statusCode = 400;
+      return respondJson({ error: "CONSENT_REQUIRED", requestId }, requestId, {
+        status: 400,
+        headers: { "Cache-Control": "no-store" }
+      });
+    }
 
     const share = await prisma.reportShare.findUnique({ where: { token }, include: { run: { select: { status: true, url: true, normalizedUrl: true } } } });
     if (!share || !isReportShareAccessible(share)) {
@@ -63,7 +70,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
           normalizedUrl: share.run.normalizedUrl,
           businessType: "unknown",
           primaryConcern: "Report unlock checkout request",
-          consentPrivacy: true,
+          consentPrivacy: body.consentPrivacy,
           leadSource: "report_unlock",
           sourcePlacement: "unlock_route",
           sourceOffer: "pdf_export",

@@ -29,6 +29,10 @@ export async function POST(request: Request) {
     const token = String(body.token ?? "").trim();
     const email = normalizeEmail(body.email);
     const provider = resolvePaymentProvider(body.provider ?? null);
+    if (body.consentPrivacy !== true) {
+      statusCode = 400;
+      return respondJson({ error: "CONSENT_REQUIRED", requestId }, requestId, { status: statusCode, headers: { "Cache-Control": "no-store" } });
+    }
 
     if (!token) {
       statusCode = 400;
@@ -103,7 +107,7 @@ export async function POST(request: Request) {
           normalizedUrl: share.run.normalizedUrl,
           businessType: "unknown",
           primaryConcern: "Report unlock or order request",
-          consentPrivacy: true,
+          consentPrivacy: body.consentPrivacy,
           leadSource: "report_unlock",
           sourcePlacement: "orders_api",
           sourceOffer: "pdf_export",

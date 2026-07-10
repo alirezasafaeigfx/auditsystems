@@ -5,6 +5,7 @@ import { getClientIp, hashClientIp } from "../../../lib/security";
 import { createLogger } from "../../../lib/logger";
 import { createRequestId, respondJson } from "../../../lib/observability";
 import { validateLeadIntake } from "../../../lib/lead-delivery";
+import { recordFunnelEvent } from "../../../lib/funnel-events";
 
 const RATE_LIMIT_WINDOW_SEC = 60 * 60;
 const RATE_LIMIT_MAX = 6;
@@ -43,21 +44,25 @@ export async function POST(request: NextRequest) {
       normalizedUrl: validated.value.normalizedUrl,
       createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
     },
-    select: { id: true, status: true },
+    select: { id: true },
   });
 
   if (recentDuplicate) {
     logger.info("lead_intake_duplicate_reused", { leadId: recentDuplicate.id });
-    return respondJson(
-      { leadId: recentDuplicate.id, status: recentDuplicate.status, duplicate: true, requestId },
-      requestId,
-      { status: 200 },
-    );
+    await recordFunnelEvent({
+      eventType: "lead_duplicate_received",
+      leadId: recentDuplicate.id,
+      source: validated.value.leadSource,
+      placement: validated.value.sourcePlacement,
+      offer: validated.value.sourceOffer,
+      metadata: { submitEventId: validated.value.submitEventId },
+    });
+    return respondJson({ accepted: true, requestId }, requestId, { status: 202 });
   }
 
   const lead = await prisma.auditLead.create({
     data: validated.value,
-    select: { id: true, status: true, leadSource: true },
+    select: { id: true, leadSource: true },
   });
 
   logger.info("lead_intake_created", {
@@ -67,5 +72,14 @@ export async function POST(request: NextRequest) {
     sourceOffer: validated.value.sourceOffer,
   });
 
-  return respondJson({ leadId: lead.id, status: lead.status, requestId }, requestId, { status: 201 });
+  await recordFunnelEvent({
+    eventType: "lead_submitted",
+    leadId: lead.id,
+    source: lead.leadSource,
+    placement: validated.value.sourcePlacement,
+    offer: validated.value.sourceOffer,
+    metadata: { submitEventId: validated.value.submitEventId },
+  });
+
+  return respondJson({ accepted: true, requestId }, requestId, { status: 202 });
 }

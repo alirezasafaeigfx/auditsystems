@@ -6,7 +6,7 @@ import Link from "next/link";
 type SubmitState =
   | { kind: "idle" }
   | { kind: "submitting" }
-  | { kind: "success"; leadId: string; duplicate: boolean }
+  | { kind: "success" }
   | { kind: "error"; message: string };
 
 function errorMessage(code: string): string {
@@ -67,7 +67,7 @@ export default function QualificationForm() {
       return;
     }
 
-    setState({ kind: "success", leadId: String(body.leadId), duplicate: Boolean(body.duplicate) });
+    setState({ kind: "success" });
   }
 
   if (state.kind === "success") {
@@ -75,10 +75,7 @@ export default function QualificationForm() {
       <section className="card hero" aria-live="polite">
         <span className="badge">درخواست ثبت شد</span>
         <h1>درخواست ارزیابی دریافت شد</h1>
-        <p>
-          شناسه درخواست: <strong>{state.leadId}</strong>
-          {state.duplicate ? " — این درخواست با مورد قبلی ادغام شد." : ""}
-        </p>
+        <p>درخواست شما برای بررسی qualification ثبت شد و برای پیگیری داخلی در صف قرار گرفت.</p>
         <p>مرحله بعدی بررسی qualification و شروع دستی Audit توسط اپراتور است.</p>
         <div className="hero-actions">
           <Link href="/sample-report" className="button secondary">مشاهده نمونه گزارش</Link>

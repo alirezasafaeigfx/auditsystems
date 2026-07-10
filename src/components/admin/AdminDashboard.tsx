@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { fetchCSRFHeaders } from '../../lib/csrf-client'
 
 type Lead = {
   id: string
@@ -53,25 +54,35 @@ export function AdminDashboard() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
   const loadData = useCallback(async () => {
-    const [statsRes, leadsRes] = await Promise.all([
-      fetch('/api/admin/stats'),
-      fetch('/api/admin/leads'),
-    ])
-    if (statsRes.status === 401 || leadsRes.status === 401) {
-      router.push('/admin/login')
-      return
+    try {
+      const [statsRes, leadsRes] = await Promise.all([
+        fetch('/api/admin/stats'),
+        fetch('/api/admin/leads'),
+      ])
+      if (statsRes.status === 401 || leadsRes.status === 401) {
+        router.push('/admin/login')
+        return
+      }
+      if (!statsRes.ok || !leadsRes.ok) {
+        setError(`Failed to load admin data (${statsRes.status}/${leadsRes.status})`)
+        return
+      }
+      setStats(await statsRes.json())
+      const leadsBody = await leadsRes.json()
+      setLeads(leadsBody.leads ?? [])
+    } catch {
+      setError('Network failure while loading admin data.')
+    } finally {
+      setLoading(false)
     }
-    setStats(await statsRes.json())
-    const leadsBody = await leadsRes.json()
-    setLeads(leadsBody.leads ?? [])
-    setLoading(false)
   }, [router])
 
   useEffect(() => {
-    loadData().catch(() => setLoading(false))
+    loadData()
   }, [loadData])
 
   const handleLogout = async () => {
@@ -80,21 +91,50 @@ export function AdminDashboard() {
   }
 
   async function updateLead(lead: Lead, payload: Record<string, unknown>) {
+    if (busyId) return
     setBusyId(lead.id)
-    await fetch(`/api/admin/leads/${lead.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-    await loadData()
-    setBusyId(null)
+    setError(null)
+    try {
+      const csrf = await fetchCSRFHeaders()
+      const response = await fetch(`/api/admin/leads/${lead.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...csrf },
+        body: JSON.stringify(payload),
+      })
+      if (!response.ok) {
+        const body = await safeJson(response)
+        setError(adminErrorMessage(response.status, body.error))
+        return
+      }
+      await loadData()
+    } catch {
+      setError('Network failure while updating the lead.')
+    } finally {
+      setBusyId(null)
+    }
   }
 
   async function postLeadAction(lead: Lead, action: 'start-audit' | 'retry-audit') {
+    if (busyId) return
     setBusyId(lead.id)
-    await fetch(`/api/admin/leads/${lead.id}/${action}`, { method: 'POST' })
-    await loadData()
-    setBusyId(null)
+    setError(null)
+    try {
+      const csrf = await fetchCSRFHeaders()
+      const response = await fetch(`/api/admin/leads/${lead.id}/${action}`, {
+        method: 'POST',
+        headers: csrf,
+      })
+      if (!response.ok) {
+        const body = await safeJson(response)
+        setError(adminErrorMessage(response.status, body.error))
+        return
+      }
+      await loadData()
+    } catch {
+      setError('Network failure while running the audit action.')
+    } finally {
+      setBusyId(null)
+    }
   }
 
   if (loading) {
@@ -107,6 +147,7 @@ export function AdminDashboard() {
         <h1 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Audit Revenue Ops</h1>
         <button onClick={handleLogout}>Logout</button>
       </div>
+      {error ? <p role="alert" className="status-note is-danger" style={{ marginBottom: '1rem' }}>{error}</p> : null}
 
       <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginBottom: '2rem' }}>
         <Kpi label="Leads" value={stats?.totalLeads ?? 0} />
@@ -138,10 +179,19 @@ export function AdminDashboard() {
                     <select
                       value={lead.status}
                       disabled={busyId === lead.id}
-                      onChange={(event) => updateLead(lead, {
-                        status: event.target.value,
-                        lostReason: event.target.value === 'LOST' ? lead.lostReason ?? 'manual-review-needed' : undefined,
-                      })}
+                      onChange={(event) => {
+                        const nextStatus = event.target.value
+                        if (nextStatus === 'LOST') {
+                          const reason = window.prompt('Enter the real loss reason before marking this lead lost.')
+                          if (!reason?.trim()) {
+                            setError('Lost reason is required.')
+                            return
+                          }
+                          updateLead(lead, { status: nextStatus, lostReason: reason.trim() })
+                          return
+                        }
+                        updateLead(lead, { status: nextStatus })
+                      }}
                     >
                       {leadStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
                     </select>
@@ -207,4 +257,20 @@ function Kpi({ label, value }: { label: string; value: number }) {
       <p style={{ fontSize: '1.8rem', fontWeight: 800 }}>{value}</p>
     </div>
   )
+}
+
+async function safeJson(response: Response): Promise<{ error?: string }> {
+  try {
+    return await response.json()
+  } catch {
+    return {}
+  }
+}
+
+function adminErrorMessage(status: number, code?: string): string {
+  if (status === 401) return 'Admin session expired. Log in again.'
+  if (status === 403) return 'Security check failed. Refresh the page and retry.'
+  if (status === 409) return code ? `Conflict: ${code}` : 'State conflict. Reload and retry.'
+  if (status >= 500) return code ? `Server error: ${code}` : 'Server error while saving.'
+  return code ?? `Request failed with status ${status}.`
 }

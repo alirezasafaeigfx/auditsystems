@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { trackSeoEvent } from "../../../../../lib/analytics";
+import { fetchCSRFHeaders } from "../../../../../lib/csrf-client";
 
 export default function UnlockPage() {
   const router = useRouter();
@@ -11,6 +12,7 @@ export default function UnlockPage() {
 
   const [email, setEmail] = useState("");
   const [provider, setProvider] = useState<"MOCK" | "ZARINPAL">("MOCK");
+  const [consentPrivacy, setConsentPrivacy] = useState(false);
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -20,6 +22,7 @@ export default function UnlockPage() {
 
   function toUserMessage(errorCode: string): string {
     if (errorCode === "INVALID_EMAIL") return "ایمیل معتبر نیست.";
+    if (errorCode === "CONSENT_REQUIRED") return "برای ایجاد سفارش باید با ذخیره اطلاعات همین درخواست موافقت کنید.";
     if (errorCode === "NOT_FOUND") return "گزارش پیدا نشد یا در دسترس نیست.";
     if (errorCode === "REPORT_NOT_READY") return "گزارش هنوز آماده نشده است.";
     return "خطا در ایجاد سفارش. دوباره تلاش کنید.";
@@ -30,10 +33,11 @@ export default function UnlockPage() {
     trackSeoEvent("seo_unlock_started", { locale: "fa", provider });
     setIsSubmitting(true);
     try {
+      const csrf = await fetchCSRFHeaders();
       const response = await fetch(`/api/orders`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, email, provider })
+        headers: { "Content-Type": "application/json", ...csrf },
+        body: JSON.stringify({ token, email, provider, consentPrivacy })
       });
 
       const body = await response.json();
@@ -80,6 +84,15 @@ export default function UnlockPage() {
             </select>
           </label>
           <p>برای تست سریع می‌توانید از Mock استفاده کنید؛ برای پرداخت واقعی Zarinpal را انتخاب کنید.</p>
+          <label>
+            <input
+              type="checkbox"
+              checked={consentPrivacy}
+              onChange={(event) => setConsentPrivacy(event.target.checked)}
+              required
+            />{" "}
+            موافقم اطلاعات تماس و سفارش فقط برای فعال‌سازی و پیگیری همین گزارش ذخیره شود.
+          </label>
           <button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "در حال ارسال..." : "ادامه"}
           </button>

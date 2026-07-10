@@ -219,6 +219,7 @@ model AuditRun {
   shares    ReportShare[]
   leads     AuditLead[]
   orders    AuditOrder[]
+  funnelEvents FunnelEvent[]
 
   @@index([normalizedUrl, createdAt])
   @@index([status, createdAt])
@@ -311,6 +312,7 @@ model AuditLead {
   updatedAt DateTime @updatedAt
 
   run AuditRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+  funnelEvents FunnelEvent[]
 
   @@index([email, createdAt])
   @@index([domain, createdAt])
@@ -352,6 +354,27 @@ model AuditOrderEvent {
   order AuditOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   @@index([orderId, createdAt])
+}
+
+model FunnelEvent {
+  id        String  @id @default(cuid())
+  eventType String
+  leadId    String?
+  runId     String?
+  source    String?
+  placement String?
+  offer     String?
+  metadata  Json?
+
+  createdAt DateTime @default(now())
+
+  lead AuditLead? @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  run  AuditRun?  @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  @@index([eventType, createdAt])
+  @@index([leadId, createdAt])
+  @@index([runId, createdAt])
+  @@index([source, createdAt])
 }
 
 model Job {
