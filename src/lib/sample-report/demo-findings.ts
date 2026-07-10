@@ -28,6 +28,8 @@ export const demoFindings: SampleFinding[] = [
     },
     owner: "developer",
     difficulty: "medium",
+    priority: "P0",
+    evidenceType: "confirmed",
   },
   {
     code: "NO_HSTS",
@@ -55,6 +57,8 @@ export const demoFindings: SampleFinding[] = [
     },
     owner: "hosting_admin",
     difficulty: "easy",
+    priority: "P1",
+    evidenceType: "confirmed",
   },
   {
     code: "CWV_LCP_POOR_PROXY",
@@ -82,6 +86,8 @@ export const demoFindings: SampleFinding[] = [
     },
     owner: "developer",
     difficulty: "medium",
+    priority: "P1",
+    evidenceType: "hypothesis",
   },
   {
     code: "HIGH_CLS",
@@ -109,6 +115,8 @@ export const demoFindings: SampleFinding[] = [
     },
     owner: "developer",
     difficulty: "medium",
+    priority: "P1",
+    evidenceType: "hypothesis",
   },
   {
     code: "NO_CANONICAL",

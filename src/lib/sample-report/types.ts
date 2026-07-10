@@ -27,6 +27,8 @@ export type SampleFinding = {
   impact: LocalizedText;
   owner: SampleOwner;
   difficulty: SampleDifficulty;
+  priority?: "P0" | "P1" | "P2";
+  evidenceType?: "confirmed" | "hypothesis";
 };
 
 export type ChecklistItem = {
@@ -47,6 +49,3 @@ export const CATEGORY_ORDER: SampleCategory[] = [
 ];
 
 export const SAMPLE_DEMO_URL = "https://anonymous-example.ir";
-
-export const SAMPLE_OVERALL_SCORE = 58;
-export const SAMPLE_SCORE_GRADE = "D";

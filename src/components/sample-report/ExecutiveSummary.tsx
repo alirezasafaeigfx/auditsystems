@@ -1,7 +1,6 @@
 import type { SampleFinding, SampleLocale } from "../../lib/sample-report/types";
 import type { SampleReportCopy } from "../../lib/sample-report/copy";
 import { countBySeverity, getTopUrgentFindings } from "../../lib/sample-report/demo-findings";
-import { SAMPLE_OVERALL_SCORE, SAMPLE_SCORE_GRADE } from "../../lib/sample-report/types";
 
 type ExecutiveSummaryProps = {
   findings: SampleFinding[];
@@ -11,6 +10,8 @@ type ExecutiveSummaryProps = {
 
 export default function ExecutiveSummary({ findings, locale, copy }: ExecutiveSummaryProps) {
   const urgent = getTopUrgentFindings(findings, 3);
+  const confirmed = findings.filter((finding) => finding.evidenceType !== "hypothesis").length;
+  const hypotheses = findings.length - confirmed;
 
   return (
     <section className="card grid">
@@ -28,13 +29,15 @@ export default function ExecutiveSummary({ findings, locale, copy }: ExecutiveSu
           }}
         >
           <div style={{ fontSize: "0.8rem", color: "var(--muted)" }}>{copy.overallScore}</div>
-          <div style={{ fontSize: "2rem", fontWeight: 800, color: "var(--danger)" }}>
-            {SAMPLE_OVERALL_SCORE}
-            <span style={{ fontSize: "1rem" }}>/100</span>
-          </div>
-          <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--danger)" }}>
-            {copy.grade}: {SAMPLE_SCORE_GRADE}
-          </div>
+          <div style={{ fontSize: "1.5rem", fontWeight: 800 }}>{copy.evidenceStatus}</div>
+        </div>
+        <div style={{ padding: "0.8rem", border: "1px solid var(--line)", borderRadius: "12px" }}>
+          <div style={{ fontSize: "0.8rem", color: "var(--muted)" }}>{copy.confirmed}</div>
+          <div style={{ fontSize: "1.5rem", fontWeight: 800 }}>{confirmed}</div>
+        </div>
+        <div style={{ padding: "0.8rem", border: "1px solid var(--line)", borderRadius: "12px" }}>
+          <div style={{ fontSize: "0.8rem", color: "var(--muted)" }}>{copy.hypothesis}</div>
+          <div style={{ fontSize: "1.5rem", fontWeight: 800 }}>{hypotheses}</div>
         </div>
         <div style={{ padding: "0.8rem", border: "1px solid var(--line)", borderRadius: "12px" }}>
           <div style={{ fontSize: "0.8rem", color: "var(--muted)" }}>{copy.totalFindings}</div>

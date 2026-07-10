@@ -9,7 +9,11 @@ export type SampleReportCopy = {
   demoBadge: string;
   executiveSummary: string;
   overallScore: string;
-  grade: string;
+  evidenceStatus: string;
+  confirmed: string;
+  hypothesis: string;
+  priority: string;
+  actionPlan: string;
   totalFindings: string;
   severityLabels: Record<SampleSeverity, string>;
   topUrgent: string;
@@ -47,8 +51,12 @@ const copyFa: SampleReportCopy = {
     "این یک نمونه آموزشی anonymized است. یافته‌ها بر اساس بررسی‌های فنی نمایشی ساخته شده‌اند — نه مشتری واقعی.",
   demoBadge: "نمونه آموزشی — anonymous-example.ir",
   executiveSummary: "خلاصه مدیریتی",
-  overallScore: "امتیاز نمونه",
-  grade: "رده",
+  overallScore: "وضعیت evidence",
+  evidenceStatus: "یافته قطعی / فرضیه",
+  confirmed: "قطعی",
+  hypothesis: "فرضیه نیازمند بررسی",
+  priority: "اولویت",
+  actionPlan: "برنامه اقدام ۳۰ روزه",
   totalFindings: "تعداد یافته‌ها",
   severityLabels: {
     CRITICAL: "بحرانی",
@@ -94,8 +102,8 @@ const copyFa: SampleReportCopy = {
     "این صفحه نمونه آموزشی است. امتیاز و یافته‌ها از بررسی فنی anonymized گرفته شده‌اند. هیچ تضمین رتبه، درآمد یا نتیجه قطعی ارائه نمی‌شود.",
   trustDetails: [
     "دامنه نمونه: anonymous-example.ir (غیرواقعی)",
-    "امتیاز ۵۸/D صرفاً نمایشی است",
-    "یافته‌ها بر اساس بررسی فنی استاندارد هستند",
+    "هیچ امتیاز، رتبه، سرعت یا نتیجه ساختگی نمایش داده نمی‌شود",
+    "یافته‌های قطعی از فرضیه‌های نیازمند بررسی جدا شده‌اند",
     "هیچ اطلاعات مشتری واقعی نمایش داده نمی‌شود",
   ],
   ctaTitle: "گزارش سایت خود را بگیرید",
@@ -113,8 +121,12 @@ const copyEn: SampleReportCopy = {
     "This is an anonymized educational sample. Findings are based on illustrative technical checks — not a real customer.",
   demoBadge: "Educational sample — anonymous-example.ir",
   executiveSummary: "Executive Summary",
-  overallScore: "Sample score",
-  grade: "Grade",
+  overallScore: "Evidence status",
+  evidenceStatus: "Confirmed / hypothesis",
+  confirmed: "Confirmed",
+  hypothesis: "Hypothesis to verify",
+  priority: "Priority",
+  actionPlan: "30-day action plan",
   totalFindings: "Total findings",
   severityLabels: {
     CRITICAL: "Critical",
@@ -160,8 +172,8 @@ const copyEn: SampleReportCopy = {
     "This page is an educational sample. Scores and findings come from anonymized technical checks. No ranking, revenue, or outcome guarantees are implied.",
   trustDetails: [
     "Sample domain: anonymous-example.ir (fictional)",
-    "Score 58/D is illustrative only",
-    "Findings are based on standard technical checks",
+    "No fake score, ranking, speed, or outcome metric is shown",
+    "Confirmed findings are separated from hypotheses that need verification",
     "No real customer data is displayed",
   ],
   ctaTitle: "Get a report for your site",

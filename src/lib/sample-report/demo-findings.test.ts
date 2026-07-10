@@ -17,6 +17,11 @@ describe("demo-findings", () => {
     }
   });
 
+  it("separates confirmed findings from hypotheses", () => {
+    expect(demoFindings.some((finding) => finding.evidenceType === "hypothesis")).toBe(true);
+    expect(demoFindings.some((finding) => finding.evidenceType !== "hypothesis")).toBe(true);
+  });
+
   it("covers required categories", () => {
     const categories = new Set(demoFindings.map((f) => f.category));
     for (const category of CATEGORY_ORDER) {
