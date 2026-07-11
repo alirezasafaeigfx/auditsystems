@@ -38,8 +38,8 @@ export async function GET() {
       totalLeads,
       newLeads,
       qualifiedLeads,
-      wonLeads,
-      lostLeads,
+convertedLeads,
+lostLeads,
       recentAudits,
     })
   } catch (error) {

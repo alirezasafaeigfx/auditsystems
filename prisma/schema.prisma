@@ -287,14 +287,14 @@ model AuditLead {
   id    String  @id @default(cuid())
   runId String?
 
-  domain         String
+  domain         String  @default("unknown")
   normalizedUrl  String?
   email          String
   name           String?
   phone          String?
   company        String?
-  businessType   String
-  primaryConcern String
+  businessType   String  @default("unknown")
+  primaryConcern String  @default("unknown")
   consentPrivacy Boolean @default(false)
   status         LeadStatus @default(NEW)
   internalNote   String?
@@ -305,6 +305,7 @@ model AuditLead {
   sourceOffer     String?
   submitEventId   String?
   qualifiedAt     DateTime?
+  lostAt          DateTime?
   note            String?
   convertedAt     DateTime?
 

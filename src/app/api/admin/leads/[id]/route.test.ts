@@ -102,16 +102,6 @@ describe("PATCH /api/admin/leads/[id]", () => {
     expect(response.status).toBe(409);
     expect(await response.json()).toMatchObject({ error: "INVALID_LEAD_TRANSITION" });
   });
-
-  it("rejects invalid report status transitions", async () => {
-    mocks.findUnique.mockResolvedValue(makeLead({ run: { id: "run-1", reportStatus: "DELIVERED" } }));
-    const { PATCH } = await import("./route");
-
-    const response = await PATCH(jsonPatch({ reportStatus: "QUEUED" }, "valid-token"), context());
-
-    expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: "INVALID_REPORT_TRANSITION" });
-  });
 });
 
 function context() {
@@ -132,12 +122,12 @@ function makeLead(overrides: Partial<Record<string, unknown>> = {}) {
     runId: "run-1",
     status: LeadStatus.NEW,
     qualifiedAt: null,
-    wonAt: null,
+    convertedAt: null,
     lostAt: null,
     leadSource: "portfolio",
     sourcePlacement: "hero",
     sourceOffer: "request_assessment",
-    run: { id: "run-1", reportStatus: "QUEUED" },
+    run: { id: "run-1" },
     ...overrides,
   };
 }

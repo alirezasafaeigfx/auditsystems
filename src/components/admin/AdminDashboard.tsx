@@ -162,7 +162,6 @@ export function AdminDashboard() {
         <Kpi label="Audits" value={stats?.totalAudits ?? 0} />
         <Kpi label="Pending Orders" value={stats?.pendingOrders ?? 0} />
       </div>
-      </div>
 
       <section className="card" style={{ padding: '1.5rem' }}>
         <h2 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '1rem' }}>Lead-to-delivery queue</h2>
