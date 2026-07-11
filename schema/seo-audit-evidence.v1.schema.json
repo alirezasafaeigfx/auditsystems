@@ -1,0 +1,230 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://audit.alirezasafaeisystems.ir/schema/seo-audit-evidence.v1.schema.json",
+  "title": "ASDEV SEO Audit Evidence Contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "auditId", "generatedAt", "evidence", "findings", "metrics", "scores"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "auditId": { "type": "string", "minLength": 1 },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "evidence": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/auditEvidence" }
+    },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/auditFinding" }
+    },
+    "metrics": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/auditMetric" }
+    },
+    "scores": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/scoreBreakdown" }
+    }
+  },
+  "$defs": {
+    "evidenceClass": {
+      "type": "string",
+      "enum": ["MEASURED", "OBSERVED", "HEURISTIC", "UNAVAILABLE"]
+    },
+    "collectionStatus": {
+      "type": "string",
+      "enum": ["SUCCESS", "PARTIAL", "RATE_LIMITED", "UNAUTHORIZED", "TIMEOUT", "INVALID_RESPONSE", "BLOCKED", "UNAVAILABLE"]
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
+    },
+    "findingStatus": {
+      "type": "string",
+      "enum": ["CONFIRMED", "INFERRED", "UNAVAILABLE", "RESOLVED"]
+    },
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stringArray": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "auditEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "schemaVersion",
+        "methodVersion",
+        "evidenceClass",
+        "source",
+        "collectedAt",
+        "requestedUrl",
+        "scope",
+        "status",
+        "confidence",
+        "summary",
+        "limitations"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "schemaVersion": { "const": "1.0.0" },
+        "methodVersion": { "$ref": "#/$defs/nonEmptyString" },
+        "evidenceClass": { "$ref": "#/$defs/evidenceClass" },
+        "source": { "$ref": "#/$defs/nonEmptyString" },
+        "provider": { "type": ["string", "null"] },
+        "collectedAt": { "type": "string", "format": "date-time" },
+        "requestedUrl": { "type": "string", "format": "uri" },
+        "finalUrl": { "type": ["string", "null"], "format": "uri" },
+        "scope": { "$ref": "#/$defs/nonEmptyString" },
+        "status": { "$ref": "#/$defs/collectionStatus" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "summary": { "$ref": "#/$defs/nonEmptyString" },
+        "rawReference": { "type": ["string", "null"] },
+        "limitations": { "$ref": "#/$defs/stringArray" },
+        "expiresAt": { "type": ["string", "null"], "format": "date-time" },
+        "contentFingerprint": { "type": ["string", "null"] },
+        "legacySource": { "type": "boolean", "default": false }
+      }
+    },
+    "auditFinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "ruleId",
+        "ruleVersion",
+        "title",
+        "severity",
+        "status",
+        "evidenceIds",
+        "impact",
+        "recommendation",
+        "verificationMethod",
+        "limitations",
+        "affectedUrls"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonEmptyString" },
+        "ruleId": { "$ref": "#/$defs/nonEmptyString" },
+        "ruleVersion": { "$ref": "#/$defs/nonEmptyString" },
+        "title": { "$ref": "#/$defs/nonEmptyString" },
+        "severity": { "$ref": "#/$defs/severity" },
+        "status": { "$ref": "#/$defs/findingStatus" },
+        "evidenceIds": { "$ref": "#/$defs/stringArray" },
+        "impact": { "$ref": "#/$defs/nonEmptyString" },
+        "recommendation": { "$ref": "#/$defs/nonEmptyString" },
+        "verificationMethod": { "$ref": "#/$defs/nonEmptyString" },
+        "limitations": { "$ref": "#/$defs/stringArray" },
+        "affectedUrls": {
+          "type": "array",
+          "items": { "type": "string", "format": "uri" },
+          "uniqueItems": true
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "status": { "const": "CONFIRMED" } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": { "evidenceIds": { "minItems": 1 } }
+          }
+        }
+      ]
+    },
+    "auditMetric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "label",
+        "value",
+        "unit",
+        "evidenceClass",
+        "evidenceIds",
+        "strategy",
+        "coverage",
+        "status",
+        "limitations"
+      ],
+      "properties": {
+        "key": { "$ref": "#/$defs/nonEmptyString" },
+        "label": { "$ref": "#/$defs/nonEmptyString" },
+        "value": { "type": ["number", "string", "boolean", "null"] },
+        "unit": { "type": ["string", "null"] },
+        "evidenceClass": { "$ref": "#/$defs/evidenceClass" },
+        "evidenceIds": { "$ref": "#/$defs/stringArray" },
+        "provider": { "type": ["string", "null"] },
+        "strategy": { "$ref": "#/$defs/nonEmptyString" },
+        "coverage": {
+          "oneOf": [
+            { "type": "number", "minimum": 0, "maximum": 1 },
+            { "$ref": "#/$defs/nonEmptyString" }
+          ]
+        },
+        "status": { "$ref": "#/$defs/collectionStatus" },
+        "limitations": { "$ref": "#/$defs/stringArray" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "evidenceClass": { "const": "UNAVAILABLE" } },
+            "required": ["evidenceClass"]
+          },
+          "then": {
+            "properties": { "value": { "type": "null" } }
+          }
+        }
+      ]
+    },
+    "scoreAdjustment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ruleId", "amount", "evidenceIds", "explanation"],
+      "properties": {
+        "ruleId": { "$ref": "#/$defs/nonEmptyString" },
+        "amount": { "type": "number", "minimum": 0 },
+        "evidenceIds": { "$ref": "#/$defs/stringArray" },
+        "explanation": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "scoreBreakdown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policyVersion",
+        "category",
+        "weight",
+        "coverage",
+        "confidence",
+        "deductions",
+        "credits",
+        "unknownRules"
+      ],
+      "properties": {
+        "policyVersion": { "$ref": "#/$defs/nonEmptyString" },
+        "category": { "$ref": "#/$defs/nonEmptyString" },
+        "weight": { "type": "number", "minimum": 0, "maximum": 1 },
+        "rawScore": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+        "weightedScore": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+        "coverage": { "type": "number", "minimum": 0, "maximum": 1 },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "deductions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/scoreAdjustment" }
+        },
+        "credits": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/scoreAdjustment" }
+        },
+        "unknownRules": { "$ref": "#/$defs/stringArray" },
+        "withheldReason": { "type": ["string", "null"] }
+      }
+    }
+  }
+}
