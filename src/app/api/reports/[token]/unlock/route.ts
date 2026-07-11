@@ -54,18 +54,20 @@ export async function POST(request: Request, context: { params: Promise<{ token:
       });
     }
 
-    const [lead, order] = await prisma.$transaction([
-      prisma.auditLead.create({ data: { runId: share.runId, email } }),
-      prisma.auditOrder.create({
-        data: {
-          runId: share.runId,
-          email,
-          provider: "MOCK",
-          amountToman: 290000,
-          status: "PENDING"
-        }
-      })
-    ]);
+    const lead = await prisma.auditLead.create({
+      data: { runId: share.runId, email, status: 'REPORT_READY' }
+    })
+
+    const order = await prisma.auditOrder.create({
+      data: {
+        runId: share.runId,
+        email,
+        provider: "MOCK",
+        amountToman: 290000,
+        status: "PENDING",
+        leadId: lead.id
+      }
+    })
 
     await prisma.auditOrderEvent.create({
       data: {

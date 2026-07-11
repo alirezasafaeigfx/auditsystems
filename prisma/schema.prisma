@@ -169,6 +169,16 @@ enum JobType {
   AUDIT_RUN
 }
 
+enum LeadStatus {
+  NEW
+  QUALIFIED
+  AUDIT_STARTED
+  REPORT_READY
+  DELIVERED
+  CONVERTED
+  LOST
+}
+
 model AuditRun {
   id            String      @id @default(cuid())
   url           String
@@ -273,12 +283,20 @@ model AuditLead {
   company String?
   note    String?
 
+  status     LeadStatus @default(NEW)
+  qualifiedAt DateTime?
+  convertedAt DateTime?
+  lostAt     DateTime?
+  lostReason String?
+
   createdAt DateTime @default(now())
 
-  run AuditRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  run   AuditRun   @relation(fields: [runId], references: [id], onDelete: Cascade)
+  order AuditOrder?
 
   @@index([email, createdAt])
   @@index([runId, createdAt])
+  @@index([status, createdAt])
 }
 
 model AuditOrder {
@@ -296,11 +314,15 @@ model AuditOrder {
   paidAt     DateTime?
   canceledAt DateTime?
 
+  leadId String?
+
   run    AuditRun          @relation(fields: [runId], references: [id], onDelete: Cascade)
+  lead   AuditLead?        @relation(fields: [leadId], references: [id])
   events AuditOrderEvent[]
 
   @@index([runId, status])
   @@index([email, createdAt])
+  @@index([leadId])
 }
 
 model AuditOrderEvent {

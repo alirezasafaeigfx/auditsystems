@@ -6,6 +6,8 @@ interface Stats {
   totalAudits: number
   totalOrders: number
   pendingOrders: number
+  totalLeads: number
+  newLeads: number
   recentAudits: Array<{
     id: string
     url: string
@@ -50,13 +52,22 @@ export function AdminDashboard() {
     <div style={{ padding: '2rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Admin Dashboard</h1>
-        <button onClick={handleLogout}>Logout</button>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <a href="/admin/leads" style={{ color: 'var(--primary)', fontWeight: 500 }}>Lead Management</a>
+          <button onClick={handleLogout}>Logout</button>
+        </div>
       </div>
       
       <div style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginBottom: '2rem' }}>
         <div className="card" style={{ padding: '1.5rem' }}>
           <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--muted)' }}>Total Audits</h3>
           <p style={{ fontSize: '2rem', fontWeight: 700 }}>{stats?.totalAudits || 0}</p>
+        </div>
+        
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--muted)' }}>Leads</h3>
+          <p style={{ fontSize: '2rem', fontWeight: 700 }}>{stats?.totalLeads || 0}</p>
+          <p style={{ fontSize: '0.82rem', color: '#ef4444' }}>{stats?.newLeads || 0} new</p>
         </div>
         
         <div className="card" style={{ padding: '1.5rem' }}>

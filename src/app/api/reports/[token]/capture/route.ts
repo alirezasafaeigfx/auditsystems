@@ -41,7 +41,8 @@ export async function POST(
     data: {
       runId: share.runId,
       email,
-      name: body.name?.trim() || null
+      name: body.name?.trim() || null,
+      status: 'REPORT_READY'
     }
   });
 

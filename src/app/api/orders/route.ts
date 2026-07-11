@@ -95,7 +95,37 @@ export async function POST(request: Request) {
       }));
 
     if (!existingPendingOrder) {
-      await prisma.auditLead.create({ data: { runId: share.runId, email } });
+      const existingLead = await prisma.auditLead.findFirst({
+        where: { runId: share.runId, email }
+      })
+      if (!existingLead) {
+        const newLead = await prisma.auditLead.create({
+          data: { runId: share.runId, email, status: 'REPORT_READY' }
+        })
+        await prisma.auditOrder.update({
+          where: { id: order.id },
+          data: { leadId: newLead.id }
+        })
+      } else {
+        await prisma.auditOrder.update({
+          where: { id: order.id },
+          data: { leadId: existingLead.id }
+        })
+        await prisma.auditLead.update({
+          where: { id: existingLead.id },
+          data: { status: 'REPORT_READY' }
+        })
+      }
+    } else {
+      const existingLead = await prisma.auditLead.findFirst({
+        where: { runId: share.runId, email }
+      })
+      if (existingLead) {
+        await prisma.auditLead.update({
+          where: { id: existingLead.id },
+          data: { status: 'REPORT_READY' }
+        })
+      }
     }
 
     const callbackRef = crypto.randomUUID().replace(/-/g, "");
