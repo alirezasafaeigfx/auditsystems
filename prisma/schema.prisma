@@ -314,7 +314,7 @@ model AuditOrder {
   paidAt     DateTime?
   canceledAt DateTime?
 
-  leadId String?
+  leadId String? @unique
 
   run    AuditRun          @relation(fields: [runId], references: [id], onDelete: Cascade)
   lead   AuditLead?        @relation(fields: [leadId], references: [id])
