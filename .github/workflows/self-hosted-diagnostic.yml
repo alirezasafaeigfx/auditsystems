@@ -21,12 +21,6 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Deliberate failure proof
-        run: |
-          set -euo pipefail
-          echo "This step is designed to fail for testing"
-          false
-
       - name: Report runner
         run: |
           set -euo pipefail
