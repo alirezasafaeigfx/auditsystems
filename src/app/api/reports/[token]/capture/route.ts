@@ -17,6 +17,10 @@ export async function POST(
     return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
   }
 
+  if (share.run.status !== "SUCCEEDED") {
+    return NextResponse.json({ error: "REPORT_NOT_READY" }, { status: 409 });
+  }
+
   let body: { email?: string; name?: string; consentPrivacy?: boolean };
   try {
     body = await request.json();

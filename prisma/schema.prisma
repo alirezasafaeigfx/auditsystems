@@ -23,21 +23,21 @@ model User {
   memberships        Membership[]
   sessions           Session[]
   emailVerifications EmailVerificationToken[]
-  referralsGiven     Referral[]           @relation("ReferralGiven")
-  referralsReceived  Referral[]           @relation("ReferralReferred")
-  teamInvites        TeamMemberInvite[]   @relation("TeamInviteUser")
+  referralsGiven     Referral[]               @relation("ReferralGiven")
+  referralsReceived  Referral[]               @relation("ReferralReferred")
+  teamInvites        TeamMemberInvite[]       @relation("TeamInviteUser")
 }
 
 model Referral {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   referrerId  String
   referredId  String
   code        String
   convertedAt DateTime?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
 
-  referrer  User @relation("ReferralGiven", fields: [referrerId], references: [id], onDelete: Cascade)
-  referred  User @relation("ReferralReferred", fields: [referredId], references: [id], onDelete: Cascade)
+  referrer User @relation("ReferralGiven", fields: [referrerId], references: [id], onDelete: Cascade)
+  referred User @relation("ReferralReferred", fields: [referredId], references: [id], onDelete: Cascade)
 
   @@unique([referrerId, referredId])
   @@index([referrerId])
@@ -53,13 +53,13 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   // Brand Settings
-  brandName        String?
-  brandLogoBase64  String?   @db.Text
-  primaryColor     String?
-  secondaryColor   String?
+  brandName       String?
+  brandLogoBase64 String? @db.Text
+  primaryColor    String?
+  secondaryColor  String?
 
   memberships            Membership[]
-  teamInvites            TeamMemberInvite[]   @relation("TeamInviteOrganization")
+  teamInvites            TeamMemberInvite[]      @relation("TeamInviteOrganization")
   projects               Project[]
   auditRuns              AuditRun[]
   subscriptions          Subscription[]
@@ -188,11 +188,11 @@ enum LeadStatus {
 }
 
 model AuditRun {
-  id            String      @id @default(cuid())
+  id            String            @id @default(cuid())
   url           String
   normalizedUrl String?
-  depth         AuditDepth  @default(QUICK)
-  status        AuditStatus @default(QUEUED)
+  depth         AuditDepth        @default(QUICK)
+  status        AuditStatus       @default(QUEUED)
   reportStatus  AuditReportStatus @default(QUEUED)
 
   projectId      String?
@@ -215,11 +215,11 @@ model AuditRun {
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   project      Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
-  findings  AuditFinding[]
-  resources AuditResource[]
-  shares    ReportShare[]
-  leads     AuditLead[]
-  orders    AuditOrder[]
+  findings     AuditFinding[]
+  resources    AuditResource[]
+  shares       ReportShare[]
+  leads        AuditLead[]
+  orders       AuditOrder[]
   funnelEvents FunnelEvent[]
 
   @@index([normalizedUrl, createdAt])
@@ -268,13 +268,13 @@ model AuditResource {
 }
 
 model ReportShare {
-  id        String    @id @default(cuid())
-  runId     String
-  token     String    @unique
-  createdAt DateTime  @default(now())
-  expiresAt DateTime?
-  revokedAt DateTime?
-  viewCount Int       @default(0)
+  id           String    @id @default(cuid())
+  runId        String
+  token        String    @unique
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime?
+  revokedAt    DateTime?
+  viewCount    Int       @default(0)
   lastViewedAt DateTime?
   passwordHash String?
 
@@ -287,20 +287,20 @@ model AuditLead {
   id    String  @id @default(cuid())
   runId String?
 
-  domain         String  @default("unknown")
-  normalizedUrl  String?
-  email          String
-  name           String?
-  phone          String?
-  company        String?
-  businessType   String  @default("unknown")
-  primaryConcern String  @default("unknown")
-  consentPrivacy Boolean @default(false)
-  status         LeadStatus @default(NEW)
-  internalNote   String?
-  nextActionAt   DateTime?
-  lostReason     String?
-  leadSource     String @default("direct")
+  domain          String     @default("unknown")
+  normalizedUrl   String?
+  email           String
+  name            String?
+  phone           String?
+  company         String?
+  businessType    String     @default("unknown")
+  primaryConcern  String     @default("unknown")
+  consentPrivacy  Boolean    @default(false)
+  status          LeadStatus @default(NEW)
+  internalNote    String?
+  nextActionAt    DateTime?
+  lostReason      String?
+  leadSource      String     @default("direct")
   sourcePlacement String?
   sourceOffer     String?
   submitEventId   String?
@@ -313,7 +313,7 @@ model AuditLead {
   updatedAt DateTime @updatedAt
 
   run          AuditRun?     @relation(fields: [runId], references: [id], onDelete: SetNull)
-  order        AuditOrder?
+  orders       AuditOrder[]
   funnelEvents FunnelEvent[]
 
   @@index([email, createdAt])
@@ -338,7 +338,7 @@ model AuditOrder {
   paidAt     DateTime?
   canceledAt DateTime?
 
-  leadId String? @unique
+  leadId String?
 
   run    AuditRun          @relation(fields: [runId], references: [id], onDelete: Cascade)
   lead   AuditLead?        @relation(fields: [leadId], references: [id])
@@ -497,22 +497,22 @@ model ScheduledAudit {
 }
 
 model TeamMemberInvite {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   organizationId String
   email          String
-  role           String   @default("VIEWER")
-  tokenHash      String   @unique
+  role           String    @default("VIEWER")
+  tokenHash      String    @unique
   invitedById    String
   expiresAt      DateTime
   acceptedAt     DateTime?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime  @default(now())
 
-  organization  Organization @relation("TeamInviteOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
-  invitedBy     User         @relation("TeamInviteUser", fields: [invitedById], references: [id], onDelete: Cascade)
+  organization Organization @relation("TeamInviteOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy    User         @relation("TeamInviteUser", fields: [invitedById], references: [id], onDelete: Cascade)
 
+  @@unique([organizationId, email])
   @@index([organizationId])
   @@index([tokenHash])
-  @@unique([organizationId, email])
 }
 
 model EmailVerificationToken {
@@ -544,7 +544,7 @@ model NotificationPreference {
 model NotificationHistory {
   id             String   @id @default(cuid())
   organizationId String
-  type           String   // AUDIT_COMPLETE
+  type           String // AUDIT_COMPLETE
   subject        String
   body           String
   email          String

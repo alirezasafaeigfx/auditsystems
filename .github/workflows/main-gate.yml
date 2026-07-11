@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -37,13 +37,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Install secret-scan tool
-        run: |
-          if ! command -v rg >/dev/null 2>&1; then
-            sudo apt-get update
-            sudo apt-get install -y ripgrep
-          fi
 
       - name: Scan tracked source for secrets
         run: pnpm run scan:secrets
@@ -78,7 +71,7 @@ jobs:
 
       - name: Upload automation artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.4
         with:
           name: main-gate-artifacts
           path: |
