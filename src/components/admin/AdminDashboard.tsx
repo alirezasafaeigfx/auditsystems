@@ -34,8 +34,9 @@ interface Stats {
   totalOrders: number
   pendingOrders: number
   totalLeads: number
+  newLeads: number
   qualifiedLeads: number
-  wonLeads: number
+  convertedLeads: number
   lostLeads: number
   recentAudits: Array<{
     id: string
@@ -46,7 +47,7 @@ interface Stats {
   }>
 }
 
-const leadStatuses = ['NEW', 'QUALIFIED', 'CALL', 'PROPOSAL', 'WON', 'LOST']
+const leadStatuses = ['NEW', 'QUALIFIED', 'AUDIT_STARTED', 'REPORT_READY', 'DELIVERED', 'CONVERTED', 'LOST']
 const reportStatuses = ['QUEUED', 'RUNNING', 'REVIEW', 'DELIVERED', 'FAILED']
 
 export function AdminDashboard() {
@@ -143,16 +144,20 @@ export function AdminDashboard() {
 
   return (
     <div style={{ padding: '2rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', gap: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Audit Revenue Ops</h1>
-        <button onClick={handleLogout}>Logout</button>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <a href="/admin/leads" style={{ color: 'var(--primary)', fontWeight: 500 }}>Lead Management</a>
+          <button onClick={handleLogout}>Logout</button>
+        </div>
       </div>
       {error ? <p role="alert" className="status-note is-danger" style={{ marginBottom: '1rem' }}>{error}</p> : null}
 
       <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginBottom: '2rem' }}>
         <Kpi label="Leads" value={stats?.totalLeads ?? 0} />
+        <Kpi label="New" value={stats?.newLeads ?? 0} />
         <Kpi label="Qualified" value={stats?.qualifiedLeads ?? 0} />
-        <Kpi label="Won" value={stats?.wonLeads ?? 0} />
+        <Kpi label="Converted" value={stats?.convertedLeads ?? 0} />
         <Kpi label="Lost" value={stats?.lostLeads ?? 0} />
         <Kpi label="Audits" value={stats?.totalAudits ?? 0} />
         <Kpi label="Pending Orders" value={stats?.pendingOrders ?? 0} />

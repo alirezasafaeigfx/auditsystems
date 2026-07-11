@@ -53,6 +53,7 @@ export async function POST(
       leadSource: "report_capture",
       sourcePlacement: "report_page",
       sourceOffer: "follow_up",
+      status: 'REPORT_READY',
     }
   });
 

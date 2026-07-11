@@ -74,6 +74,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
           leadSource: "report_unlock",
           sourcePlacement: "unlock_route",
           sourceOffer: "pdf_export",
+          status: 'REPORT_READY',
         },
       }),
       prisma.auditOrder.create({
@@ -82,10 +83,14 @@ export async function POST(request: Request, context: { params: Promise<{ token:
           email,
           provider: "MOCK",
           amountToman: 290000,
-          status: "PENDING"
+          status: "PENDING",
         }
       })
     ]);
+    await prisma.auditOrder.update({
+      where: { id: order.id },
+      data: { leadId: lead.id }
+    })
 
     await prisma.auditOrderEvent.create({
       data: {

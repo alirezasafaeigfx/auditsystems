@@ -4,9 +4,10 @@ import { normalizeAuditTargetUrl } from "./normalizeAuditTargetUrl";
 export const LEAD_STATUSES = [
   LeadStatus.NEW,
   LeadStatus.QUALIFIED,
-  LeadStatus.CALL,
-  LeadStatus.PROPOSAL,
-  LeadStatus.WON,
+  LeadStatus.AUDIT_STARTED,
+  LeadStatus.REPORT_READY,
+  LeadStatus.DELIVERED,
+  LeadStatus.CONVERTED,
   LeadStatus.LOST,
 ] as const;
 
