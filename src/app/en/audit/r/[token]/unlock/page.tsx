@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { trackSeoEvent } from "../../../../../../lib/analytics";
+import { fetchCSRFHeaders } from "../../../../../../lib/csrf-client";
 
 export default function UnlockPageEn() {
   const router = useRouter();
@@ -11,6 +12,7 @@ export default function UnlockPageEn() {
 
   const [email, setEmail] = useState("");
   const [provider, setProvider] = useState<"MOCK" | "ZARINPAL">("MOCK");
+  const [consentPrivacy, setConsentPrivacy] = useState(false);
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -20,6 +22,7 @@ export default function UnlockPageEn() {
 
   function toUserMessage(errorCode: string): string {
     if (errorCode === "INVALID_EMAIL") return "Please enter a valid email address.";
+    if (errorCode === "CONSENT_REQUIRED") return "Consent is required to create and follow up this order.";
     if (errorCode === "NOT_FOUND") return "Report not found or unavailable.";
     if (errorCode === "REPORT_NOT_READY") return "Report is not ready yet.";
     return "Failed to create order. Please try again.";
@@ -30,10 +33,11 @@ export default function UnlockPageEn() {
     trackSeoEvent("seo_unlock_started", { locale: "en", provider });
     setIsSubmitting(true);
     try {
+      const csrf = await fetchCSRFHeaders();
       const response = await fetch(`/api/orders`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, email, provider })
+        headers: { "Content-Type": "application/json", ...csrf },
+        body: JSON.stringify({ token, email, provider, consentPrivacy })
       });
 
       const body = await response.json();
@@ -80,6 +84,15 @@ export default function UnlockPageEn() {
             </select>
           </label>
           <p>Use Mock for local test flow and Zarinpal for real gateway checkout.</p>
+          <label>
+            <input
+              type="checkbox"
+              checked={consentPrivacy}
+              onChange={(event) => setConsentPrivacy(event.target.checked)}
+              required
+            />{" "}
+            I agree that contact and order details are stored only to unlock and follow up this report.
+          </label>
           <button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Submitting..." : "Submit"}
           </button>

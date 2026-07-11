@@ -18,6 +18,8 @@ export default function FindingCard({ finding, locale, copy }: FindingCardProps)
           {copy.severityLabels[finding.severity]}
         </span>
         <span className="badge">{copy.categoryLabels[finding.category]}</span>
+        <span className="badge">{finding.evidenceType === "hypothesis" ? copy.hypothesis : copy.confirmed}</span>
+        <span className="badge">{copy.priority}: {finding.priority ?? "P1"}</span>
       </div>
       <h3 style={{ fontWeight: 600, fontSize: "1rem" }}>{finding.title[locale]}</h3>
       <p>{finding.description[locale]}</p>

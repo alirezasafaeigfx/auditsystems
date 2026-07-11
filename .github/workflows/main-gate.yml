@@ -38,6 +38,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install secret-scan tool
+        run: |
+          if ! command -v rg >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ripgrep
+          fi
+
+      - name: Scan tracked source for secrets
+        run: pnpm run scan:secrets
+
       - name: Run automation hard gate
         env:
           APP_BASE_URL: "http://localhost:3000"

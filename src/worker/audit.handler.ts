@@ -10,6 +10,7 @@ import { createAuditLogger } from "../lib/logger";
 import { createRequestId } from "../lib/observability";
 import { isDnsLookupFailure } from "../lib/security";
 import { sendAuditCompleteNotification } from "../lib/notifications";
+import { recordFunnelEvent } from "../lib/funnel-events";
 
 export type JobHandler = (job: Job, signal: AbortSignal) => Promise<void>;
 
@@ -54,12 +55,13 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
 
   await prisma.auditRun.update({
     where: { id: run.id },
-    data: {
-      normalizedUrl: normalized.normalizedUrl,
-      status: "RUNNING",
-      startedAt: new Date(),
-      errorCode: null,
-      errorMessage: null
+      data: {
+        normalizedUrl: normalized.normalizedUrl,
+        status: "RUNNING",
+        reportStatus: "RUNNING",
+        startedAt: new Date(),
+        errorCode: null,
+        errorMessage: null
     }
   });
 
@@ -138,6 +140,7 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
         where: { id: run.id },
         data: {
           status: "SUCCEEDED",
+          reportStatus: "REVIEW",
           finishedAt: new Date(),
           summary: {
             ...(summary as Record<string, unknown>),
@@ -149,6 +152,8 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
         }
       })
     ]);
+
+    await recordFunnelEvent({ eventType: "report_review", runId: run.id });
 
     if (run.organizationId) {
       const membership = await prisma.membership.findFirst({
@@ -171,6 +176,7 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
       where: { id: run.id },
       data: {
         status: "FAILED",
+        reportStatus: "FAILED",
         finishedAt: new Date(),
         errorCode: "AUDIT_FAILED",
         errorMessage: error instanceof Error ? error.message : String(error)

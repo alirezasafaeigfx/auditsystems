@@ -9,12 +9,15 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const [totalAudits, totalOrders, pendingOrders, totalLeads, newLeads, recentAudits] = await Promise.all([
+    const [totalAudits, totalOrders, pendingOrders, totalLeads, newLeads, qualifiedLeads, convertedLeads, lostLeads, recentAudits] = await Promise.all([
       prisma.auditRun.count(),
       prisma.auditOrder.count(),
       prisma.auditOrder.count({ where: { status: 'PENDING' } }),
       prisma.auditLead.count(),
       prisma.auditLead.count({ where: { status: 'NEW' } }),
+      prisma.auditLead.count({ where: { status: 'QUALIFIED' } }),
+      prisma.auditLead.count({ where: { status: 'CONVERTED' } }),
+      prisma.auditLead.count({ where: { status: 'LOST' } }),
       prisma.auditRun.findMany({
         take: 10,
         orderBy: { createdAt: 'desc' },
@@ -22,6 +25,7 @@ export async function GET() {
           id: true,
           url: true,
           status: true,
+          reportStatus: true,
           createdAt: true,
         },
       }),
@@ -33,6 +37,9 @@ export async function GET() {
       pendingOrders,
       totalLeads,
       newLeads,
+      qualifiedLeads,
+      wonLeads,
+      lostLeads,
       recentAudits,
     })
   } catch (error) {
