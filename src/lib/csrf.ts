@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 /**
  * CSRF Protection Utilities
@@ -85,7 +85,12 @@ export function verifyCSRFToken(
       .update(`${timestamp}:${randomString}${opts.secret}`)
       .digest("hex");
     
-    if (signature !== expectedSignature) {
+    const sigBuffer = Buffer.from(signature, "hex");
+    const expectedBuffer = Buffer.from(expectedSignature, "hex");
+    if (sigBuffer.length !== expectedBuffer.length) {
+      return false;
+    }
+    if (!timingSafeEqual(sigBuffer, expectedBuffer)) {
       return false;
     }
     
@@ -149,6 +154,11 @@ export async function csrfProtection(
   
   // Skip CSRF check if no secret configured (CI/test environments)
   if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[SECURITY] CSRF_SECRET is not configured — rejecting request in production');
+      return { valid: false, error: "CSRF protection misconfigured" };
+    }
+    console.warn('[SECURITY] CSRF_SECRET is not configured — CSRF protection disabled (non-production)');
     return { valid: true };
   }
 

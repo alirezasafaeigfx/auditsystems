@@ -1,4 +1,5 @@
 import { prisma } from "../../../../../lib/db";
+import { validateAdminSession } from "../../../../../lib/admin-auth";
 import { observeApiRequest } from "../../../../../lib/metrics";
 import { createRequestId, logEvent, respondJson } from "../../../../../lib/observability";
 
@@ -7,6 +8,12 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   const startedAt = Date.now();
   let statusCode = 200;
   try {
+    const isAuthenticated = await validateAdminSession();
+    if (!isAuthenticated) {
+      statusCode = 401;
+      return respondJson({ error: "UNAUTHORIZED", requestId }, requestId, { status: 401 });
+    }
+
     const { id } = await context.params;
 
     const run = await prisma.auditRun.findUnique({
