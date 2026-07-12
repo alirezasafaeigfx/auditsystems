@@ -2,6 +2,7 @@
   "name": "asdev-audit-ir",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@9.15.0",
   "type": "module",
   "scripts": {
     "dev": "next dev",
@@ -47,6 +48,7 @@
     "smoke:lead-delivery": "tsx src/scripts/smoke-lead-delivery.ts",
     "smoke:routes": "bash scripts/smoke-public-routes.sh",
     "scan:secrets": "bash scripts/scan-secrets.sh",
+    "check:actions-pinned": "bash scripts/check-actions-pinned.sh",
     "cleanup": "tsx src/scripts/cleanup.ts",
     "plans:seed": "tsx src/scripts/seed-plans.ts",
     "scheduled:run": "tsx src/scripts/run-scheduled-audits.ts",

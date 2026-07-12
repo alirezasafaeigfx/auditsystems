@@ -153,7 +153,15 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
       })
     ]);
 
-    await recordFunnelEvent({ eventType: "report_review", runId: run.id });
+    try {
+      await recordFunnelEvent({ eventType: "report_review", runId: run.id });
+    } catch (funnelError) {
+      const logger = createAuditLogger(createRequestId(), run.id);
+      logger.warn("worker_audit_funnel_event_failed", {
+        runId: run.id,
+        error: funnelError instanceof Error ? funnelError.message : String(funnelError)
+      });
+    }
 
     if (run.organizationId) {
       const membership = await prisma.membership.findFirst({

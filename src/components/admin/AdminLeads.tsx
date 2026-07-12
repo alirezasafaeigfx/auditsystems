@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { fetchCSRFHeaders } from '@/lib/csrf-client'
 
 interface Lead {
   id: string
@@ -17,7 +18,7 @@ interface Lead {
   lostReason: string | null
   createdAt: string
   run: { id: string; url: string; status: string } | null
-  order: { id: string; status: string; amountToman: number; paidAt: string | null } | null
+  orders: Array<{ id: string; status: string; amountToman: number; paidAt: string | null }>
 }
 
 interface StatusCount {
@@ -81,18 +82,24 @@ export function AdminLeads() {
   const updateStatus = async (leadId: string, newStatus: string, lostReason?: string) => {
     setUpdating(true)
     try {
+      const csrfHeaders = await fetchCSRFHeaders()
       const res = await fetch(`/api/admin/leads/${leadId}/status`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders },
         body: JSON.stringify({ status: newStatus, lostReason }),
       })
-      if (!res.ok) throw new Error('Failed to update')
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to update')
+      }
       setSelectedLead(null)
       fetchLeads()
     } catch (e) {
       console.error('Update failed:', e)
+      alert(e instanceof Error ? e.message : 'Update failed')
+    } finally {
+      setUpdating(false)
     }
-    setUpdating(false)
   }
 
   return (
@@ -186,12 +193,12 @@ export function AdminLeads() {
                   {lead.name && <div style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>{lead.name}{lead.company ? ` — ${lead.company}` : ''}</div>}
                 </div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>
-                  {lead.run?.url ? new URL(lead.run.url).hostname : '-'}
+                  {lead.run?.url ? (() => { try { return new URL(lead.run.url).hostname } catch { return lead.run.url } })() : '-'}
                 </div>
                 <div>
-                  {lead.order ? (
-                    <span style={{ color: lead.order.status === 'PAID' ? '#16a34a' : '#ca8a04', fontWeight: 500 }}>
-                      {lead.order.status === 'PAID' ? `${lead.order.amountToman.toLocaleString()} T` : lead.order.status}
+                  {lead.orders[0] ? (
+                    <span style={{ color: lead.orders[0].status === 'PAID' ? '#16a34a' : '#ca8a04', fontWeight: 500 }}>
+                      {lead.orders[0].status === 'PAID' ? `${lead.orders[0].amountToman.toLocaleString()} T` : lead.orders[0].status}
                     </span>
                   ) : (
                     <span style={{ color: 'var(--muted)' }}>No order</span>
@@ -257,8 +264,8 @@ export function AdminLeads() {
                 background: STATUS_COLORS[selectedLead.status], color: '#fff',
               }}>{selectedLead.status}</span></div>
               <div><strong>Created:</strong> {new Date(selectedLead.createdAt).toLocaleString('fa-IR')}</div>
-              {selectedLead.order && (
-                <div><strong>Order:</strong> {selectedLead.order.status} — {selectedLead.order.amountToman.toLocaleString()} Toman{selectedLead.order.paidAt ? ` (paid ${new Date(selectedLead.order.paidAt).toLocaleDateString('fa-IR')})` : ''}</div>
+              {selectedLead.orders[0] && (
+                <div><strong>Order:</strong> {selectedLead.orders[0].status} — {selectedLead.orders[0].amountToman.toLocaleString()} Toman{selectedLead.orders[0].paidAt ? ` (paid ${new Date(selectedLead.orders[0].paidAt).toLocaleDateString('fa-IR')})` : ''}</div>
               )}
             </div>
 

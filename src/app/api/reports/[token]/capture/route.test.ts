@@ -25,7 +25,7 @@ describe("POST /api/reports/[token]/capture", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
-    mocks.findUnique.mockResolvedValue({ runId: "run-1", run: { url: "https://example.com", normalizedUrl: "https://example.com/" } });
+    mocks.findUnique.mockResolvedValue({ runId: "run-1", run: { url: "https://example.com", normalizedUrl: "https://example.com/", status: "SUCCEEDED" } });
     mocks.findFirst.mockResolvedValue(null);
   });
 

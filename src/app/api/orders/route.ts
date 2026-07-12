@@ -127,16 +127,18 @@ export async function POST(request: Request) {
           where: { id: order.id },
           data: { leadId: existingLead.id }
         })
-        await prisma.auditLead.update({
-          where: { id: existingLead.id },
-          data: { status: 'REPORT_READY' }
-        })
+        if (existingLead.status !== "CONVERTED" && existingLead.status !== "LOST") {
+          await prisma.auditLead.update({
+            where: { id: existingLead.id },
+            data: { status: 'REPORT_READY' }
+          })
+        }
       }
     } else {
       const existingLead = await prisma.auditLead.findFirst({
         where: { runId: share.runId, email }
       })
-      if (existingLead) {
+      if (existingLead && existingLead.status !== "CONVERTED" && existingLead.status !== "LOST") {
         await prisma.auditLead.update({
           where: { id: existingLead.id },
           data: { status: 'REPORT_READY' }

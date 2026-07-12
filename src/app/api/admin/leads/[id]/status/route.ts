@@ -1,8 +1,11 @@
+import { LeadStatus } from '@prisma/client'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { validateAdminSession } from '@/lib/admin-auth'
+import { csrfProtection } from '@/lib/csrf'
+import { canTransition } from '@/lib/lead-state-machine'
 
-const VALID_STATUSES = ['NEW', 'QUALIFIED', 'AUDIT_STARTED', 'REPORT_READY', 'DELIVERED', 'CONVERTED', 'LOST'] as const
+const VALID_STATUSES: readonly string[] = Object.values(LeadStatus) as readonly string[]
 
 export async function POST(
   request: NextRequest,
@@ -12,6 +15,11 @@ export async function POST(
     const isAuthenticated = await validateAdminSession()
     if (!isAuthenticated) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const csrfCheck = await csrfProtection(request)
+    if (!csrfCheck.valid) {
+      return NextResponse.json({ error: 'FORBIDDEN', details: csrfCheck.error }, { status: 403 })
     }
 
     const { id } = await params
@@ -27,6 +35,14 @@ export async function POST(
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
     }
 
+    if (!canTransition(existing.status as LeadStatus, status as LeadStatus)) {
+      return NextResponse.json({ error: `Invalid transition: ${existing.status} -> ${status}` }, { status: 409 })
+    }
+
+    if (status === 'LOST' && !lostReason) {
+      return NextResponse.json({ error: 'lostReason is required when transitioning to LOST' }, { status: 400 })
+    }
+
     const updateData: Record<string, unknown> = { status }
 
     if (status === 'QUALIFIED') {
@@ -35,15 +51,15 @@ export async function POST(
       updateData.convertedAt = new Date()
     } else if (status === 'LOST') {
       updateData.lostAt = new Date()
-      updateData.lostReason = lostReason || null
+      updateData.lostReason = lostReason
     }
 
     const lead = await prisma.auditLead.update({
       where: { id },
-      data: updateData as any,
+      data: updateData,
       include: {
         run: { select: { id: true, url: true } },
-        order: { select: { id: true, status: true, amountToman: true } },
+        orders: { select: { id: true, status: true, amountToman: true }, orderBy: { createdAt: 'desc' }, take: 1 },
       },
     })
 

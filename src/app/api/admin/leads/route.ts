@@ -1,3 +1,4 @@
+import { LeadStatus, Prisma } from '@prisma/client'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { validateAdminSession } from '@/lib/admin-auth'
@@ -15,9 +16,9 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'))
     const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get('limit') || '20')))
 
-    const where: Record<string, unknown> = {}
-    if (status && status !== 'ALL') {
-      where.status = status
+    const where: Prisma.AuditLeadWhereInput = {}
+    if (status && status !== 'ALL' && Object.values(LeadStatus).includes(status as LeadStatus)) {
+      where.status = status as LeadStatus
     }
     if (search) {
       where.OR = [
@@ -29,21 +30,21 @@ export async function GET(request: NextRequest) {
 
     const [leads, total] = await Promise.all([
       prisma.auditLead.findMany({
-        where: where as any,
+        where,
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
         include: {
           run: { select: { id: true, url: true, status: true } },
-          order: { select: { id: true, status: true, amountToman: true, paidAt: true } },
+          orders: { select: { id: true, status: true, amountToman: true, paidAt: true }, orderBy: { createdAt: 'desc' }, take: 1 },
         },
       }),
-      prisma.auditLead.count({ where: where as any }),
+      prisma.auditLead.count({ where }),
     ])
 
     const statusCounts = await Promise.all(
-      ['NEW', 'QUALIFIED', 'AUDIT_STARTED', 'REPORT_READY', 'DELIVERED', 'CONVERTED', 'LOST'].map(async (s) => {
-        const count = await prisma.auditLead.count({ where: { status: s as any } })
+      (Object.values(LeadStatus) as LeadStatus[]).map(async (s) => {
+        const count = await prisma.auditLead.count({ where: { status: s } })
         return { status: s, count }
       })
     )
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
       statusCounts,
     })
   } catch (error) {
-    console.error('Admin leads error:', error)
-    return NextResponse.json({ error: 'Failed to fetch leads' }, { status: 500 })
+    const message = error instanceof Error ? error.message : 'unknown'
+    return NextResponse.json({ error: 'Failed to fetch leads', details: message }, { status: 500 })
   }
 }
