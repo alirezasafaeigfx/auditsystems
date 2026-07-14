@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   generateCSRFToken,
   verifyCSRFToken,
@@ -10,6 +10,12 @@ const TEST_SECRET = "test-csrf-secret-key-for-testing-only";
 describe("CSRF Protection", () => {
   beforeEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.useRealTimers();
+    delete process.env.CSRF_SECRET;
   });
 
   describe("generateCSRFToken + verifyCSRFToken", () => {
