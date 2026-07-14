@@ -12,11 +12,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: roadmap-automation-${{ github.repository }}
+  group: roadmap-automation-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
   roadmap:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, linux, x64, asdev-ci]
     timeout-minutes: 30
 
@@ -47,3 +48,14 @@ jobs:
         with:
           name: roadmap-reports
           path: logs/roadmap/
+
+      - name: Cleanup runner workspace
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -n "${GITHUB_WORKSPACE:-}" ] && [ -d "${GITHUB_WORKSPACE:-}" ]; then
+            find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} + || true
+          fi
+          if [ -n "${RUNNER_TEMP:-}" ] && [ -d "${RUNNER_TEMP:-}" ]; then
+            find "$RUNNER_TEMP" -mindepth 1 -maxdepth 1 -exec rm -rf {} + || true
+          fi
