@@ -1,71 +1,167 @@
 # Auto Generated Project Status
 
-Generated at: 2026-02-23T20:05:35.537Z
+Generated at: 2026-07-15T22:09:15.459Z
 
 ## Overview
-- API routes: 10
-- Page routes: 22
-- Test files: 6
-- NPM scripts: 24
+- API routes: 46
+- Page routes: 72
+- Test files: 69
+- NPM scripts: 64
 
 ## Roadmap Phases
 - Done: 10
 - In Progress: 0
 - Planned: 0
-- Last automation run: 2026-02-23T18:29:25.505Z
-- Last run results: passed=25, failed=0, skipped=0
 
 ## API Routes
+- `/api/admin/auth/login`
+- `/api/admin/auth/logout`
+- `/api/admin/billing-events`
+- `/api/admin/leads`
+- `/api/admin/leads/[id]`
+- `/api/admin/leads/[id]/retry-audit`
+- `/api/admin/leads/[id]/start-audit`
+- `/api/admin/leads/[id]/status`
+- `/api/admin/monitoring`
+- `/api/admin/stats`
+- `/api/analytics/rum`
 - `/api/audit/runs`
 - `/api/audit/runs/[id]`
+- `/api/auth/login`
+- `/api/auth/logout`
+- `/api/auth/me`
+- `/api/auth/resend-verification`
+- `/api/auth/sessions`
+- `/api/auth/signup`
+- `/api/auth/verify-email`
+- `/api/billing/callback`
+- `/api/billing/checkout`
+- `/api/billing/current`
+- `/api/csrf`
+- `/api/health`
+- `/api/leads`
 - `/api/live`
 - `/api/metrics`
+- `/api/newsletter`
+- `/api/notifications/history`
+- `/api/notifications/preferences`
+- `/api/notifications/unsubscribe`
 - `/api/orders`
 - `/api/payments/callback`
 - `/api/pdf/[token]`
+- `/api/projects`
+- `/api/projects/[projectId]/audit`
+- `/api/projects/[projectId]/schedule`
 - `/api/ready`
+- `/api/referrals`
 - `/api/reports/[token]`
+- `/api/reports/[token]/capture`
 - `/api/reports/[token]/unlock`
+- `/api/settings/brand`
+- `/api/stats`
+- `/api/team`
 
 ## Page Routes
 - `/`
+- `/admin`
+- `/admin/leads`
+- `/admin/login`
+- `/admin/monitoring`
+- `/app`
+- `/app/billing`
+- `/app/notifications`
+- `/app/projects`
+- `/app/projects/[projectId]`
+- `/app/projects/[projectId]/audits/[runId]`
+- `/app/projects/[projectId]/schedule`
+- `/app/projects/new`
+- `/app/referrals`
+- `/app/reports`
+- `/app/settings`
+- `/app/settings/brand`
+- `/app/team`
+- `/asdev`
 - `/audit`
+- `/audit-readiness`
 - `/audit/r/[token]`
 - `/audit/r/[token]/success`
 - `/audit/r/[token]/unlock`
+- `/blog`
+- `/blog/[slug]`
 - `/brand/asdev-portfolio`
+- `/case-studies`
+- `/case-studies/[slug]`
+- `/compare/[tokenA]/[tokenB]`
 - `/en`
 - `/en/audit`
 - `/en/audit/r/[token]`
 - `/en/audit/r/[token]/success`
 - `/en/audit/r/[token]/unlock`
+- `/en/blog`
+- `/en/blog/[slug]`
 - `/en/brand/asdev-portfolio`
+- `/en/case-studies`
+- `/en/case-studies/[slug]`
 - `/en/failed`
+- `/en/faq`
 - `/en/guides`
 - `/en/guides/[slug]`
+- `/en/landing/agency`
+- `/en/landing/ecommerce-audit`
+- `/en/landing/security-audit`
+- `/en/landing/speed-optimization`
 - `/en/pillar/iran-readiness-audit`
+- `/en/pricing`
+- `/en/qualification`
 - `/en/sample-report`
+- `/en/standards`
 - `/failed`
+- `/faq`
 - `/guides`
 - `/guides/[slug]`
+- `/landing/agency`
+- `/landing/ecommerce-audit`
+- `/landing/security-audit`
+- `/landing/security-check`
+- `/landing/seo-audit`
+- `/landing/speed-optimization`
+- `/landing/wordpress-audit`
+- `/login`
 - `/pillar/iran-readiness-audit`
+- `/pricing`
+- `/qualification`
 - `/sample-report`
+- `/signup`
+- `/standards`
+- `/verify-email`
 
 ## Environment Variables (.env.example)
 - `DATABASE_URL`
+- `IP_HASH_SALT`
+- `CSRF_SECRET`
+- `SESSION_SECRET`
+- `DOWNLOAD_TOKEN_SECRET`
+- `ADMIN_SESSION_SECRET`
 - `AUDIT_DNS_GUARD`
+- `AUDIT_DNS_FAIL_OPEN`
 - `WORKER_POLL_MS`
 - `WORKER_JOB_TIMEOUT_MS`
-- `IP_HASH_SALT`
+- `WORKER_CONCURRENCY`
 - `UPSTASH_REDIS_REST_URL`
 - `UPSTASH_REDIS_REST_TOKEN`
+- `REDIS_URL`
 - `REQUIRE_DISTRIBUTED_RATE_LIMIT`
 - `PAYMENT_PROVIDER_DEFAULT`
-- `APP_BASE_URL`
 - `APP_BASE_URL_STRICT`
-- `NEXT_PUBLIC_GA4_MEASUREMENT_ID`
+- `NEXT_PUBLIC_SITE_URL`
 - `ZARINPAL_MERCHANT_ID`
-- `DOWNLOAD_TOKEN_SECRET`
+- `PAYPING_API_KEY`
+- `IDPAY_API_KEY`
+- `IDPAY_SANDBOX`
+- `NEXT_PUBLIC_GA4_MEASUREMENT_ID`
+- `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
 
 ## Phase Checks Inventory
 | Phase | Title | Status | Checks |
