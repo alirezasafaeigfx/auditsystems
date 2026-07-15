@@ -26,6 +26,11 @@ function signSessionPayload(payload: string): string {
 }
 
 function createSignedSession(): string {
+// F-003 KNOWN LIMITATION: Admin sessions are stateless HMAC-signed tokens.
+// Once issued, they cannot be revoked server-side for up to 24 hours.
+// This is a deliberate architectural trade-off for simplicity.
+// Owner must explicitly accept this risk before Production deployment.
+// See: alirezasafaei-dev/alirezasafaeisystems/issues/99
   const ts = Date.now()
   const nonce = crypto.randomBytes(16).toString('hex')
   const payload = `${ts}:${nonce}`

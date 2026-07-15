@@ -19,3 +19,5 @@ logs/deploy/readiness-*.md
 logs/deploy/last-readiness.json
 logs/deploy/last-readiness.md
 .mimocode/
+ops/backups/
+*.sql.gz
