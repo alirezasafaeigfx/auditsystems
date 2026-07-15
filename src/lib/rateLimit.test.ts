@@ -60,7 +60,7 @@ describe("isDistributedRateLimitRequired", () => {
 
 describe("F-004: consumeDistributedRateLimit fail-closed behavior", () => {
   it("returns allowed: false when no Redis is configured and NODE_ENV is production", async () => {
-    process.env.NODE_ENV = "production";
+    Object.defineProperty(process.env, "NODE_ENV", { value: "production", writable: true });
     delete process.env.UPSTASH_REDIS_REST_URL;
     delete process.env.UPSTASH_REDIS_REST_TOKEN;
     const { consumeDistributedRateLimit } = await import("./rateLimit");
@@ -70,7 +70,7 @@ describe("F-004: consumeDistributedRateLimit fail-closed behavior", () => {
   });
 
   it("returns allowed: true when no Redis is configured and NODE_ENV is development", async () => {
-    process.env.NODE_ENV = "development";
+    Object.defineProperty(process.env, "NODE_ENV", { value: "development", writable: true });
     delete process.env.UPSTASH_REDIS_REST_URL;
     delete process.env.UPSTASH_REDIS_REST_TOKEN;
     const { consumeDistributedRateLimit } = await import("./rateLimit");

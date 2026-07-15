@@ -19,8 +19,8 @@ vi.mock("../../../../lib/metrics", () => ({
 }));
 
 vi.mock("../../../../lib/reportShare", () => ({
-  isReportShareAccessible: (share: unknown) => share && !share.revoked,
-  hasPassword: (share: unknown) => !!share?.passwordHash,
+  isReportShareAccessible: (share: { revoked?: boolean }) => share && !share.revoked,
+  hasPassword: (share: { passwordHash?: string }) => !!share?.passwordHash,
   verifyPassword: (pw: string) => pw === "correct-password",
 }));
 
