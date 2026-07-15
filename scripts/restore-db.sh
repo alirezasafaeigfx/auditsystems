@@ -192,7 +192,7 @@ else
         --no-owner \
         --no-privileges \
         "$BACKUP_FILE" 2>&1 | tail -20; then
-        log "WARNING: pg_restore completed with warnings (may be non-critical)"
+        die "pg_restore failed. The target database may be inconsistent."
     fi
 fi
 
@@ -219,6 +219,9 @@ for tbl in "User" "Audit" "AuditReport" "Subscription"; do
     COUNT=$(run_psql -t -c \
         "SELECT count(*) FROM \"${tbl}\";" 2>/dev/null | tr -d ' ' || echo "N/A")
     log "  ${tbl}: ${COUNT} rows"
+    if [ "$COUNT" = "N/A" ]; then
+        HEALTH_OK=false
+    fi
 done
 
 # Check database connectivity
@@ -233,7 +236,8 @@ log "========================================="
 if $HEALTH_OK; then
     log "Restore completed successfully"
 else
-    log "Restore completed with warnings. Review health check output above."
+    log "Restore verification failed. Review health check output above."
+    exit 1
 fi
 log "  Source: ${BACKUP_FILENAME}"
 log "  Database: configured target (${DB_NAME_DISPLAY}@${DB_HOST_DISPLAY}:${DB_PORT_DISPLAY})"
