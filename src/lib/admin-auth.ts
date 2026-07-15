@@ -42,7 +42,13 @@ function verifySignedSession(token: string): boolean {
 }
 
 export function validateAdminCredentials(username: string, password: string): boolean {
-  return username === ADMIN_USERNAME && password === ADMIN_PASSWORD && ADMIN_PASSWORD.length > 0
+  if (ADMIN_PASSWORD.length === 0) return false
+  const usernameBuf = Buffer.from(username)
+  const expectedUsernameBuf = Buffer.from(ADMIN_USERNAME)
+  const passwordBuf = Buffer.from(password)
+  const expectedPasswordBuf = Buffer.from(ADMIN_PASSWORD)
+  if (usernameBuf.length !== expectedUsernameBuf.length || passwordBuf.length !== expectedPasswordBuf.length) return false
+  return crypto.timingSafeEqual(usernameBuf, expectedUsernameBuf) && crypto.timingSafeEqual(passwordBuf, expectedPasswordBuf)
 }
 
 export function isSessionAuthConfigured(): boolean {

@@ -48,7 +48,6 @@ jobs:
 
       - name: Run automation hard gate
         env:
-          APP_BASE_URL: "http://localhost:3000"
           DOWNLOAD_TOKEN_SECRET: "ci-download-secret-min-16"
           PAYMENT_PROVIDER_DEFAULT: "MOCK"
           REQUIRE_DISTRIBUTED_RATE_LIMIT: "false"

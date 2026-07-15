@@ -57,8 +57,7 @@ export async function GET(request: NextRequest) {
       totalPages: Math.ceil(total / limit),
       statusCounts,
     })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'unknown'
-    return NextResponse.json({ error: 'Failed to fetch leads', details: message }, { status: 500 })
+  } catch {
+    return NextResponse.json({ error: 'Failed to fetch leads' }, { status: 500 })
   }
 }
