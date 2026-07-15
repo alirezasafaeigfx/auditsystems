@@ -42,17 +42,24 @@ die() {
     exit 1
 }
 
-# Resolve database connection
+# Resolve the exact database connection. Never silently fall back to a
+# development database in this production-oriented script.
+PG_DUMP_ARGS=()
+PGPASSWORD_VALUE="${POSTGRES_PASSWORD:-}"
+
 if [ -n "${DATABASE_URL:-}" ]; then
+    PG_DUMP_ARGS=("$DATABASE_URL")
     log "Using DATABASE_URL from environment"
-elif [ -n "${POSTGRES_HOST:-}" ] && [ -n "${POSTGRES_DB:-}" ]; then
-    PGPASSWORD="${POSTGRES_PASSWORD:-postgres}" \
-    DATABASE_URL="postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5432}/${POSTGRES_DB}"
-    log "Constructed DATABASE_URL from individual env vars"
+elif [ -n "${POSTGRES_HOST:-}" ] && [ -n "${POSTGRES_DB:-}" ] && [ -n "${POSTGRES_USER:-}" ]; then
+    PG_DUMP_ARGS=(
+        -h "$POSTGRES_HOST"
+        -p "${POSTGRES_PORT:-5432}"
+        -U "$POSTGRES_USER"
+        -d "$POSTGRES_DB"
+    )
+    log "Using explicit POSTGRES_* connection settings"
 else
-    log "No DATABASE_URL or POSTGRES_* vars set, using docker-compose defaults"
-    PGPASSWORD="postgres" \
-    DATABASE_URL="postgresql://postgres:postgres@localhost:5432/asdev_audit"
+    die "DATABASE_URL or POSTGRES_HOST, POSTGRES_DB, and POSTGRES_USER must be set"
 fi
 
 # Verify pg_dump is available
@@ -72,14 +79,13 @@ fi
 
 # Run pg_dump with gzip compression
 log "Running pg_dump..."
-if ! PGPASSWORD="${POSTGRES_PASSWORD:-postgres}" pg_dump \
-    -h "${POSTGRES_HOST:-localhost}" \
-    -p "${POSTGRES_PORT:-5432}" \
-    -U "${POSTGRES_USER:-postgres}" \
-    -d "${POSTGRES_DB:-asdev_audit}" \
+if ! PGPASSWORD="$PGPASSWORD_VALUE" pg_dump \
     --no-owner \
     --no-privileges \
+    --clean \
+    --if-exists \
     -F p \
+    "${PG_DUMP_ARGS[@]}" \
     2>> "${LOG_DIR}/backup.log" | gzip > "$BACKUP_FILE"; then
     rm -f "$BACKUP_FILE"
     die "pg_dump failed. Check ${LOG_DIR}/backup.log for details."
@@ -124,3 +130,4 @@ log "  File: ${BACKUP_FILE}"
 log "  Size: ${BACKUP_SIZE}"
 log "  Retention: ${RETENTION_DAYS} days"
 log "  Total backups on disk: ${TOTAL_BACKUPS}"
+
