@@ -63,11 +63,19 @@ DB_NAME_DISPLAY="<from DATABASE_URL>"
 PSQL_ARGS=()
 PG_ISREADY_ARGS=()
 PG_RESTORE_ARGS=()
+PGDATABASE_VALUE=""
+USE_DATABASE_URL=false
 
 if [ -n "${DATABASE_URL:-}" ]; then
-    PSQL_ARGS=(--dbname="$DATABASE_URL")
-    PG_ISREADY_ARGS=(--dbname="$DATABASE_URL")
-    PG_RESTORE_ARGS=(--dbname="$DATABASE_URL")
+    command -v node >/dev/null 2>&1 || die "node is required to normalize DATABASE_URL safely"
+    PGDATABASE_VALUE="$(DATABASE_URL="$DATABASE_URL" node -e '
+      const url = new URL(process.env.DATABASE_URL);
+      for (const key of ["schema", "connection_limit", "pool_timeout", "pgbouncer"]) {
+        url.searchParams.delete(key);
+      }
+      process.stdout.write(url.toString());
+    ')"
+    USE_DATABASE_URL=true
     log "Using DATABASE_URL from environment"
 elif [ -n "${POSTGRES_HOST:-}" ] && [ -n "${POSTGRES_DB:-}" ] && [ -n "${POSTGRES_USER:-}" ]; then
     DB_HOST_DISPLAY="$POSTGRES_HOST"
@@ -81,6 +89,30 @@ elif [ -n "${POSTGRES_HOST:-}" ] && [ -n "${POSTGRES_DB:-}" ] && [ -n "${POSTGRE
 else
     die "DATABASE_URL or POSTGRES_HOST, POSTGRES_DB, and POSTGRES_USER must be set"
 fi
+
+run_psql() {
+    if $USE_DATABASE_URL; then
+        PGDATABASE="$PGDATABASE_VALUE" PGPASSWORD="" psql "$@"
+    else
+        PGPASSWORD="$DB_PASS" psql "${PSQL_ARGS[@]}" "$@"
+    fi
+}
+
+run_pg_isready() {
+    if $USE_DATABASE_URL; then
+        PGDATABASE="$PGDATABASE_VALUE" PGPASSWORD="" pg_isready "$@"
+    else
+        PGPASSWORD="$DB_PASS" pg_isready "${PG_ISREADY_ARGS[@]}" "$@"
+    fi
+}
+
+run_pg_restore() {
+    if $USE_DATABASE_URL; then
+        PGDATABASE="$PGDATABASE_VALUE" PGPASSWORD="" pg_restore "$@"
+    else
+        PGPASSWORD="$DB_PASS" pg_restore "${PG_RESTORE_ARGS[@]}" "$@"
+    fi
+}
 
 # Pre-restore verification
 log "========================================="
@@ -137,7 +169,7 @@ log "Starting restore..."
 
 # Run pre-restore health check
 log "  Pre-restore health check..."
-if PGPASSWORD="$DB_PASS" pg_isready "${PG_ISREADY_ARGS[@]}" >/dev/null 2>&1; then
+if run_pg_isready >/dev/null 2>&1; then
     log "  Database is currently accessible"
 else
     log "  WARNING: Database is not responding. Attempting restore anyway..."
@@ -146,8 +178,7 @@ fi
 # Restore
 if [[ "$BACKUP_FILENAME" == *.gz ]]; then
     log "  Decompressing and restoring..."
-    if ! zcat "$BACKUP_FILE" | PGPASSWORD="$DB_PASS" psql \
-        "${PSQL_ARGS[@]}" \
+    if ! zcat "$BACKUP_FILE" | run_psql \
         --set ON_ERROR_STOP=1 \
         --single-transaction \
         2>&1 | tail -20; then
@@ -155,8 +186,7 @@ if [[ "$BACKUP_FILENAME" == *.gz ]]; then
     fi
 else
     log "  Restoring from custom dump format..."
-    if ! PGPASSWORD="$DB_PASS" pg_restore \
-        "${PG_RESTORE_ARGS[@]}" \
+    if ! run_pg_restore \
         --clean \
         --if-exists \
         --no-owner \
@@ -175,7 +205,7 @@ log "Post-restore health check..."
 HEALTH_OK=true
 
 # Check table count
-TABLE_COUNT=$(PGPASSWORD="$DB_PASS" psql "${PSQL_ARGS[@]}" -t -c \
+TABLE_COUNT=$(run_psql -t -c \
     "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null | tr -d ' ')
 if [ -n "$TABLE_COUNT" ] && [ "$TABLE_COUNT" -gt 0 ]; then
     log "  Tables found: ${TABLE_COUNT}"
@@ -186,13 +216,13 @@ fi
 
 # Check record counts for key tables
 for tbl in "User" "Audit" "AuditReport" "Subscription"; do
-    COUNT=$(PGPASSWORD="$DB_PASS" psql "${PSQL_ARGS[@]}" -t -c \
+    COUNT=$(run_psql -t -c \
         "SELECT count(*) FROM \"${tbl}\";" 2>/dev/null | tr -d ' ' || echo "N/A")
     log "  ${tbl}: ${COUNT} rows"
 done
 
 # Check database connectivity
-if PGPASSWORD="$DB_PASS" pg_isready "${PG_ISREADY_ARGS[@]}" >/dev/null 2>&1; then
+if run_pg_isready >/dev/null 2>&1; then
     log "  Connectivity: OK"
 else
     log "  WARNING: Database not responding to pg_isready"
@@ -207,4 +237,3 @@ else
 fi
 log "  Source: ${BACKUP_FILENAME}"
 log "  Database: configured target (${DB_NAME_DISPLAY}@${DB_HOST_DISPLAY}:${DB_PORT_DISPLAY})"
-
