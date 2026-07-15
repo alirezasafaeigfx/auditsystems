@@ -91,8 +91,11 @@ export NODE_ENV=production
 export HOSTNAME=127.0.0.1
 export PORT
 
-pnpm prisma migrate deploy
+# Complete the immutable application build before changing database state.
 pnpm run build
+
+# Apply migrations only after the release has built successfully.
+pnpm prisma migrate deploy
 
 cp -r .next/static .next/standalone/.next/
 cp -r public .next/standalone/
@@ -168,3 +171,4 @@ if (( ${#releases[@]} > KEEP_RELEASES )); then
 fi
 
 echo "[deploy] completed $ENVIRONMENT release $RELEASE_ID"
+
