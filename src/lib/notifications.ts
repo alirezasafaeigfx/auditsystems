@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { signUnsubToken } from "./hmac-tokens";
 import { prisma } from "./db";
 import { logEvent } from "./observability";
 
@@ -99,7 +99,7 @@ function renderEmailBody(
     .map(([cat, score]) => `  - ${cat}: ${score}/100`)
     .join("\n");
 
-  const unsubscribeToken = (() => { const secret = process.env.CSRF_SECRET; if (!secret) throw new Error("CSRF_SECRET required"); const payload = `unsub:${organizationId}`; const sig = createHash("sha256").update(payload + secret).digest("hex"); return Buffer.from(`${payload}:${sig}`).toString("base64"); })();
+  const unsubSecret = process.env.CSRF_SECRET; if (!unsubSecret) throw new Error("CSRF_SECRET required"); const unsubscribeToken = signUnsubToken(organizationId, unsubSecret);
   const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://auditsystems.ir"}/api/notifications/unsubscribe?token=${unsubscribeToken}`;
 
   return [
