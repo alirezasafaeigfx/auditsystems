@@ -68,6 +68,35 @@ APP_WEB_NAME="${APP_NAME}-web"
 APP_WORKER_NAME="${APP_NAME}-worker"
 PORT="3011"
 [[ "$ENVIRONMENT" == "production" ]] && PORT="3010"
+PREVIOUS_RELEASE_DIR=""
+if [[ -L "$CURRENT_LINK" ]]; then
+  PREVIOUS_RELEASE_DIR="$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)"
+fi
+
+rollback_failed_release() {
+  if [[ -z "$PREVIOUS_RELEASE_DIR" || ! -f "$PREVIOUS_RELEASE_DIR/ecosystem.config.cjs" ]]; then
+    echo "[deploy] no valid previous release is available for automatic application rollback" >&2
+    return 1
+  fi
+
+  echo "[deploy] rolling application back to $(basename "$PREVIOUS_RELEASE_DIR")" >&2
+  ln -sfn "$PREVIOUS_RELEASE_DIR" "$CURRENT_LINK"
+  pm2 delete "$APP_WEB_NAME" >/dev/null 2>&1 || true
+  pm2 delete "$APP_WORKER_NAME" >/dev/null 2>&1 || true
+  pm2 start "$PREVIOUS_RELEASE_DIR/ecosystem.config.cjs" --update-env
+  pm2 save >/dev/null 2>&1 || true
+
+  for attempt in {1..20}; do
+    if curl -fsS "http://127.0.0.1:$PORT/api/ready" >/dev/null 2>&1; then
+      echo "[deploy] previous application release is healthy after rollback" >&2
+      return 0
+    fi
+    sleep 2
+  done
+
+  echo "[deploy] previous application release failed its rollback health check" >&2
+  return 1
+}
 
 mkdir -p "$ENV_DIR" "$LOG_DIR" "$RELEASES_DIR" "$BASE_DIR/current"
 [[ -f "$ENV_FILE" ]] || { echo "[deploy] missing env file: $ENV_FILE" >&2; exit 1; }
@@ -161,7 +190,11 @@ for attempt in {1..20}; do
     echo "[deploy] health check passed for $ENVIRONMENT on port $PORT"
     break
   fi
-  [[ "$attempt" -eq 20 ]] && { echo "[deploy] health check failed" >&2; exit 1; }
+  if [[ "$attempt" -eq 20 ]]; then
+    echo "[deploy] health check failed" >&2
+    rollback_failed_release || true
+    exit 1
+  fi
   sleep 2
 done
 
@@ -171,4 +204,3 @@ if (( ${#releases[@]} > KEEP_RELEASES )); then
 fi
 
 echo "[deploy] completed $ENVIRONMENT release $RELEASE_ID"
-
