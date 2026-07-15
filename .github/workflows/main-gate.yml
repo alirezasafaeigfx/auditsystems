@@ -12,11 +12,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: main-gate-${{ github.repository }}
+  group: main-gate-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
   gate:
+    name: Self-hosted quality gate
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: [self-hosted, linux, x64, asdev-ci]
     timeout-minutes: 30
 
@@ -27,7 +29,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
-          version: 9
+          version: 9.15.0
 
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -55,9 +57,11 @@ jobs:
       - name: Curl smoke /asdev
         run: |
           pnpm run build
-          PORT=3110 pnpm run start >/tmp/audit-smoke.log 2>&1 &
+          APP_PID_FILE="${RUNNER_TEMP}/audit-app.pid"
+          setsid env PORT=3110 pnpm run start >"${RUNNER_TEMP}/audit-smoke.log" 2>&1 &
           APP_PID=$!
-          trap "kill $APP_PID >/dev/null 2>&1 || true" EXIT
+          echo "$APP_PID" > "$APP_PID_FILE"
+          trap 'kill -- "-$APP_PID" 2>/dev/null || true' EXIT
           for i in {1..40}; do
             if curl -fsS http://127.0.0.1:3110/asdev >/tmp/asdev.html; then
               break
@@ -81,3 +85,20 @@ jobs:
             logs/roadmap/
             logs/preflight/
             docs/AUTO_GENERATED_STATUS.md
+
+      - name: Cleanup runner workspace
+        if: always()
+        run: |
+          set -euo pipefail
+          APP_PID_FILE="${RUNNER_TEMP}/audit-app.pid"
+          if [ -f "$APP_PID_FILE" ]; then
+            APP_PID="$(cat "$APP_PID_FILE")"
+            kill -- "-$APP_PID" 2>/dev/null || true
+            rm -f "$APP_PID_FILE"
+          fi
+          if [ -n "${GITHUB_WORKSPACE:-}" ] && [ -d "${GITHUB_WORKSPACE:-}" ]; then
+            find "$GITHUB_WORKSPACE" -mindepth 1 -maxdepth 1 -exec rm -rf {} + || true
+          fi
+          if [ -n "${RUNNER_TEMP:-}" ] && [ -d "${RUNNER_TEMP:-}" ]; then
+            find "$RUNNER_TEMP" -mindepth 1 -maxdepth 1 -exec rm -rf {} + || true
+          fi
