@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: "Target environment"
+        description: "Target environment (production is disabled; use the authorized release runbook)"
         required: true
         type: choice
-        options: [staging, production]
+        options: [staging]
       release_ref:
         description: "Git ref (tag/branch/SHA)"
         required: true
@@ -26,8 +26,8 @@ env:
 
 jobs:
   deploy:
-    if: github.event.inputs.approved == 'YES'
-    runs-on: ubuntu-latest
+    if: github.event.inputs.approved == 'YES' && github.event.inputs.environment == 'staging'
+    runs-on: [self-hosted, linux, x64, asdev-ci]
     environment: ${{ github.event.inputs.environment }}
     permissions:
       contents: read
@@ -45,7 +45,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
-          version: 10
+          dest: ${{ runner.temp }}/setup-pnpm
 
       - name: Setup Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -151,8 +151,8 @@ jobs:
           export HOSTNAME=127.0.0.1
           export PORT
 
-          pnpm prisma migrate deploy
           pnpm run build
+          pnpm prisma migrate deploy
 
           # Prepare standalone output
           cp -r .next/static .next/standalone/.next/
