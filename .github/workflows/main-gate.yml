@@ -46,6 +46,9 @@ jobs:
       - name: Verify Actions are pinned
         run: pnpm run check:actions-pinned
 
+      - name: Verify release backup and rollback safety
+        run: bash scripts/tests/test-release-safety.sh
+
       - name: Run automation hard gate
         env:
           DOWNLOAD_TOKEN_SECRET: "ci-download-secret-min-16"
