@@ -21,6 +21,10 @@ function getRedisConfig(): { url: string; token: string } | null {
   return { url, token };
 }
 
+function isProduction(): boolean {
+  return process.env.NODE_ENV === "production";
+}
+
 export async function consumeDistributedRateLimit(input: {
   key: string;
   limit: number;
@@ -70,7 +74,7 @@ export async function consumeDistributedRateLimit(input: {
   try {
     if (!getLocalRedisUrl()) {
       return {
-        allowed: true,
+        allowed: !isProduction(),
         remaining: input.limit,
         limit: input.limit,
         resetSec: input.windowSec,
@@ -98,7 +102,7 @@ export async function consumeDistributedRateLimit(input: {
     });
 
     return {
-      allowed: true,
+      allowed: !isProduction(),
       remaining: input.limit,
       limit: input.limit,
       resetSec: input.windowSec,
