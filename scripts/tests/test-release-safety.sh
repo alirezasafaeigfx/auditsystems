@@ -34,7 +34,11 @@ set -euo pipefail
 printf '%s\n' "$@" >> "$ASDEV_TEST_TMP/psql.args"
 printf '%s\n' "${PGDATABASE:-}" >> "$ASDEV_TEST_TMP/psql.database"
 if [[ " $* " == *" -c "* ]]; then
-  printf ' 10\n'
+  if [[ "${ASDEV_TEST_ZERO_TABLES:-0}" == "1" ]]; then
+    printf ' 0\n'
+  else
+    printf ' 10\n'
+  fi
 else
   consume="$(mktemp)"
   trap 'rm -f "$consume"' EXIT
@@ -89,11 +93,22 @@ fi
 grep -Fx -- '--single-transaction' "$TMP_ROOT/psql.args" >/dev/null
 grep -Fx -- "$EXPECTED_LIBPQ_URL" "$TMP_ROOT/pg-isready.database" >/dev/null
 
+set +e
+PATH="$TEST_BIN:$PATH" DATABASE_URL="$CANARY_URL" ASDEV_TEST_ZERO_TABLES=1 \
+  bash "$PROJECT/scripts/restore-db.sh" "$backup_file" --force >"$TMP_ROOT/restore-zero-tables.log" 2>&1
+zero_tables_rc=$?
+set -e
+if [[ "$zero_tables_rc" -eq 0 ]]; then
+  echo "restore verification must fail when no public tables are present" >&2
+  exit 1
+fi
+
 build_line="$(grep -n '^pnpm run build$' "$PROJECT/ops/deploy/deploy.sh" | cut -d: -f1)"
 migrate_line="$(grep -n '^pnpm prisma migrate deploy$' "$PROJECT/ops/deploy/deploy.sh" | cut -d: -f1)"
 if [[ -z "$build_line" || -z "$migrate_line" || "$build_line" -ge "$migrate_line" ]]; then
   echo "build must occur before migration" >&2
   exit 1
 fi
+grep -F -- 'rollback_failed_release' "$PROJECT/ops/deploy/deploy.sh" >/dev/null
 
 echo "release safety fixtures: PASS"
