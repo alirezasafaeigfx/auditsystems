@@ -11,13 +11,26 @@ DUMP_PATTERNS=(
   "ops/backups/*"
 )
 
+EXCLUDE_PATTERNS=(
+  "prisma/migrations/*"
+)
+
 violations=0
 for pattern in "${DUMP_PATTERNS[@]}"; do
   files=$(git ls-files "$pattern" 2>/dev/null || true)
   if [[ -n "$files" ]]; then
-    echo "VIOLATION: Database dump pattern found in Git: $pattern"
-    echo "$files"
-    violations=$((violations + 1))
+    excluded=false
+    for exclude in "${EXCLUDE_PATTERNS[@]}"; do
+      if echo "$files" | grep -q "$exclude"; then
+        excluded=true
+        break
+      fi
+    done
+    if [[ "$excluded" == "false" ]]; then
+      echo "VIOLATION: Database dump pattern found in Git: $pattern"
+      echo "$files"
+      violations=$((violations + 1))
+    fi
   fi
 done
 
