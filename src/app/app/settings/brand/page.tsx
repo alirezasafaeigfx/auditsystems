@@ -1,3 +1,4 @@
+"use client";
 import { fetchCSRFHeaders } from "@/lib/csrf-client";
 
 import { useState, useEffect, useRef } from "react";
