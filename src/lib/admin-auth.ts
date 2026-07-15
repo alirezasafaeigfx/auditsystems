@@ -1,6 +1,15 @@
 import { cookies } from 'next/headers'
 import crypto from 'node:crypto'
 
+/**
+ * KNOWN LIMITATION (F-003 - owner-accepted risk):
+ * Admin session tokens are stateless HMAC-signed tokens, NOT stored server-side.
+ * This means individual sessions CANNOT be revoked server-side.
+ * To revoke all sessions, rotate ADMIN_SESSION_SECRET in the environment.
+ * The 24-hour maxAge provides bounded exposure. Owner has accepted this trade-off
+ * for operational simplicity (no DB-backed session store required).
+ */
+
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin'
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || ''
 const SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || ''

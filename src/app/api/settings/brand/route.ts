@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { validateSession, getOrganizationForUser } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/db";
+import { csrfProtection } from "../../../../lib/csrf";
+import { logEvent } from "../../../../lib/observability";
 
 export async function GET() {
   const user = await validateSession();
@@ -28,6 +30,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const csrfCheck = await csrfProtection(request);
+  if (!csrfCheck.valid) {
+    logEvent("warn", "brand_csrf_failed", { error: csrfCheck.error });
+    return NextResponse.json({ error: "FORBIDDEN", details: csrfCheck.error }, { status: 403 });
+  }
+
   const user = await validateSession();
   if (!user) {
     return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });

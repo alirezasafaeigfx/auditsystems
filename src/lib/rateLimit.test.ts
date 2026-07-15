@@ -57,3 +57,25 @@ describe("isDistributedRateLimitRequired", () => {
     expect(isDistributedRateLimitRequired()).toBe(true);
   });
 });
+
+describe("F-004: consumeDistributedRateLimit fail-closed behavior", () => {
+  it("returns allowed: false when no Redis is configured and NODE_ENV is production", async () => {
+    Object.defineProperty(process.env, "NODE_ENV", { value: "production", writable: true });
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    const { consumeDistributedRateLimit } = await import("./rateLimit");
+    const result = await consumeDistributedRateLimit({ key: "test:key", limit: 10, windowSec: 60 });
+    expect(result.allowed).toBe(false);
+    expect(result.backend).toBe("disabled");
+  });
+
+  it("returns allowed: true when no Redis is configured and NODE_ENV is development", async () => {
+    Object.defineProperty(process.env, "NODE_ENV", { value: "development", writable: true });
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    const { consumeDistributedRateLimit } = await import("./rateLimit");
+    const result = await consumeDistributedRateLimit({ key: "test:key", limit: 10, windowSec: 60 });
+    expect(result.allowed).toBe(true);
+    expect(result.backend).toBe("disabled");
+  });
+});

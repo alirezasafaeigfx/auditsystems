@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { validateSession } from "../../../lib/auth";
 import { createRequestId, logEvent, respondJson } from "../../../lib/observability";
 import { ensureReferralCode, getReferralStats, trackReferral } from "../../../lib/referral";
+import { csrfProtection } from "../../../lib/csrf";
 
 export async function GET() {
   const requestId = createRequestId();
@@ -26,17 +27,28 @@ export async function POST(request: NextRequest) {
   const requestId = createRequestId();
 
   try {
+    const user = await validateSession();
+    if (!user) {
+      return respondJson({ error: "UNAUTHORIZED", requestId }, requestId, { status: 401, headers: { "Cache-Control": "no-store" } });
+    }
+
+    const csrfCheck = await csrfProtection(request);
+    if (!csrfCheck.valid) {
+      logEvent("warn", "referral_csrf_failed", { requestId, error: csrfCheck.error });
+      return respondJson({ error: "FORBIDDEN", requestId, details: csrfCheck.error }, requestId, { status: 403, headers: { "Cache-Control": "no-store" } });
+    }
+
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== "object") {
       return respondJson({ error: "INVALID_PAYLOAD", requestId }, requestId, { status: 400, headers: { "Cache-Control": "no-store" } });
     }
 
-    const { referralCode, userId } = body as { referralCode?: unknown; userId?: unknown };
-    if (typeof referralCode !== "string" || typeof userId !== "string") {
+    const { referralCode } = body as { referralCode?: unknown };
+    if (typeof referralCode !== "string") {
       return respondJson({ error: "INVALID_PARAMS", requestId }, requestId, { status: 400, headers: { "Cache-Control": "no-store" } });
     }
 
-    const referral = await trackReferral(referralCode, userId);
+    const referral = await trackReferral(referralCode, user.id);
     if (!referral) {
       return respondJson({ ok: false, requestId }, requestId, { headers: { "Cache-Control": "no-store" } });
     }
