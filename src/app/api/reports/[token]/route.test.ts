@@ -19,12 +19,12 @@ vi.mock("../../../../lib/metrics", () => ({
 }));
 
 vi.mock("../../../../lib/reportShare", () => ({
-  isReportShareAccessible: (share: any) => share && !share.revoked,
-  hasPassword: (share: any) => !!share?.passwordHash,
-  verifyPassword: (pw: string, hash: string) => pw === "correct-password",
+  isReportShareAccessible: (share: unknown) => share && !share.revoked,
+  hasPassword: (share: unknown) => !!share?.passwordHash,
+  verifyPassword: (pw: string) => pw === "correct-password",
 }));
 
-function makeShare(overrides: Record<string, any> = {}) {
+function makeShare(overrides: Record<string, unknown> = {}) {
   return {
     id: "share-1",
     token: "test-token",
