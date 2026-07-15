@@ -73,7 +73,7 @@ if [ -n "${DATABASE_URL:-}" ]; then
       for (const key of ["schema", "connection_limit", "pool_timeout", "pgbouncer"]) {
         url.searchParams.delete(key);
       }
-      process.stdout.write(url.toString());
+      process.stdout.write(url.pathname.slice(1));
     ')"
     USE_DATABASE_URL=true
     log "Using DATABASE_URL from environment"
