@@ -53,15 +53,33 @@ fi
 BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
 BACKUP_FILENAME=$(basename "$BACKUP_FILE")
 
-# Resolve database connection
-DB_HOST="${POSTGRES_HOST:-localhost}"
-DB_PORT="${POSTGRES_PORT:-5432}"
-DB_USER="${POSTGRES_USER:-postgres}"
-DB_PASS="${POSTGRES_PASSWORD:-postgres}"
-DB_NAME="${POSTGRES_DB:-asdev_audit}"
+# Resolve the exact target database. Never silently restore into a local
+# development database when production connection settings are missing.
+DB_PASS="${POSTGRES_PASSWORD:-}"
+DB_HOST_DISPLAY="<from DATABASE_URL>"
+DB_PORT_DISPLAY="<from DATABASE_URL>"
+DB_USER_DISPLAY="<from DATABASE_URL>"
+DB_NAME_DISPLAY="<from DATABASE_URL>"
+PSQL_ARGS=()
+PG_ISREADY_ARGS=()
+PG_RESTORE_ARGS=()
 
 if [ -n "${DATABASE_URL:-}" ]; then
+    PSQL_ARGS=(--dbname="$DATABASE_URL")
+    PG_ISREADY_ARGS=(--dbname="$DATABASE_URL")
+    PG_RESTORE_ARGS=(--dbname="$DATABASE_URL")
     log "Using DATABASE_URL from environment"
+elif [ -n "${POSTGRES_HOST:-}" ] && [ -n "${POSTGRES_DB:-}" ] && [ -n "${POSTGRES_USER:-}" ]; then
+    DB_HOST_DISPLAY="$POSTGRES_HOST"
+    DB_PORT_DISPLAY="${POSTGRES_PORT:-5432}"
+    DB_USER_DISPLAY="$POSTGRES_USER"
+    DB_NAME_DISPLAY="$POSTGRES_DB"
+    PSQL_ARGS=(-h "$DB_HOST_DISPLAY" -p "$DB_PORT_DISPLAY" -U "$DB_USER_DISPLAY" -d "$DB_NAME_DISPLAY")
+    PG_ISREADY_ARGS=(-h "$DB_HOST_DISPLAY" -p "$DB_PORT_DISPLAY" -U "$DB_USER_DISPLAY" -d "$DB_NAME_DISPLAY")
+    PG_RESTORE_ARGS=(-h "$DB_HOST_DISPLAY" -p "$DB_PORT_DISPLAY" -U "$DB_USER_DISPLAY" -d "$DB_NAME_DISPLAY")
+    log "Using explicit POSTGRES_* connection settings"
+else
+    die "DATABASE_URL or POSTGRES_HOST, POSTGRES_DB, and POSTGRES_USER must be set"
 fi
 
 # Pre-restore verification
@@ -95,9 +113,9 @@ fi
 # Safety confirmation
 if [ "$FORCE" = false ] && [ "$DRY_RUN" = false ]; then
     echo ""
-    echo "WARNING: This will OVERWRITE the current database '${DB_NAME}'."
-    echo "  Host: ${DB_HOST}:${DB_PORT}"
-    echo "  User: ${DB_USER}"
+    echo "WARNING: This will OVERWRITE the configured target database."
+    echo "  Host: ${DB_HOST_DISPLAY}:${DB_PORT_DISPLAY}"
+    echo "  User: ${DB_USER_DISPLAY}"
     echo "  Backup: ${BACKUP_FILENAME} (${BACKUP_SIZE})"
     echo ""
     read -r -p "Type 'RESTORE' to confirm: " CONFIRM
@@ -108,7 +126,7 @@ if [ "$FORCE" = false ] && [ "$DRY_RUN" = false ]; then
 fi
 
 if $DRY_RUN; then
-    log "DRY RUN: Would restore ${BACKUP_FILENAME} to ${DB_NAME}"
+    log "DRY RUN: Would restore ${BACKUP_FILENAME} to the configured target database"
     log "DRY RUN: Would run post-restore health check"
     log "DRY RUN complete. No changes made."
     exit 0
@@ -119,7 +137,7 @@ log "Starting restore..."
 
 # Run pre-restore health check
 log "  Pre-restore health check..."
-if PGPASSWORD="$DB_PASS" pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1; then
+if PGPASSWORD="$DB_PASS" pg_isready "${PG_ISREADY_ARGS[@]}" >/dev/null 2>&1; then
     log "  Database is currently accessible"
 else
     log "  WARNING: Database is not responding. Attempting restore anyway..."
@@ -129,21 +147,16 @@ fi
 if [[ "$BACKUP_FILENAME" == *.gz ]]; then
     log "  Decompressing and restoring..."
     if ! zcat "$BACKUP_FILE" | PGPASSWORD="$DB_PASS" psql \
-        -h "$DB_HOST" \
-        -p "$DB_PORT" \
-        -U "$DB_USER" \
-        -d "$DB_NAME" \
+        "${PSQL_ARGS[@]}" \
         --set ON_ERROR_STOP=1 \
+        --single-transaction \
         2>&1 | tail -20; then
         die "Restore failed. The database may be in an inconsistent state."
     fi
 else
     log "  Restoring from custom dump format..."
     if ! PGPASSWORD="$DB_PASS" pg_restore \
-        -h "$DB_HOST" \
-        -p "$DB_PORT" \
-        -U "$DB_USER" \
-        -d "$DB_NAME" \
+        "${PG_RESTORE_ARGS[@]}" \
         --clean \
         --if-exists \
         --no-owner \
@@ -162,7 +175,7 @@ log "Post-restore health check..."
 HEALTH_OK=true
 
 # Check table count
-TABLE_COUNT=$(PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -c \
+TABLE_COUNT=$(PGPASSWORD="$DB_PASS" psql "${PSQL_ARGS[@]}" -t -c \
     "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null | tr -d ' ')
 if [ -n "$TABLE_COUNT" ] && [ "$TABLE_COUNT" -gt 0 ]; then
     log "  Tables found: ${TABLE_COUNT}"
@@ -173,13 +186,13 @@ fi
 
 # Check record counts for key tables
 for tbl in "User" "Audit" "AuditReport" "Subscription"; do
-    COUNT=$(PGPASSWORD="$DB_PASS" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -c \
+    COUNT=$(PGPASSWORD="$DB_PASS" psql "${PSQL_ARGS[@]}" -t -c \
         "SELECT count(*) FROM \"${tbl}\";" 2>/dev/null | tr -d ' ' || echo "N/A")
     log "  ${tbl}: ${COUNT} rows"
 done
 
 # Check database connectivity
-if PGPASSWORD="$DB_PASS" pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1; then
+if PGPASSWORD="$DB_PASS" pg_isready "${PG_ISREADY_ARGS[@]}" >/dev/null 2>&1; then
     log "  Connectivity: OK"
 else
     log "  WARNING: Database not responding to pg_isready"
@@ -193,4 +206,5 @@ else
     log "Restore completed with warnings. Review health check output above."
 fi
 log "  Source: ${BACKUP_FILENAME}"
-log "  Database: ${DB_NAME}@${DB_HOST}:${DB_PORT}"
+log "  Database: configured target (${DB_NAME_DISPLAY}@${DB_HOST_DISPLAY}:${DB_PORT_DISPLAY})"
+
