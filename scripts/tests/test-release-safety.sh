@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+REPO_ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 TMP_ROOT="$(mktemp -d)"
 trap 'rm -rf "$TMP_ROOT"' EXIT
 
 PROJECT="$TMP_ROOT/project"
 TEST_BIN="$TMP_ROOT/bin"
 mkdir -p "$PROJECT/scripts" "$PROJECT/ops/deploy" "$TEST_BIN"
-cp "$REPO_ROOT/backup-db.sh" "$PROJECT/scripts/backup-db.sh"
-cp "$REPO_ROOT/restore-db.sh" "$PROJECT/scripts/restore-db.sh"
-cp "$REPO_ROOT/deploy.sh" "$PROJECT/ops/deploy/deploy.sh"
+cp "$REPO_ROOT/scripts/backup-db.sh" "$PROJECT/scripts/backup-db.sh"
+cp "$REPO_ROOT/scripts/restore-db.sh" "$PROJECT/scripts/restore-db.sh"
+cp "$REPO_ROOT/ops/deploy/deploy.sh" "$PROJECT/ops/deploy/deploy.sh"
 
 cat > "$TEST_BIN/pg_dump" <<'STUB'
 #!/usr/bin/env bash
