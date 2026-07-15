@@ -46,9 +46,19 @@ die() {
 # development database in this production-oriented script.
 PG_DUMP_ARGS=()
 PGPASSWORD_VALUE="${POSTGRES_PASSWORD:-}"
+PGDATABASE_VALUE=""
+USE_DATABASE_URL=false
 
 if [ -n "${DATABASE_URL:-}" ]; then
-    PG_DUMP_ARGS=("$DATABASE_URL")
+    command -v node >/dev/null 2>&1 || die "node is required to normalize DATABASE_URL safely"
+    PGDATABASE_VALUE="$(DATABASE_URL="$DATABASE_URL" node -e '
+      const url = new URL(process.env.DATABASE_URL);
+      for (const key of ["schema", "connection_limit", "pool_timeout", "pgbouncer"]) {
+        url.searchParams.delete(key);
+      }
+      process.stdout.write(url.toString());
+    ')"
+    USE_DATABASE_URL=true
     log "Using DATABASE_URL from environment"
 elif [ -n "${POSTGRES_HOST:-}" ] && [ -n "${POSTGRES_DB:-}" ] && [ -n "${POSTGRES_USER:-}" ]; then
     PG_DUMP_ARGS=(
@@ -61,6 +71,14 @@ elif [ -n "${POSTGRES_HOST:-}" ] && [ -n "${POSTGRES_DB:-}" ] && [ -n "${POSTGRE
 else
     die "DATABASE_URL or POSTGRES_HOST, POSTGRES_DB, and POSTGRES_USER must be set"
 fi
+
+run_pg_dump() {
+    if $USE_DATABASE_URL; then
+        PGDATABASE="$PGDATABASE_VALUE" PGPASSWORD="" pg_dump "$@"
+    else
+        PGPASSWORD="$PGPASSWORD_VALUE" pg_dump "${PG_DUMP_ARGS[@]}" "$@"
+    fi
+}
 
 # Verify pg_dump is available
 command -v pg_dump >/dev/null 2>&1 || die "pg_dump not found. Install postgresql-client."
@@ -79,13 +97,12 @@ fi
 
 # Run pg_dump with gzip compression
 log "Running pg_dump..."
-if ! PGPASSWORD="$PGPASSWORD_VALUE" pg_dump \
+if ! run_pg_dump \
     --no-owner \
     --no-privileges \
     --clean \
     --if-exists \
     -F p \
-    "${PG_DUMP_ARGS[@]}" \
     2>> "${LOG_DIR}/backup.log" | gzip > "$BACKUP_FILE"; then
     rm -f "$BACKUP_FILE"
     die "pg_dump failed. Check ${LOG_DIR}/backup.log for details."
@@ -130,4 +147,3 @@ log "  File: ${BACKUP_FILE}"
 log "  Size: ${BACKUP_SIZE}"
 log "  Retention: ${RETENTION_DAYS} days"
 log "  Total backups on disk: ${TOTAL_BACKUPS}"
-
