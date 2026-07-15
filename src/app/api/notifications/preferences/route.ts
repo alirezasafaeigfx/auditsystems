@@ -1,6 +1,7 @@
 import { validateSession, getOrganizationForUser } from "../../../../lib/auth";
 import { prisma } from "../../../../lib/db";
-import { createRequestId, respondJson } from "../../../../lib/observability";
+import { createRequestId, logEvent, respondJson } from "../../../../lib/observability";
+import { csrfProtection } from "../../../../lib/csrf";
 
 export async function GET() {
   const requestId = createRequestId();
@@ -38,6 +39,12 @@ export async function POST(request: Request) {
   const requestId = createRequestId();
 
   try {
+    const csrfCheck = await csrfProtection(request);
+    if (!csrfCheck.valid) {
+      logEvent("warn", "notifications_csrf_failed", { requestId, error: csrfCheck.error });
+      return respondJson({ error: "FORBIDDEN", requestId, details: csrfCheck.error }, requestId, { status: 403 });
+    }
+
     const user = await validateSession();
     if (!user) {
       return respondJson({ error: "UNAUTHORIZED" }, requestId, { status: 401 });
