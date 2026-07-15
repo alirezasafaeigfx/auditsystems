@@ -98,7 +98,7 @@ function renderEmailBody(
     .map(([cat, score]) => `  - ${cat}: ${score}/100`)
     .join("\n");
 
-  const unsubscribeToken = Buffer.from(`unsub:${organizationId}`).toString("base64");
+  const unsubscribeToken = (() => { const secret = process.env.CSRF_SECRET; if (!secret) throw new Error("CSRF_SECRET required"); const payload = `unsub:${organizationId}`; const sig = require("crypto").createHash("sha256").update(payload + secret).digest("hex"); return Buffer.from(`${payload}:${sig}`).toString("base64"); })();
   const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://auditsystems.ir"}/api/notifications/unsubscribe?token=${unsubscribeToken}`;
 
   return [
