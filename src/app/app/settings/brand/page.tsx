@@ -1,4 +1,4 @@
-"use client";
+import { fetchCSRFHeaders } from "@/lib/csrf-client";
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -167,9 +167,10 @@ export default function BrandSettingsPage() {
     setSuccess(false);
 
     try {
+      const csrfHeaders = await fetchCSRFHeaders();
       const res = await fetch("/api/settings/brand", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...csrfHeaders },
         body: JSON.stringify({
           brandName: settings.brandName,
           brandLogoBase64: settings.brandLogoBase64,
