@@ -107,12 +107,12 @@ jobs:
           grep -q '"status":"ready"' "$READY_JSON" || grep -q '"status":"degraded"' "$READY_JSON"
 
       - name: Upload automation artifacts
-        if: always()
+        if: failure() || github.event_name == 'workflow_dispatch'
         continue-on-error: true
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.4
         with:
           name: main-gate-artifacts
-          retention-days: 3
+          retention-days: 1
           path: |
             logs/roadmap/
             logs/preflight/
