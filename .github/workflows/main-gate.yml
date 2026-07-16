@@ -46,11 +46,17 @@ jobs:
       - name: Verify Actions are pinned
         run: pnpm run check:actions-pinned
 
+      - name: Reject tracked database dumps
+        run: pnpm run check:no-database-dumps
+
       - name: Verify release backup and rollback safety
-        run: bash scripts/tests/test-release-safety.sh
+        run: |
+          bash scripts/tests/test-database-dump-guard.sh
+          bash scripts/tests/test-release-safety.sh
 
       - name: Run automation hard gate
         env:
+          APP_BASE_URL: "https://audit.alirezasafaeisystems.ir"
           DOWNLOAD_TOKEN_SECRET: "ci-download-secret-min-16"
           PAYMENT_PROVIDER_DEFAULT: "MOCK"
           REQUIRE_DISTRIBUTED_RATE_LIMIT: "false"
@@ -64,19 +70,41 @@ jobs:
           APP_PID=$!
           echo "$APP_PID" > "$APP_PID_FILE"
           trap 'kill -- "-$APP_PID" 2>/dev/null || true' EXIT
+          SMOKE_HTML="${RUNNER_TEMP}/asdev.html"
+          READY_JSON="${RUNNER_TEMP}/ready.json"
+          READY_HEAD="${RUNNER_TEMP}/ready.head"
+          SMOKE_REACHABLE=false
           for i in {1..40}; do
-            if curl -fsS http://127.0.0.1:3110/asdev >/tmp/asdev.html; then
+            if curl -fsS http://127.0.0.1:3110/asdev >"$SMOKE_HTML"; then
+              SMOKE_REACHABLE=true
               break
+            fi
+            if ! kill -0 "$APP_PID" 2>/dev/null; then
+              echo "smoke server exited before becoming reachable" >&2
+              tail -100 "${RUNNER_TEMP}/audit-smoke.log" >&2 || true
+              exit 1
             fi
             sleep 1
           done
-          grep -q "Alireza Safaei" /tmp/asdev.html
-          grep -q "alireza_safaei_network" /tmp/asdev.html
-          GET_CODE="$(curl -sS -o /tmp/ready.json -w '%{http_code}' http://127.0.0.1:3110/api/ready)"
-          HEAD_CODE="$(curl -sSI -o /tmp/ready.head -w '%{http_code}' -X HEAD http://127.0.0.1:3110/api/ready)"
-          test "${GET_CODE}" = "200"
-          test "${HEAD_CODE}" = "${GET_CODE}"
-          grep -q '"status":"ready"' /tmp/ready.json || grep -q '"status":"degraded"' /tmp/ready.json
+          if [ "$SMOKE_REACHABLE" != "true" ]; then
+            echo "smoke server did not become reachable" >&2
+            tail -100 "${RUNNER_TEMP}/audit-smoke.log" >&2 || true
+            exit 1
+          fi
+          grep -q "Alireza Safaei Network" "$SMOKE_HTML"
+          grep -q "Audit Performance/SEO/Security" "$SMOKE_HTML"
+          GET_CODE="$(curl -sS -o "$READY_JSON" -w '%{http_code}' http://127.0.0.1:3110/api/ready)"
+          HEAD_CODE="$(curl -sSI -o "$READY_HEAD" -w '%{http_code}' -X HEAD http://127.0.0.1:3110/api/ready)"
+          case "$GET_CODE" in
+            200|503) ;;
+            *)
+              echo "unexpected readiness status: $GET_CODE" >&2
+              cat "$READY_JSON" >&2 || true
+              exit 1
+              ;;
+          esac
+          test "$HEAD_CODE" = "$GET_CODE"
+          grep -q '"status":"ready"' "$READY_JSON" || grep -q '"status":"degraded"' "$READY_JSON"
 
       - name: Upload automation artifacts
         if: always()

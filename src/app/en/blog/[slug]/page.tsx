@@ -1,5 +1,25 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getBlogPosts } from "../../../../content/blog";
+import { buildPageMetadata } from "../../../../lib/seoMeta";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const post = getBlogPosts("en").find((entry) => entry.slug === slug);
+
+  if (!post) {
+    return { title: "Post not found", robots: { index: false, follow: false } };
+  }
+
+  return buildPageMetadata({
+    locale: "en",
+    path: `/blog/${post.slug}`,
+    title: post.title,
+    description: post.description,
+    type: "article",
+    keywords: ["technical audit", "technical SEO", post.slug.replaceAll("-", " ")]
+  });
+}
 
 export default async function EnglishBlogSlugPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

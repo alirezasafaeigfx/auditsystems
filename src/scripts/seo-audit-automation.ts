@@ -4,6 +4,7 @@ import process from "node:process";
 import sitemap from "../app/sitemap";
 import robots from "../app/robots";
 import { getGuides } from "../content/guides";
+import { isNoIndexRoute } from "../lib/seoPolicy";
 
 type CheckOutcome = "passed" | "failed";
 
@@ -30,19 +31,9 @@ function hasMetadataDefinition(content: string): boolean {
   return /export\s+const\s+metadata\s*:/.test(content) || /export\s+async\s+function\s+generateMetadata/.test(content);
 }
 
-function isTokenRouteFile(filePath: string): boolean {
-  return filePath.includes(`${path.sep}audit${path.sep}r${path.sep}[token]${path.sep}`);
-}
-
-function isFailedPageFile(filePath: string): boolean {
-  return filePath.endsWith(`${path.sep}failed${path.sep}page.tsx`);
-}
-
 function isIndexablePageFile(filePath: string): boolean {
   if (!filePath.endsWith(`${path.sep}page.tsx`)) return false;
-  if (isTokenRouteFile(filePath)) return false;
-  if (isFailedPageFile(filePath)) return false;
-  return true;
+  return !isNoIndexRoute(toRouteFromPageFile(filePath));
 }
 
 async function collectFiles(dir: string, matcher: (entryPath: string) => boolean): Promise<string[]> {
@@ -189,6 +180,9 @@ async function main(): Promise<void> {
   await fs.writeFile(path.join(logsDir, "last-run.json"), `${JSON.stringify(summary, null, 2)}\n`);
   await fs.writeFile(path.join(logsDir, "last-run.md"), toMarkdown(summary));
 
+  for (const check of checks.filter((entry) => entry.outcome === "failed")) {
+    console.error(`SEO check failed: ${check.id} — ${check.detail}`);
+  }
   console.log(`SEO checks: passed=${passed}, failed=${failed}`);
   if (strict && failed > 0) {
     process.exit(1);

@@ -5,6 +5,7 @@
   "packageManager": "pnpm@9.15.0",
   "type": "module",
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -13,7 +14,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "check": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build",
+    "check:no-database-dumps": "bash scripts/check-no-database-dumps.sh",
+    "check": "pnpm run check:no-database-dumps && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build",
     "dev:check": "bash scripts/dev-check.sh",
     "perf:build": "PERF_MODE=full ../../../scripts/gpu-browser-run.sh pnpm run build",
     "perf:lint": "PERF_MODE=full ../../../scripts/gpu-run.sh pnpm run lint",

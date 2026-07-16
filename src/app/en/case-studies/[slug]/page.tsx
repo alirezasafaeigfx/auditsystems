@@ -1,5 +1,7 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { buildPageMetadata } from "../../../../lib/seoMeta";
 
 const caseStudies: Record<string, { title: string; problem: string; findings: string[]; result: string; scoreBefore: number; scoreAfter: number }> = {
   "ecommerce-improvement": {
@@ -27,6 +29,24 @@ const caseStudies: Record<string, { title: string; problem: string; findings: st
     scoreAfter: 85,
   },
 };
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const study = caseStudies[slug];
+
+  if (!study) {
+    return { title: "Case study not found", robots: { index: false, follow: false } };
+  }
+
+  return buildPageMetadata({
+    locale: "en",
+    path: `/case-studies/${slug}`,
+    title: study.title,
+    description: study.problem,
+    type: "article",
+    keywords: ["website audit case study", "technical SEO", slug.replaceAll("-", " ")]
+  });
+}
 
 export default async function EnglishCaseStudyPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

@@ -1,5 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getBlogPosts } from "../../../content/blog";
+import { buildPageMetadata } from "../../../lib/seoMeta";
+
+export const metadata: Metadata = buildPageMetadata({
+  locale: "en",
+  path: "/blog",
+  title: "Technical Audit Blog",
+  description: "Practical guides for technical SEO, website security, performance, and evidence-based audits.",
+  keywords: ["technical SEO audit", "website security audit", "web performance", "audit best practices"]
+});
 
 export default function EnglishBlogPage() {
   const posts = getBlogPosts("en");

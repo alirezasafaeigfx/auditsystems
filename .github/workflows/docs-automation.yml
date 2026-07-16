@@ -11,6 +11,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: docs-automation-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   docs:
     runs-on: [self-hosted, linux, x64, asdev-ci]

@@ -1,4 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { toAbsoluteUrl } from "../../lib/site";
+
+export const metadata: Metadata = {
+  title: "Audit Readiness Checklist",
+  description: "Prepare your website for a technical, SEO, security, accessibility, and performance audit.",
+  alternates: {
+    canonical: toAbsoluteUrl("/audit-readiness")
+  }
+};
 
 export default function AuditReadinessPage() {
   return (

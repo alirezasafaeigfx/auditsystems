@@ -1,4 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { buildPageMetadata } from "../../../lib/seoMeta";
+
+export const metadata: Metadata = buildPageMetadata({
+  locale: "en",
+  path: "/case-studies",
+  title: "Website Audit Case Studies",
+  description: "Examples of technical SEO, security, and performance audit outcomes.",
+  keywords: ["website audit case studies", "technical SEO results", "security audit", "web performance"]
+});
 
 export default function EnglishCaseStudiesPage() {
   const caseStudies = [

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Release safety
+- Classify tracked database dump/backup paths independently and allow only canonical Prisma migration SQL.
+- Enforce the dump guard in the package quality gate and required CI with adversarial fixtures.
+- Preserve the complete remote PostgreSQL host, port, user, password, database, and SSL target for backup/restore without exposing credentials in arguments or logs.
+- Print sanitized target identity and backup SHA-256 before recovery operations.
+
 ## v0.6.0 - 2026-07-15
 ### Release #103 — Security and Production Hardening
 

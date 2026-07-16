@@ -50,7 +50,7 @@ pnpm run deploy:readiness
 
 `pnpm run check` includes lint, typecheck, tests, and build. Treat any required CI job that did not receive a runner as an infrastructure blocker, not a pass.
 
-Before the next production release, [Issue #52](https://github.com/alirezasafaei-dev/auditsystems/issues/52) must make database-dump detection per-file and enforce it in required CI. Before the next database-affecting production release, [Issue #55](https://github.com/alirezasafaei-dev/auditsystems/issues/55) must fix remote backup/restore target propagation.
+The required gate classifies every tracked path independently: only `prisma/migrations/<migration-id>/migration.sql` is allowed, and all other SQL/dump/backup artifacts are rejected. Backup/restore tests must assert the complete remote host, port, user, database, authentication, and SSL target.
 
 ## 3. PostgreSQL rehearsal
 
@@ -68,24 +68,15 @@ Prove and record:
 8. the source database is unchanged;
 9. artifacts and logs contain no secret.
 
-Use the repository scripts with explicit protected PostgreSQL target variables:
+Use the repository scripts with a protected complete `DATABASE_URL` or explicit `POSTGRES_*` variables:
 
 ```bash
-export POSTGRES_HOST='<source-host>'
-export POSTGRES_PORT='5432'
-export POSTGRES_DB='<source-db>'
-export POSTGRES_USER='<source-user>'
-export POSTGRES_PASSWORD='<source-password>'
-bash scripts/backup-db.sh
-
-export POSTGRES_HOST='<restore-host>'
-export POSTGRES_DB='<restore-db>'
-export POSTGRES_USER='<restore-user>'
-export POSTGRES_PASSWORD='<restore-password>'
-bash scripts/restore-db.sh ops/backups/<verified-backup>.sql.gz --force
+DATABASE_URL='<disposable-source-url>' bash scripts/backup-db.sh
+DATABASE_URL='<disposable-restore-url>' \
+  bash scripts/restore-db.sh ops/backups/<verified-backup>.sql.gz --force
 ```
 
-Until [Issue #55](https://github.com/alirezasafaei-dev/auditsystems/issues/55) is fixed and integration-tested, do not rely on `DATABASE_URL` alone for a remote backup or restore target. The current URL mode preserves the database name but does not propagate the full host/user/port/auth target to libpq tools.
+The shared resolver propagates host, port, decoded user/password, database name, and supported SSL parameters through libpq environment variables. Credentials must not appear in process arguments or logs. Explicit `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD` remain supported.
 
 Store the evidence SHA-256 and the exact source SHA. Do not commit the database dump.
 
@@ -98,7 +89,7 @@ bash scripts/backup-db.sh --dry-run
 bash scripts/backup-db.sh
 ```
 
-For production, use the complete `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD` set in protected server environment. Verify the resolved target before running without `--dry-run`. `DATABASE_URL`-only remote targeting is blocked operationally by [Issue #55](https://github.com/alirezasafaei-dev/auditsystems/issues/55).
+For production, use a complete protected `DATABASE_URL` or the complete `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, and `POSTGRES_PASSWORD` set. Verify the sanitized resolved target printed by `--dry-run` before mutation; passwords are never printed.
 
 The script:
 

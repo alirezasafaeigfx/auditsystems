@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isNoIndexRoute } from "./src/lib/seoPolicy";
 
 function isHttpsRequest(request: NextRequest): boolean {
   const proto = request.headers.get("x-forwarded-proto");
@@ -38,7 +39,9 @@ function withSecurityHeaders(request: NextRequest, response: NextResponse): Next
         "upgrade-insecure-requests"
       ].join("; ")
     );
-  } else {
+  }
+
+  if (isApi || isNoIndexRoute(request.nextUrl.pathname)) {
     response.headers.set("X-Robots-Tag", "noindex, nofollow");
   }
 

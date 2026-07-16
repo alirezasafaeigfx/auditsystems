@@ -32,7 +32,7 @@
         {
           "id": "scanner-ssrf-guard",
           "description": "SSRF guard implementation exists",
-          "command": "rg -n \"SSRF_BLOCKED\" src/lib/normalizeAuditTargetUrl.ts"
+          "command": "grep -nE \"SSRF_BLOCKED\" src/lib/normalizeAuditTargetUrl.ts"
         }
       ]
     },
@@ -44,7 +44,7 @@
         {
           "id": "summary-schema-v1",
           "description": "Summary schema v1 is present",
-          "command": "rg -n \"asdev.audit.summary.v1\" src/lib/summary.ts src/lib/summary.types.ts"
+          "command": "grep -nE \"asdev.audit.summary.v1\" src/lib/summary.ts src/lib/summary.types.ts"
         },
         {
           "id": "report-route-present",
@@ -78,17 +78,17 @@
         {
           "id": "rate-limit-create-run",
           "description": "Rate limit control exists on create run",
-          "command": "rg -n \"consumeDistributedRateLimit|RATE_LIMITED\" src/app/api/audit/runs/route.ts src/lib/rateLimit.ts"
+          "command": "grep -nE \"consumeDistributedRateLimit|RATE_LIMITED\" src/app/api/audit/runs/route.ts src/lib/rateLimit.ts"
         },
         {
           "id": "observability-request-id",
           "description": "Request id instrumentation exists",
-          "command": "rg -n \"requestId|x-request-id\" src/lib/observability.ts src/app/api"
+          "command": "grep -R -nE \"requestId|x-request-id\" src/lib/observability.ts src/app/api"
         },
         {
           "id": "metrics-endpoint",
           "description": "Prometheus-style metrics endpoint exists",
-          "command": "test -f src/app/api/metrics/route.ts && rg -n \"audit_api_requests_total\" src/lib/metrics.ts"
+          "command": "test -f src/app/api/metrics/route.ts && grep -nE \"audit_api_requests_total\" src/lib/metrics.ts"
         },
         {
           "id": "quality-gate",
@@ -110,7 +110,7 @@
         {
           "id": "provider-integration",
           "description": "Payment provider integration exists",
-          "command": "rg -n \"ZARINPAL|createCheckout|verifyCheckout\" src/lib/payments.ts src/app/api/payments/callback/route.ts"
+          "command": "grep -nE \"ZARINPAL|createCheckout|verifyCheckout\" src/lib/payments.ts src/app/api/payments/callback/route.ts"
         },
         {
           "id": "pdf-delivery-route",
@@ -149,7 +149,7 @@
         {
           "id": "edge-security-middleware",
           "description": "Global security headers proxy is enabled",
-          "command": "test -f proxy.ts && rg -n \"Content-Security-Policy|X-Frame-Options|Strict-Transport-Security\" proxy.ts"
+          "command": "test -f proxy.ts && grep -nE \"Content-Security-Policy|X-Frame-Options|Strict-Transport-Security\" proxy.ts"
         },
         {
           "id": "health-probe-model",
@@ -193,7 +193,7 @@
         {
           "id": "live-domains-ready",
           "description": "Rollout runtime contracts (health probes + host binding + rollout docs) are present",
-          "command": "test -f src/app/api/live/route.ts && test -f src/app/api/ready/route.ts && rg -n \"next start -H 127.0.0.1 -p\" ops/deploy/deploy.sh && test -f docs/ROADMAP_SHARED_VPS_PRODUCTION.md && test -f docs/PROJECT_ANALYSIS_REAL_DATA.md"
+          "command": "test -f src/app/api/live/route.ts && test -f src/app/api/ready/route.ts && grep -nF \"export HOSTNAME=127.0.0.1\" ops/deploy/deploy.sh && grep -nF \"args: '.next/standalone/server.js'\" ops/deploy/deploy.sh && grep -nF \"/api/ready\" ops/deploy/deploy.sh && test -f docs/ROADMAP_SHARED_VPS_PRODUCTION.md && test -f docs/PROJECT_ANALYSIS_REAL_DATA.md"
         }
       ]
     }
