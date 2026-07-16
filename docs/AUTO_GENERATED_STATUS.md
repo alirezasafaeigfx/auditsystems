@@ -1,12 +1,12 @@
 # Auto Generated Project Status
 
-Generated at: 2026-07-15T22:09:15.459Z
+Generated at: 2026-07-16T06:45:30.509Z
 
 ## Overview
 - API routes: 46
 - Page routes: 72
-- Test files: 69
-- NPM scripts: 64
+- Test files: 70
+- NPM scripts: 66
 
 ## Roadmap Phases
 - Done: 10
@@ -179,7 +179,7 @@ Generated at: 2026-07-15T22:09:15.459Z
 
 ## Key Commands
 - `pnpm run dev` -> `next dev`
-- `pnpm run check` -> `pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build`
+- `pnpm run check` -> `pnpm run check:no-database-dumps && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build`
 - `pnpm run worker:dev` -> `tsx src/worker/index.ts`
 - `pnpm run roadmap:run` -> `tsx src/scripts/roadmap-automation.ts --strict`
 - `pnpm run roadmap:dry` -> `tsx src/scripts/roadmap-automation.ts --dry-run`
