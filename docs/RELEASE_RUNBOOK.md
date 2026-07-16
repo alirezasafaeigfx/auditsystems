@@ -211,8 +211,9 @@ Post-release remediation is merged but **not deployed**:
 - database release-safety hardening: PR [#57](https://github.com/alirezasafaei-dev/auditsystems/pull/57), merge SHA `541c1c08faa8474b644f25864da0895fdb70478d`;
 - revocable database-backed admin sessions: PR [#58](https://github.com/alirezasafaei-dev/auditsystems/pull/58), merge SHA `fc9e2ee4ba363f8d15638a7148ab7b1505eba041`;
 - implementation issue [#53](https://github.com/alirezasafaei-dev/auditsystems/issues/53): completed;
-- PostgreSQL 16 migration rehearsal gate [#60](https://github.com/alirezasafaei-dev/auditsystems/issues/60): required before the next database-affecting production release.
+- PostgreSQL 16 migration rehearsal gate [#60](https://github.com/alirezasafaei-dev/auditsystems/issues/60): completed through PR [#63](https://github.com/alirezasafaei-dev/auditsystems/pull/63), evidence merge SHA `9e05ba2d381cd8f511bf0c286e3fecbc474b768e`;
+- rehearsal evidence: [admin-session-pg16-rehearsal-20260716T073000Z.md](reports/release-gates/admin-session-pg16-rehearsal-20260716T073000Z.md), backup SHA-256 `956d1bd7cf82069e43bf67255b6d239e7750b3f66c8d7b48d0c17cb66968f5cf`.
 
-PR #58 passed 74/74 test files, 741/741 tests, lint, typecheck, build, route smoke, secret scan, pinned-Actions validation, dump guard, release-safety fixtures, roadmap 25/25, and SEO 7/7. This evidence authorizes merge only. It does not authorize a production migration or deployment.
+PR #58 passed 74/74 test files, 741/741 tests, lint, typecheck, build, route smoke, secret scan, pinned-Actions validation, dump guard, release-safety fixtures, roadmap 25/25, and SEO 7/7. The exact code-bearing SHA `fc9e2ee4ba363f8d15638a7148ab7b1505eba041` then passed PostgreSQL 16.14 clean migration, idempotence, AdminSession schema/index verification, backup/restore, source-integrity, and secret-scan checks with `PRODUCTION_MUTATED=no`.
 
-Do not deploy the post-release `AdminSession` code until issue #60 is complete, the final release SHA is frozen, backup/rollback readiness is re-verified, and the owner supplies a new exact production authorization token.
+The post-release database rehearsal gate is complete, but production deployment remains separately owner-gated. Before any deployment, freeze the final full release SHA, repeat the rehearsal if later database-affecting files differ from the rehearsed SHA, verify production backup/rollback readiness, and require a new exact production authorization token.
