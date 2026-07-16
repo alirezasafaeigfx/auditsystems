@@ -79,6 +79,12 @@ export function AdminLeads() {
     fetchLeads()
   }, [fetchLeads])
 
+  const handleLogout = async () => {
+    const csrfHeaders = await fetchCSRFHeaders()
+    await fetch('/api/admin/auth/logout', { method: 'POST', headers: csrfHeaders })
+    router.push('/admin/login')
+  }
+
   const updateStatus = async (leadId: string, newStatus: string, lostReason?: string) => {
     setUpdating(true)
     try {
@@ -108,7 +114,7 @@ export function AdminLeads() {
         <h1 style={{ fontSize: '1.8rem', fontWeight: 700 }}>Lead Management</h1>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <a href="/admin" style={{ color: 'var(--primary)' }}>Dashboard</a>
-          <button onClick={() => { fetch('/api/admin/auth/logout', { method: 'POST' }); router.push('/admin/login') }}>
+          <button onClick={handleLogout}>
             Logout
           </button>
         </div>

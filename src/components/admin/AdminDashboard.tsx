@@ -87,7 +87,8 @@ export function AdminDashboard() {
   }, [loadData])
 
   const handleLogout = async () => {
-    await fetch('/api/admin/auth/logout', { method: 'POST' })
+    const csrf = await fetchCSRFHeaders()
+    await fetch('/api/admin/auth/logout', { method: 'POST', headers: csrf })
     router.push('/admin/login')
   }
 

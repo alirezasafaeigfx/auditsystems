@@ -98,6 +98,18 @@ model Session {
   @@index([userId])
 }
 
+model AdminSession {
+  id        String    @id
+  tokenHash String    @unique
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+  lastSeenAt DateTime?
+
+  @@index([expiresAt])
+  @@index([revokedAt, expiresAt])
+}
+
 model Project {
   id             String   @id @default(cuid())
   organizationId String

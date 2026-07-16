@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { fetchCSRFHeaders } from '@/lib/csrf-client'
 
 interface SiteCheck {
   name: string
@@ -130,7 +131,8 @@ export default function MonitoringPage() {
   }, [fetchData])
 
   const handleLogout = async () => {
-    await fetch('/api/admin/auth/logout', { method: 'POST' })
+    const csrfHeaders = await fetchCSRFHeaders()
+    await fetch('/api/admin/auth/logout', { method: 'POST', headers: csrfHeaders })
     router.push('/admin/login')
   }
 

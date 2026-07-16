@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { fetchCSRFHeaders } from '@/lib/csrf-client'
 
 export function AdminLoginForm() {
   const [username, setUsername] = useState('')
@@ -16,9 +17,10 @@ export function AdminLoginForm() {
     setLoading(true)
 
     try {
+      const csrfHeaders = await fetchCSRFHeaders()
       const res = await fetch('/api/admin/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders },
         body: JSON.stringify({ username, password }),
       })
 
