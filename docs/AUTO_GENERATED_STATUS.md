@@ -1,11 +1,11 @@
 # Auto Generated Project Status
 
-Generated at: 2026-07-16T06:45:30.509Z
+Generated at: 2026-07-16T06:59:04.978Z
 
 ## Overview
-- API routes: 46
+- API routes: 48
 - Page routes: 72
-- Test files: 70
+- Test files: 74
 - NPM scripts: 66
 
 ## Roadmap Phases
@@ -16,6 +16,8 @@ Generated at: 2026-07-16T06:45:30.509Z
 ## API Routes
 - `/api/admin/auth/login`
 - `/api/admin/auth/logout`
+- `/api/admin/auth/sessions`
+- `/api/admin/auth/sessions/revoke-all`
 - `/api/admin/billing-events`
 - `/api/admin/leads`
 - `/api/admin/leads/[id]`
