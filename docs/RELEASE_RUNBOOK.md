@@ -202,6 +202,17 @@ PRODUCTION_MUTATED=<yes|no>
 
 Link the coordinated closure report from the mother repository. Release-specific risk acceptances must state their expiry and tracking issue.
 
-## Release #103 note
+## Release #103 and post-release status
 
-Release #103 deployed AuditSystems SHA `d55312543ef74b003aeac6aa560980e78b876e57` successfully on 2026-07-15. Its 24-hour admin-session revocation acceptance applies only to that release. [Issue #53](https://github.com/alirezasafaei-dev/auditsystems/issues/53) must be revisited before the next production release.
+Release #103 deployed AuditSystems SHA `d55312543ef74b003aeac6aa560980e78b876e57` successfully on 2026-07-15. That deployed release retains the owner-approved 24-hour stateless admin-session acceptance.
+
+Post-release remediation is merged but **not deployed**:
+
+- database release-safety hardening: PR [#57](https://github.com/alirezasafaei-dev/auditsystems/pull/57), merge SHA `541c1c08faa8474b644f25864da0895fdb70478d`;
+- revocable database-backed admin sessions: PR [#58](https://github.com/alirezasafaei-dev/auditsystems/pull/58), merge SHA `fc9e2ee4ba363f8d15638a7148ab7b1505eba041`;
+- implementation issue [#53](https://github.com/alirezasafaei-dev/auditsystems/issues/53): completed;
+- PostgreSQL 16 migration rehearsal gate [#60](https://github.com/alirezasafaei-dev/auditsystems/issues/60): required before the next database-affecting production release.
+
+PR #58 passed 74/74 test files, 741/741 tests, lint, typecheck, build, route smoke, secret scan, pinned-Actions validation, dump guard, release-safety fixtures, roadmap 25/25, and SEO 7/7. This evidence authorizes merge only. It does not authorize a production migration or deployment.
+
+Do not deploy the post-release `AdminSession` code until issue #60 is complete, the final release SHA is frozen, backup/rollback readiness is re-verified, and the owner supplies a new exact production authorization token.
