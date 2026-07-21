@@ -65,16 +65,16 @@ export const demoFindings: SampleFinding[] = [
     severity: "HIGH",
     category: "performance",
     title: {
-      fa: "LCP بالا: بیش از ۴ ثانیه",
-      en: "High LCP: over 4 seconds",
+      fa: "نمونه LCP بالا: بیش از ۴ ثانیه",
+      en: "Illustrative high LCP: over 4 seconds",
     },
     description: {
-      fa: "بزرگترین عنصر نقاشی (LCP) بیش از ۴ ثانیه بارگذاری می‌شود.",
-      en: "Largest Contentful Paint exceeds 4 seconds on the sample run.",
+      fa: "در سناریوی نمایشی، بزرگترین عنصر نقاشی (LCP) بیش از ۴ ثانیه بارگذاری می‌شود.",
+      en: "In this illustrative scenario, Largest Contentful Paint exceeds 4 seconds.",
     },
     evidence: {
-      fa: "اندازه‌گیری lab روی anonymous-example.ir: LCP ≈ 4.2s در شبکه 4G شبیه‌سازی‌شده.",
-      en: "Lab measurement on anonymous-example.ir: LCP ≈ 4.2s on simulated 4G.",
+      fa: "داده نمایشی: LCP ≈ 4.2s در شبکه 4G شبیه‌سازی‌شده؛ این مقدار از اندازه‌گیری واقعی به‌دست نیامده است.",
+      en: "Illustrative data: LCP ≈ 4.2s on simulated 4G; this value was not produced by a real measurement.",
     },
     recommendation: {
       fa: "تصاویر above-the-fold را فشرده کنید، preload برای LCP اضافه کنید، lazy-load برای تصاویر غیرضروری.",
@@ -94,16 +94,16 @@ export const demoFindings: SampleFinding[] = [
     severity: "HIGH",
     category: "performance",
     title: {
-      fa: "CLS بالا: جابجایی عناصر در حین بارگذاری",
-      en: "High CLS: layout shift during load",
+      fa: "نمونه CLS بالا: جابجایی عناصر در حین بارگذاری",
+      en: "Illustrative high CLS: layout shift during load",
     },
     description: {
-      fa: "نرخ جابجایی تجمعی (CLS) بالاتر از حد توصیه‌شده است.",
-      en: "Cumulative Layout Shift exceeds the recommended threshold.",
+      fa: "در سناریوی نمایشی، نرخ جابجایی تجمعی (CLS) بالاتر از حد توصیه‌شده است.",
+      en: "In this illustrative scenario, Cumulative Layout Shift exceeds the recommended threshold.",
     },
     evidence: {
-      fa: "CLS ≈ 0.18 در اجرای نمونه؛ بنر و فونت بدون ابعاد ثابت باعث shift شده‌اند.",
-      en: "CLS ≈ 0.18 in the sample run; banner and web fonts without reserved space caused shifts.",
+      fa: "داده نمایشی: CLS ≈ 0.18؛ بنر و فونت بدون فضای رزروشده به‌عنوان علت فرضی نمایش داده شده‌اند.",
+      en: "Illustrative data: CLS ≈ 0.18; a banner and web fonts without reserved space are shown as hypothetical causes.",
     },
     recommendation: {
       fa: "width/height برای رسانه‌ها، font-display و فضای رزرو برای محتوای داینامیک تنظیم کنید.",

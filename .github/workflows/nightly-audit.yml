@@ -44,14 +44,14 @@ jobs:
 
       - name: Unit tests
         env:
-          APP_BASE_URL: "http://localhost:3000"
+          APP_BASE_URL: "https://audit.alirezasafaeisystems.ir"
           DOWNLOAD_TOKEN_SECRET: "ci-nightly-download-secret-min-16"
           PAYMENT_PROVIDER_DEFAULT: "MOCK"
         run: pnpm test
 
       - name: Build
         env:
-          APP_BASE_URL: "http://localhost:3000"
+          APP_BASE_URL: "https://audit.alirezasafaeisystems.ir"
           DOWNLOAD_TOKEN_SECRET: "ci-nightly-download-secret-min-16"
           PAYMENT_PROVIDER_DEFAULT: "MOCK"
           REQUIRE_DISTRIBUTED_RATE_LIMIT: "false"
@@ -71,7 +71,7 @@ jobs:
           curl -fsS http://127.0.0.1:3120/api/ready | grep -q '"status":"ready"\|"status":"degraded"'
 
       - name: Upload build artifacts
-        if: always()
+        if: failure() || github.event_name == 'workflow_dispatch'
         continue-on-error: true
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -80,12 +80,13 @@ jobs:
             .next/standalone/
             .next/static/
             public/
-          retention-days: 3
+          retention-days: 1
 
   production-smoke:
     runs-on: [self-hosted, linux, x64, asdev-ci]
     timeout-minutes: 10
     needs: quality-gate
+    if: always()
 
     steps:
       - name: Production health check
@@ -159,17 +160,22 @@ jobs:
           fi
 
       - name: Create GitHub issue on failure
+        env:
+          QUALITY_RESULT: ${{ needs.quality-gate.result }}
+          SMOKE_RESULT: ${{ needs.production-smoke.result }}
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             const title = `🚨 Nightly Audit Failed — ${new Date().toISOString().split('T')[0]}`;
+            const qualityResult = process.env.QUALITY_RESULT || 'unknown';
+            const smokeResult = process.env.SMOKE_RESULT || 'unknown';
             const body = [
               '## Nightly Audit Failure',
               '',
               `| Check | Result |`,
               `|-------|--------|`,
-              `| Quality Gate | ${context.payload.workflow_run?.conclusion || 'unknown'} |`,
-              `| Production Smoke | ${context.payload.workflow_run?.conclusion || 'unknown'} |`,
+              `| Quality Gate | ${qualityResult} |`,
+              `| Production Smoke | ${smokeResult} |`,
               '',
               `**Run**: [#${context.runNumber}](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`,
               `**Ref**: ${context.ref}`,
@@ -179,13 +185,32 @@ jobs:
               '*Auto-created by nightly-audit workflow*'
             ].join('\n');
 
-            await github.rest.issues.create({
+            const openFailures = await github.paginate(github.rest.issues.listForRepo, {
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title,
-              body,
-              labels: ['nightly-failure', 'automated']
+              state: 'open',
+              labels: 'nightly-failure,automated',
+              per_page: 100
             });
+
+            const existing = openFailures.find((issue) => !issue.pull_request);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body
+              });
+              core.info(`Updated existing failure issue #${existing.number}.`);
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['nightly-failure', 'automated']
+              });
+            }
 
   nightly-report:
     runs-on: [self-hosted, linux, x64, asdev-ci]
@@ -209,3 +234,35 @@ jobs:
           else
             echo "**Status: FAILURES DETECTED** ❌" >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Close resolved nightly failure issues
+        if: github.event_name == 'schedule' && github.ref == 'refs/heads/main' && needs.quality-gate.result == 'success' && needs.production-smoke.result == 'success'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'nightly-failure,automated',
+              per_page: 100
+            });
+
+            const resolved = issues.filter((issue) => !issue.pull_request);
+            for (const issue of resolved) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `Resolved by successful scheduled nightly run ${context.runId}: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+              });
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed',
+                state_reason: 'completed'
+              });
+            }
+
+            core.info(`Closed ${resolved.length} resolved nightly failure issue(s).`)

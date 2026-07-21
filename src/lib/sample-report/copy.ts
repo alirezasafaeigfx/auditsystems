@@ -45,10 +45,10 @@ const copyFa: SampleReportCopy = {
   pageTitle: "نمونه گزارش ممیزی سایت",
   metaTitle: "نمونه گزارش ممیزی سایت",
   metaDescription:
-    "نمونه آموزشی گزارش ممیزی فنی سایت شامل امنیت، سئو، عملکرد و دسترسی‌پذیری با یافته‌های anonymized و پیشنهاد اصلاح.",
+    "نمونه آموزشی گزارش ممیزی فنی سایت شامل امنیت، سئو، عملکرد و دسترسی‌پذیری با داده‌های کاملاً نمایشی و پیشنهاد اصلاح.",
   heroTitle: "نمونه گزارش ممیزی سایت",
   heroLead:
-    "این یک نمونه آموزشی anonymized است. یافته‌ها بر اساس بررسی‌های فنی نمایشی ساخته شده‌اند — نه مشتری واقعی.",
+    "این یک سناریوی آموزشی کاملاً نمایشی است. دامنه، یافته‌ها و اعداد متعلق به مشتری یا اندازه‌گیری واقعی نیستند.",
   demoBadge: "نمونه آموزشی — anonymous-example.ir",
   executiveSummary: "خلاصه مدیریتی",
   overallScore: "وضعیت evidence",
@@ -99,11 +99,11 @@ const copyFa: SampleReportCopy = {
   },
   trustTitle: "درباره این گزارش",
   trustBody:
-    "این صفحه نمونه آموزشی است. امتیاز و یافته‌ها از بررسی فنی anonymized گرفته شده‌اند. هیچ تضمین رتبه، درآمد یا نتیجه قطعی ارائه نمی‌شود.",
+    "این صفحه یک سناریوی آموزشی ساختگی برای نمایش قالب گزارش است. هیچ‌یک از امتیازها، یافته‌ها یا مقادیر آن داده واقعی مشتری نیست و هیچ تضمین رتبه، درآمد یا نتیجه‌ای ارائه نمی‌شود.",
   trustDetails: [
     "دامنه نمونه: anonymous-example.ir (غیرواقعی)",
-    "هیچ امتیاز، رتبه، سرعت یا نتیجه ساختگی نمایش داده نمی‌شود",
-    "یافته‌های قطعی از فرضیه‌های نیازمند بررسی جدا شده‌اند",
+    "تمام امتیازها و مقادیر سرعت صرفاً داده نمایشی برای توضیح ساختار گزارش‌اند",
+    "برچسب قطعی یا فرضیه فقط وضعیت شواهد را در همین سناریوی نمایشی نشان می‌دهد",
     "هیچ اطلاعات مشتری واقعی نمایش داده نمی‌شود",
   ],
   ctaTitle: "گزارش سایت خود را بگیرید",
@@ -115,10 +115,10 @@ const copyEn: SampleReportCopy = {
   pageTitle: "Sample Website Audit Report",
   metaTitle: "Sample Website Audit Report",
   metaDescription:
-    "Educational sample technical audit report covering security, SEO, performance, and accessibility with anonymized demo findings.",
+    "Educational sample technical audit report covering security, SEO, performance, and accessibility with fully illustrative data.",
   heroTitle: "Sample Website Audit Report",
   heroLead:
-    "This is an anonymized educational sample. Findings are based on illustrative technical checks — not a real customer.",
+    "This is a fully illustrative educational scenario. The domain, findings, and numbers do not come from a real customer or measurement.",
   demoBadge: "Educational sample — anonymous-example.ir",
   executiveSummary: "Executive Summary",
   overallScore: "Evidence status",
@@ -169,11 +169,11 @@ const copyEn: SampleReportCopy = {
   },
   trustTitle: "About this report",
   trustBody:
-    "This page is an educational sample. Scores and findings come from anonymized technical checks. No ranking, revenue, or outcome guarantees are implied.",
+    "This page is a fictional educational scenario that demonstrates the report format. None of its scores, findings, or values are real customer data, and no ranking, revenue, or outcome guarantee is implied.",
   trustDetails: [
     "Sample domain: anonymous-example.ir (fictional)",
-    "No fake score, ranking, speed, or outcome metric is shown",
-    "Confirmed findings are separated from hypotheses that need verification",
+    "All scores and speed values are illustrative data used to explain the report structure",
+    "Confirmed and hypothesis labels describe evidence status only within this illustrative scenario",
     "No real customer data is displayed",
   ],
   ctaTitle: "Get a report for your site",

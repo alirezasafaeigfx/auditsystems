@@ -1,55 +1,34 @@
-type Testimonial = {
-  name: string;
-  role: string;
+type ReportUseCase = {
+  title: string;
   text: string;
-  rating: number;
 };
 
-const testimonials: Testimonial[] = [
+const reportUseCases: ReportUseCase[] = [
   {
-    name: "محمد رضایی",
-    role: "مدیر فنی فروشگاه آنلاین",
-    text: "ارزیابی سایت به ما کمک کرد مشکلات مخفی سئو را پیدا کنیم. بعد از اصلاح، ترافیک ارگانیک ۴۰٪ افزایش یافت.",
-    rating: 5,
+    title: "اولویت‌بندی مشکلات",
+    text: "یافته‌های فنی را بر اساس شدت، شواهد و اقدام بعدی مرتب کنید تا تیم بداند از کجا شروع کند.",
   },
   {
-    name: "سارا احمدی",
-    role: "مدیر محصول شرکت نوپا",
-    text: "گزارش بسیار ساده و قابل فهم بود. حتی تیم غیرفنی ما توانست مشکلات را درک کند و اقدام کند.",
-    rating: 5,
+    title: "هماهنگی تیم فنی و کسب‌وکار",
+    text: "مشاهده فنی، اثر احتمالی و روش بررسی را کنار هم ببینید و درباره اقدام بعدی تصمیم بگیرید.",
   },
   {
-    name: "علی محمدی",
-    role: "توسعه‌دهنده فول‌استک",
-    text: "بهترین ابزار ارزیابی فنی که استفاده کردم. راه حل‌ها واقعاً عملی و قابل اجرا هستند.",
-    rating: 5,
+    title: "پیگیری اصلاحات",
+    text: "پیشنهادهای عملی و روش اعتبارسنجی را به وظایف قابل‌پیگیری برای توسعه، محتوا و زیرساخت تبدیل کنید.",
   },
 ];
 
-function StarRating({ rating }: { rating: number }) {
-  return (
-    <div className="testimonial-rating" aria-label={`${rating} از ۵ ستاره`}>
-      {Array.from({ length: 5 }, (_, i) => (
-        <span key={i} className={i < rating ? "star filled" : "star"}>
-          ★
-        </span>
-      ))}
-    </div>
-  );
-}
-
 export default function Testimonials() {
   return (
-    <section className="testimonials-section" aria-label="نظرات مشتریان">
-      <h2>مشتریان ما چه می‌گویند</h2>
+    <section className="testimonials-section" aria-label="کاربردهای گزارش ممیزی">
+      <h2>این گزارش به چه تصمیم‌هایی کمک می‌کند؟</h2>
       <div className="testimonials-grid">
-        {testimonials.map((t) => (
-          <article key={t.name} className="testimonial-card">
-            <StarRating rating={t.rating} />
-            <blockquote className="testimonial-text">{t.text}</blockquote>
+        {reportUseCases.map((item) => (
+          <article key={item.title} className="testimonial-card">
+            <blockquote className="testimonial-text">{item.text}</blockquote>
             <div className="testimonial-author">
-              <strong>{t.name}</strong>
-              <span>{t.role}</span>
+              <strong>{item.title}</strong>
+              <span>نمونه کاربرد گزارش</span>
             </div>
           </article>
         ))}

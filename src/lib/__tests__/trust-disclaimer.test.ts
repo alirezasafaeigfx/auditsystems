@@ -16,8 +16,9 @@ describe("sample report trust", () => {
       expect(body.includes("نمونه") || body.includes("آموزشی") || body.includes("demo")).toBe(true);
     });
 
-    it("hero lead mentions anonymized", () => {
-      expect(copyFa.heroLead.toLowerCase()).toContain("anonymized");
+    it("hero lead clearly labels all data as illustrative", () => {
+      expect(copyFa.heroLead).toContain("کاملاً نمایشی");
+      expect(copyFa.heroLead).toContain("اندازه‌گیری واقعی نیستند");
     });
 
     it("demo badge shows example domain", () => {
@@ -65,8 +66,9 @@ describe("sample report trust", () => {
       expect(body.includes("demo") || body.includes("example") || body.includes("sample")).toBe(true);
     });
 
-    it("hero lead mentions anonymized", () => {
-      expect(copyEn.heroLead.toLowerCase()).toContain("anonymized");
+    it("hero lead clearly labels all data as illustrative", () => {
+      expect(copyEn.heroLead.toLowerCase()).toContain("fully illustrative");
+      expect(copyEn.heroLead.toLowerCase()).toContain("real customer or measurement");
     });
 
     it("has all required copy keys", () => {

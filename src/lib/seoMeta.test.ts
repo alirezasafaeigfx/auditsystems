@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   buildPageMetadata,
   buildLocaleAlternates,
@@ -8,6 +8,19 @@ import {
 } from "./seoMeta";
 
 const SITE_URL = "https://audit.alirezasafaeisystems.ir";
+const originalAppBaseUrl = process.env.APP_BASE_URL;
+
+beforeEach(() => {
+  process.env.APP_BASE_URL = SITE_URL;
+});
+
+afterEach(() => {
+  if (originalAppBaseUrl === undefined) {
+    delete process.env.APP_BASE_URL;
+  } else {
+    process.env.APP_BASE_URL = originalAppBaseUrl;
+  }
+});
 
 describe("buildPageMetadata", () => {
   it("builds metadata for FA page", () => {
