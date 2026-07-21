@@ -1,6 +1,6 @@
 import process from "node:process";
 import { handlers } from "./audit.handler";
-import { leaseNextJob, markJobFailed, markJobSucceeded, recycleExpiredLeases, sleep } from "./queue";
+import { leaseNextJob, markJobFailed, markJobSucceeded, recycleExpiredLeases, sleep, type LeasedJob } from "./queue";
 
 const workerId = `worker-${process.pid}`;
 const pollMs = Number(process.env.WORKER_POLL_MS ?? "1200");
@@ -20,7 +20,7 @@ async function runLoop(): Promise<void> {
     await recycleExpiredLeases();
 
     // Try to lease multiple jobs based on concurrency
-    const jobs: Array<{ job: any; controller: AbortController; timer: NodeJS.Timeout }> = []; // eslint-disable-line @typescript-eslint/no-explicit-any
+    const jobs: Array<{ job: LeasedJob; controller: AbortController; timer: NodeJS.Timeout }> = [];
 
     for (let i = 0; i < concurrency; i++) {
       const job = await leaseNextJob(`${workerId}-${i}`, fallbackTimeoutMs);

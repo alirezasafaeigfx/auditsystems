@@ -58,7 +58,7 @@ export function extractResourcesFromHtml(html: string, opts: ExtractOptions): Ex
   };
 
   // Extract scripts
-  $("script").each((_i: number, element: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  $("script").each((_i, element) => {
     const src = $(element).attr("src");
     if (src) {
       const attrs: Record<string, string | boolean> = {
@@ -71,7 +71,7 @@ export function extractResourcesFromHtml(html: string, opts: ExtractOptions): Ex
   });
 
   // Extract links
-  $("link").each((_i: number, element: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  $("link").each((_i, element) => {
     const href = $(element).attr("href");
     if (!href) return;
 
@@ -96,7 +96,7 @@ export function extractResourcesFromHtml(html: string, opts: ExtractOptions): Ex
   });
 
   // Extract images
-  $("img").each((_i: number, element: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  $("img").each((_i, element) => {
     const src = $(element).attr("src");
     const srcset = $(element).attr("srcset");
     const loading = $(element).attr("loading") ?? "";
@@ -114,7 +114,7 @@ export function extractResourcesFromHtml(html: string, opts: ExtractOptions): Ex
   });
 
   // Extract source elements
-  $("source").each((_i: number, element: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  $("source").each((_i, element) => {
     const srcset = $(element).attr("srcset");
     if (!srcset) return;
 
