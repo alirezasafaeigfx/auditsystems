@@ -19,10 +19,13 @@ function getBaseUrl(): string {
 }
 
 function getDefaultProvider(): PaymentProvider {
-  const value = (process.env.PAYMENT_PROVIDER_DEFAULT ?? "MOCK").toUpperCase();
+  const value = process.env.PAYMENT_PROVIDER_DEFAULT?.toUpperCase();
   if (value === "ZARINPAL") return "ZARINPAL";
   if (value === "IDPAY") return "IDPAY";
   if (value === "PAYPING") return "PAYPING";
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("PAYMENT_PROVIDER_DEFAULT is not configured for production");
+  }
   return "MOCK";
 }
 
@@ -32,6 +35,9 @@ export function resolvePaymentProvider(value?: string | null): PaymentProvider {
   if (upper === "ZARINPAL") return "ZARINPAL";
   if (upper === "IDPAY") return "IDPAY";
   if (upper === "PAYPING") return "PAYPING";
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("PAYMENT_PROVIDER_NOT_CONFIGURED");
+  }
   return "MOCK";
 }
 
@@ -42,6 +48,19 @@ export async function createCheckout(input: {
   amountToman: number;
   email: string;
 }): Promise<PaymentCheckoutResult> {
+  if (typeof input.amountToman !== "number" || !Number.isFinite(input.amountToman)) {
+    throw new Error("INVALID_AMOUNT");
+  }
+  if (input.amountToman <= 0 || input.amountToman > 100_000_000) {
+    throw new Error("AMOUNT_OUT_OF_RANGE");
+  }
+  if (!input.orderId || input.orderId.length > 64) {
+    throw new Error("INVALID_ORDER_ID");
+  }
+  if (!input.callbackRef || input.callbackRef.length > 128) {
+    throw new Error("INVALID_CALLBACK_REF");
+  }
+
   const callbackUrl = `${getBaseUrl()}/api/payments/callback?provider=${input.provider}&callbackRef=${encodeURIComponent(input.callbackRef)}`;
   const timeoutMs = 10000; // 10 second timeout for all payment requests
 

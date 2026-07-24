@@ -11,6 +11,9 @@ function asProvider(value: string | null): PaymentProvider {
   if (upper === "ZARINPAL") return "ZARINPAL";
   if (upper === "IDPAY") return "IDPAY";
   if (upper === "PAYPING") return "PAYPING";
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(`UNKNOWN_PAYMENT_PROVIDER: ${value}`);
+  }
   return "MOCK";
 }
 
@@ -70,6 +73,11 @@ async function handleBillingCallback(request: NextRequest): Promise<NextResponse
         error: "INVOICE_NOT_PENDING",
         requestId
       }, requestId, { status: 409, headers: { "Cache-Control": "no-store" } });
+    }
+
+    if (invoice.provider !== provider && provider !== "MOCK") {
+      logEvent("warn", "provider_mismatch", { requestId, expected: invoice.provider, received: provider });
+      return respondJson({ error: "PROVIDER_MISMATCH", requestId }, requestId, { status: 400, headers: { "Cache-Control": "no-store" } });
     }
 
     const verification = await verifyCheckout({
