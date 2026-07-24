@@ -132,7 +132,7 @@ export default function NotificationsPage() {
               padding: "0.375rem 1rem",
               borderRadius: "9999px",
               border: "none",
-              background: preferences?.emailEnabled ? "var(--brand, #0f7a66)" : "var(--muted, #9ca3af)",
+              background: preferences?.emailEnabled ? "var(--brand, #2563eb)" : "var(--muted, #9ca3af)",
               color: "white",
               fontWeight: 600,
               fontSize: "0.875rem",

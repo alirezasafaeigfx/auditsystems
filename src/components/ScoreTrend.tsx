@@ -7,7 +7,7 @@ type Props = {
 };
 
 function scoreColor(score: number): string {
-  if (score >= 80) return "#22c55e";
+  if (score >= 80) return "#3b82f6";
   if (score >= 60) return "#3b82f6";
   if (score >= 40) return "#f59e0b";
   return "#ef4444";
@@ -20,7 +20,7 @@ function trendIndicator(scores: number[]): { label: string; color: string; arrow
   const older = scores.slice(0, -3);
   const olderAvg = older.length > 0 ? older.reduce((a, b) => a + b, 0) / older.length : avg;
   const diff = avg - olderAvg;
-  if (diff > 3) return { label: "بهبود", color: "#22c55e", arrow: "↑" };
+  if (diff > 3) return { label: "بهبود", color: "#3b82f6", arrow: "↑" };
   if (diff < -3) return { label: "کاهش", color: "#ef4444", arrow: "↓" };
   return { label: "پایدار", color: "#6b7280", arrow: "→" };
 }

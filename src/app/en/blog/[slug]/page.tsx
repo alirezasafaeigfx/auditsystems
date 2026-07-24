@@ -31,7 +31,7 @@ export default async function EnglishBlogSlugPage({ params }: { params: Promise<
       <main className="container page-shell">
         <section className="card" style={{ textAlign: "center", padding: "3rem" }}>
           <h1>Post not found</h1>
-          <Link href="/en/blog" style={{ color: "var(--brand, #0f7a66)" }}>Back to blog</Link>
+          <Link href="/en/blog" style={{ color: "var(--brand, #2563eb)" }}>Back to blog</Link>
         </section>
       </main>
     );

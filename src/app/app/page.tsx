@@ -105,7 +105,7 @@ export default async function AppDashboardPage() {
             </span>
           </div>
           <div style={{ height: "6px", background: "var(--border, #e5e7eb)", borderRadius: "3px", overflow: "hidden" }}>
-            <div style={{ height: "100%", background: projectProgress >= 100 ? "var(--warn, #f59e0b)" : "var(--brand, #0f7a66)", borderRadius: "3px", width: `${projectProgress}%`, transition: "width 0.3s" }} />
+            <div style={{ height: "100%", background: projectProgress >= 100 ? "var(--warn, #f59e0b)" : "var(--brand, #2563eb)", borderRadius: "3px", width: `${projectProgress}%`, transition: "width 0.3s" }} />
           </div>
           {!usage.canCreateProject && (
             <Link href="/app/billing" style={{ color: "var(--warn, #f59e0b)", fontSize: "0.75rem", textDecoration: "none", marginTop: "0.25rem", display: "inline-block" }}>سقف رسید — ارتقا دهید</Link>
@@ -120,7 +120,7 @@ export default async function AppDashboardPage() {
             </span>
           </div>
           <div style={{ height: "6px", background: "var(--border, #e5e7eb)", borderRadius: "3px", overflow: "hidden" }}>
-            <div style={{ height: "100%", background: auditProgress >= 100 ? "var(--danger, #dc2626)" : auditProgress >= 80 ? "var(--warn, #f59e0b)" : "var(--brand, #0f7a66)", borderRadius: "3px", width: `${auditProgress}%`, transition: "width 0.3s" }} />
+            <div style={{ height: "100%", background: auditProgress >= 100 ? "var(--danger, #dc2626)" : auditProgress >= 80 ? "var(--warn, #f59e0b)" : "var(--brand, #2563eb)", borderRadius: "3px", width: `${auditProgress}%`, transition: "width 0.3s" }} />
           </div>
           {!usage.canRunAudit && (
             <Link href="/app/billing" style={{ color: "var(--warn, #f59e0b)", fontSize: "0.75rem", textDecoration: "none", marginTop: "0.25rem", display: "inline-block" }}>سقف رسید — ارتقا دهید</Link>
@@ -199,7 +199,7 @@ export default async function AppDashboardPage() {
             <div className="card" style={{ padding: "1rem", border: "1px solid #fde68a", background: "var(--warn-bg, #fffbeb)" }}>
               <div style={{ color: "var(--warn, #92400e)", fontSize: "0.75rem", marginBottom: "0.25rem", fontWeight: 600 }}>یادآوری ارتقا</div>
               <div style={{ fontWeight: 600, fontSize: "0.875rem" }}>ممیزی بیشتر، اسکن زمان‌بندی شده و گزارش PDF فعال کنید.</div>
-              <Link href="/app/billing" style={{ display: "inline-block", marginTop: "0.5rem", color: "var(--brand, #0f7a66)", fontWeight: 600, fontSize: "0.875rem" }}>
+              <Link href="/app/billing" style={{ display: "inline-block", marginTop: "0.5rem", color: "var(--brand, #2563eb)", fontWeight: 600, fontSize: "0.875rem" }}>
                 مشاهده پلن‌ها ←
               </Link>
             </div>
@@ -213,7 +213,7 @@ export default async function AppDashboardPage() {
                 <span>پلن رایگان</span>
               )}
             </div>
-            <Link href="/app/billing" style={{ display: "inline-block", marginTop: "0.5rem", color: "var(--brand, #0f7a66)", fontWeight: 600, fontSize: "0.875rem" }}>
+            <Link href="/app/billing" style={{ display: "inline-block", marginTop: "0.5rem", color: "var(--brand, #2563eb)", fontWeight: 600, fontSize: "0.875rem" }}>
               مدیریت ←
             </Link>
           </div>
@@ -237,7 +237,7 @@ export default async function AppDashboardPage() {
                 همه پروژه‌ها
               </Link>
               {usage.canCreateProject && (
-                <Link href="/app/projects/new" style={{ color: "var(--brand, #0f7a66)", textDecoration: "none", fontSize: "0.875rem", fontWeight: 600 }}>
+                <Link href="/app/projects/new" style={{ color: "var(--brand, #2563eb)", textDecoration: "none", fontSize: "0.875rem", fontWeight: 600 }}>
                   + افزودن وب‌سایت
                 </Link>
               )}
@@ -246,7 +246,7 @@ export default async function AppDashboardPage() {
           {recentAudits.length === 0 ? (
             <div style={{ textAlign: "center", padding: "2rem", border: "1px solid var(--border, #e5e7eb)", borderRadius: "0.5rem" }}>
               <p style={{ color: "var(--muted, #6b7280)", marginBottom: "1rem" }}>هنوز ممیزی‌ای انجام نشده.</p>
-              <Link href="/app/projects" style={{ color: "var(--brand, #0f7a66)", textDecoration: "none", fontWeight: 600 }}>اولین ممیزی خود را اجرا کنید ←</Link>
+              <Link href="/app/projects" style={{ color: "var(--brand, #2563eb)", textDecoration: "none", fontWeight: 600 }}>اولین ممیزی خود را اجرا کنید ←</Link>
             </div>
           ) : (
             <div style={{ border: "1px solid var(--border, #e5e7eb)", borderRadius: "0.5rem", overflow: "hidden" }}>
@@ -282,7 +282,7 @@ export default async function AppDashboardPage() {
                         </td>
                         <td style={{ padding: "0.75rem" }}>
                           {audit.shares[0]?.token ? (
-                            <a href={`/audit/r/${audit.shares[0].token}`} target="_blank" rel="noopener noreferrer" style={{ color: "var(--brand, #0f7a66)", textDecoration: "none" }}>
+                            <a href={`/audit/r/${audit.shares[0].token}`} target="_blank" rel="noopener noreferrer" style={{ color: "var(--brand, #2563eb)", textDecoration: "none" }}>
                               مشاهده
                             </a>
                           ) : (

@@ -120,7 +120,7 @@ export default function SignupPage() {
         </form>
 
         <p style={{ textAlign: "center", marginTop: "1rem", fontSize: "0.875rem", color: "var(--muted, #6b7280)" }}>
-          قبلاً حساب دارید؟ <Link href="/login" style={{ color: "var(--brand, #0f7a66)", textDecoration: "none" }}>ورود</Link>
+          قبلاً حساب دارید؟ <Link href="/login" style={{ color: "var(--brand, #2563eb)", textDecoration: "none" }}>ورود</Link>
         </p>
       </div>
     </div>

@@ -15,7 +15,7 @@ export default function Error({
       </p>
       <button
         onClick={() => reset()}
-        style={{ padding: "0.75rem 1.5rem", background: "#0f7a66", color: "#fff", border: "none", borderRadius: "0.5rem", cursor: "pointer", fontWeight: 600 }}
+        style={{ padding: "0.75rem 1.5rem", background: "#2563eb", color: "#fff", border: "none", borderRadius: "0.5rem", cursor: "pointer", fontWeight: 600 }}
       >
         تلاش مجدد
       </button>

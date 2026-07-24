@@ -40,7 +40,7 @@ export default function EnglishBlogPage() {
       {posts.length === 0 && (
         <div className="card" style={{ textAlign: "center", padding: "3rem" }}>
           <p>No blog posts available in English yet.</p>
-          <Link href="/blog" style={{ color: "var(--brand, #0f7a66)" }}>View in Persian</Link>
+          <Link href="/blog" style={{ color: "var(--brand, #2563eb)" }}>View in Persian</Link>
         </div>
       )}
     </main>

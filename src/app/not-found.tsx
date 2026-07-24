@@ -9,7 +9,7 @@ export default function NotFound() {
         صفحه‌ای که دنبال آن هستید وجود ندارد یا منتقل شده است.
       </p>
       <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
-        <Link href="/" style={{ padding: "0.75rem 1.5rem", background: "#0f7a66", color: "#fff", borderRadius: "0.5rem", textDecoration: "none", fontWeight: 600 }}>
+        <Link href="/" style={{ padding: "0.75rem 1.5rem", background: "#2563eb", color: "#fff", borderRadius: "0.5rem", textDecoration: "none", fontWeight: 600 }}>
           صفحه اصلی
         </Link>
         <Link href="/audit" style={{ padding: "0.75rem 1.5rem", border: "1px solid #e5e7eb", borderRadius: "0.5rem", textDecoration: "none", fontWeight: 600 }}>

@@ -44,7 +44,7 @@ function VerifyEmailContent() {
           <div style={{ padding: "1rem", background: "#d1fae5", border: "1px solid #6ee7b7", borderRadius: "0.5rem", color: "#065f46" }}>
             {message}
             <div style={{ marginTop: "1rem" }}>
-              <a href="/app" style={{ color: "#0f7a66", fontWeight: 600 }}>Go to Dashboard →</a>
+              <a href="/app" style={{ color: "#2563eb", fontWeight: 600 }}>Go to Dashboard →</a>
             </div>
           </div>
         )}
@@ -52,7 +52,7 @@ function VerifyEmailContent() {
           <div style={{ padding: "1rem", background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: "0.5rem", color: "#991b1b" }}>
             {message}
             <div style={{ marginTop: "1rem" }}>
-              <a href="/login" style={{ color: "#0f7a66", fontWeight: 600 }}>Back to Login</a>
+              <a href="/login" style={{ color: "#2563eb", fontWeight: 600 }}>Back to Login</a>
             </div>
           </div>
         )}

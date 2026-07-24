@@ -30,11 +30,11 @@ const STATUSES = ['NEW', 'QUALIFIED', 'AUDIT_STARTED', 'REPORT_READY', 'DELIVERE
 
 const STATUS_COLORS: Record<string, string> = {
   NEW: '#6366f1',
-  QUALIFIED: '#22c55e',
+  QUALIFIED: '#3b82f6',
   AUDIT_STARTED: '#3b82f6',
   REPORT_READY: '#a855f7',
   DELIVERED: '#06b6d4',
-  CONVERTED: '#16a34a',
+  CONVERTED: '#1d4ed8',
   LOST: '#ef4444',
 }
 
@@ -203,7 +203,7 @@ export function AdminLeads() {
                 </div>
                 <div>
                   {lead.orders[0] ? (
-                    <span style={{ color: lead.orders[0].status === 'PAID' ? '#16a34a' : '#ca8a04', fontWeight: 500 }}>
+                    <span style={{ color: lead.orders[0].status === 'PAID' ? '#1d4ed8' : '#ca8a04', fontWeight: 500 }}>
                       {lead.orders[0].status === 'PAID' ? `${lead.orders[0].amountToman.toLocaleString()} T` : lead.orders[0].status}
                     </span>
                   ) : (

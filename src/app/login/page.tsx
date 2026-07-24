@@ -102,7 +102,7 @@ export default function LoginPage() {
         </form>
 
         <p style={{ textAlign: "center", marginTop: "1rem", fontSize: "0.875rem", color: "var(--muted, #6b7280)" }}>
-          حساب ندارید؟ <Link href="/signup" style={{ color: "var(--brand, #0f7a66)", textDecoration: "none" }}>ثبت‌نام کنید</Link>
+          حساب ندارید؟ <Link href="/signup" style={{ color: "var(--brand, #2563eb)", textDecoration: "none" }}>ثبت‌نام کنید</Link>
         </p>
       </div>
     </div>

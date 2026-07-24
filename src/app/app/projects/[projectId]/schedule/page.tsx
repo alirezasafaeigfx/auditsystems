@@ -29,7 +29,7 @@ export default async function SchedulePage({
     return (
       <main style={{ textAlign: "center", padding: "4rem 2rem" }}>
         <h1>پروژه پیدا نشد</h1>
-        <Link href="/app/projects" style={{ color: "#0f7a66" }}>بازگشت به پروژه‌ها</Link>
+        <Link href="/app/projects" style={{ color: "#2563eb" }}>بازگشت به پروژه‌ها</Link>
       </main>
     );
   }
@@ -97,7 +97,7 @@ export default async function SchedulePage({
                       </span>
                     </td>
                     <td style={{ padding: "0.75rem", textAlign: "center" }}>
-                      <Link href={`/app/projects/${projectId}/audits/${run.id}`} style={{ color: "#0f7a66", textDecoration: "none" }}>
+                      <Link href={`/app/projects/${projectId}/audits/${run.id}`} style={{ color: "#2563eb", textDecoration: "none" }}>
                         مشاهده
                       </Link>
                     </td>

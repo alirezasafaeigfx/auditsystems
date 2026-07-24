@@ -96,14 +96,14 @@ export default async function BillingPage({
             <div style={{ fontSize: "0.75rem", color: "var(--muted, #6b7280)" }}>پروژه‌ها</div>
             <div style={{ fontWeight: 600 }}>{usage.projectCount} / {usage.projectLimit}</div>
             <div style={{ height: "4px", background: "var(--border, #e5e7eb)", borderRadius: "2px", marginTop: "4px" }}>
-              <div style={{ height: "100%", background: "var(--brand, #0f7a66)", borderRadius: "2px", width: `${Math.min(100, (usage.projectCount / usage.projectLimit) * 100)}%` }} />
+              <div style={{ height: "100%", background: "var(--brand, #2563eb)", borderRadius: "2px", width: `${Math.min(100, (usage.projectCount / usage.projectLimit) * 100)}%` }} />
             </div>
           </div>
           <div>
             <div style={{ fontSize: "0.75rem", color: "var(--muted, #6b7280)" }}>ممیزی این ماه</div>
             <div style={{ fontWeight: 600 }}>{usage.auditCount} / {usage.auditLimit}</div>
             <div style={{ height: "4px", background: "var(--border, #e5e7eb)", borderRadius: "2px", marginTop: "4px" }}>
-              <div style={{ height: "100%", background: "var(--brand, #0f7a66)", borderRadius: "2px", width: `${Math.min(100, (usage.auditCount / usage.auditLimit) * 100)}%` }} />
+              <div style={{ height: "100%", background: "var(--brand, #2563eb)", borderRadius: "2px", width: `${Math.min(100, (usage.auditCount / usage.auditLimit) * 100)}%` }} />
             </div>
           </div>
         </div>
@@ -160,12 +160,12 @@ export default async function BillingPage({
           const isCurrent = plan.code === currentPlanCode;
           return (
             <div key={plan.code} className="card" style={{
-              border: isCurrent ? "2px solid var(--brand, #0f7a66)" : undefined,
+              border: isCurrent ? "2px solid var(--brand, #2563eb)" : undefined,
               padding: "1.5rem",
               position: "relative"
             }}>
               {isCurrent && (
-                <span style={{ position: "absolute", top: "-0.75rem", left: "1rem", background: "var(--brand, #0f7a66)", color: "#fff", padding: "0.125rem 0.5rem", borderRadius: "9999px", fontSize: "0.75rem", fontWeight: 600 }}>
+                <span style={{ position: "absolute", top: "-0.75rem", left: "1rem", background: "var(--brand, #2563eb)", color: "#fff", padding: "0.125rem 0.5rem", borderRadius: "9999px", fontSize: "0.75rem", fontWeight: 600 }}>
                   پلن فعلی
                 </span>
               )}

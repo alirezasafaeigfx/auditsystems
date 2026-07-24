@@ -52,8 +52,8 @@ interface MonitoringData {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  up: '#22c55e',
-  pass: '#22c55e',
+  up: '#3b82f6',
+  pass: '#3b82f6',
   down: '#ef4444',
   fail: '#ef4444',
   degraded: '#f59e0b',

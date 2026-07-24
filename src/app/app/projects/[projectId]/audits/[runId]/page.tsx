@@ -155,7 +155,7 @@ export default async function AuditDetailPage({ params }: Props) {
                       <p style={{ color: "var(--muted, #6b7280)", fontSize: "0.875rem", margin: "0.25rem 0" }}>{f.description}</p>
                     )}
                     {f.recommendation && (
-                      <p style={{ color: "var(--brand, #0f7a66)", fontSize: "0.875rem", margin: "0.25rem 0", fontStyle: "italic" }}>💡 {f.recommendation}</p>
+                      <p style={{ color: "var(--brand, #2563eb)", fontSize: "0.875rem", margin: "0.25rem 0", fontStyle: "italic" }}>💡 {f.recommendation}</p>
                     )}
                     <span style={{ color: "var(--muted, #9ca3af)", fontSize: "0.75rem" }}>{categoryLabels[f.category] ?? f.category}</span>
                   </div>

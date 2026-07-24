@@ -96,7 +96,7 @@ export default async function ProjectDetailPage({ params }: Props) {
           <div style={{ fontWeight: 600, fontSize: "0.875rem", marginBottom: "0.25rem" }}>خلاصه آخرین ممیزی</div>
           <div style={{ fontSize: "0.875rem", color: "var(--text, #374151)" }}>
             {issueCount} مشکل پیدا شد. {latestAudit?.shares[0]?.token && (
-              <a href={`/audit/r/${latestAudit.shares[0].token}`} target="_blank" rel="noopener noreferrer" style={{ color: "var(--brand, #0f7a66)", textDecoration: "none", fontWeight: 600 }}>
+              <a href={`/audit/r/${latestAudit.shares[0].token}`} target="_blank" rel="noopener noreferrer" style={{ color: "var(--brand, #2563eb)", textDecoration: "none", fontWeight: 600 }}>
                 مشاهده گزارش کامل ←
               </a>
             )}
@@ -149,13 +149,13 @@ export default async function ProjectDetailPage({ params }: Props) {
                     {audit.finishedAt ? new Date(audit.finishedAt).toLocaleString("fa-IR") : "—"}
                   </td>
                   <td style={{ padding: "0.75rem" }}>
-                    <Link href={`/app/projects/${project.id}/audits/${audit.id}`} style={{ color: "var(--brand, #0f7a66)", textDecoration: "none" }}>
+                    <Link href={`/app/projects/${project.id}/audits/${audit.id}`} style={{ color: "var(--brand, #2563eb)", textDecoration: "none" }}>
                       مشاهده
                     </Link>
                   </td>
                   <td style={{ padding: "0.75rem" }}>
                     {audit.shares[0]?.token ? (
-                      <a href={`/audit/r/${audit.shares[0].token}`} target="_blank" rel="noopener noreferrer" style={{ color: "var(--brand, #0f7a66)", textDecoration: "none" }}>
+                      <a href={`/audit/r/${audit.shares[0].token}`} target="_blank" rel="noopener noreferrer" style={{ color: "var(--brand, #2563eb)", textDecoration: "none" }}>
                         گزارش
                       </a>
                     ) : (

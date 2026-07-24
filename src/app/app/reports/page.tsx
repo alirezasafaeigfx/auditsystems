@@ -60,7 +60,7 @@ export default async function ReportsPage({
       {reports.length === 0 ? (
         <div style={{ textAlign: "center", padding: "3rem", color: "#6b7280" }}>
           <p style={{ marginBottom: "1rem" }}>هنوز گزارشی ثبت نشده است.</p>
-          <Link href="/audit" style={{ padding: "0.75rem 1.5rem", background: "#0f7a66", color: "#fff", borderRadius: "0.5rem", textDecoration: "none", fontWeight: 600 }}>
+          <Link href="/audit" style={{ padding: "0.75rem 1.5rem", background: "#2563eb", color: "#fff", borderRadius: "0.5rem", textDecoration: "none", fontWeight: 600 }}>
             شروع ممیزی
           </Link>
         </div>
@@ -103,7 +103,7 @@ export default async function ReportsPage({
                       </td>
                       <td style={{ padding: "0.75rem", textAlign: "center" }}>
                         {token ? (
-                          <Link href={`/audit/r/${token}`} style={{ color: "#0f7a66", textDecoration: "none", fontWeight: 600 }}>
+                          <Link href={`/audit/r/${token}`} style={{ color: "#2563eb", textDecoration: "none", fontWeight: 600 }}>
                             مشاهده
                           </Link>
                         ) : "—"}
