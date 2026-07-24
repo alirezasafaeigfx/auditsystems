@@ -29,7 +29,7 @@ export async function GET() {
       }
     });
 
-    return respondJson({ requestId, history }, requestId);
+    return respondJson({ requestId, history }, requestId, { headers: { "Cache-Control": "no-store" } });
   } catch {
     return respondJson({ error: "INTERNAL_ERROR" }, requestId, { status: 500 });
   }

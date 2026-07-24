@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       limit,
       totalPages: Math.ceil(total / limit),
       statusCounts,
-    })
+    }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } })
   } catch {
     return NextResponse.json({ error: 'Failed to fetch leads' }, { status: 500 })
   }

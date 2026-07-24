@@ -39,9 +39,9 @@ export async function GET() {
       newLeads,
       qualifiedLeads,
 convertedLeads,
-lostLeads,
+      lostLeads,
       recentAudits,
-    })
+    }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } })
   } catch (error) {
     console.error('Admin stats error:', error)
     return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 })

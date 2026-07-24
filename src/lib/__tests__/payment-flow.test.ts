@@ -317,28 +317,26 @@ describe("Payment flow — checkout → callback → subscription", () => {
   });
 
   it("MOCK provider rejected in production via resolvePaymentProvider", async () => {
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
-    process.env.PAYMENT_PROVIDER_DEFAULT = undefined;
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("PAYMENT_PROVIDER_DEFAULT", "");
 
     try {
       const { resolvePaymentProvider } = await import("../payments");
       expect(() => resolvePaymentProvider("invalid")).toThrow("PAYMENT_PROVIDER_NOT_CONFIGURED");
     } finally {
-      process.env.NODE_ENV = originalEnv;
+      vi.unstubAllEnvs();
     }
   });
 
   it("MOCK provider accepted in non-production", async () => {
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "test";
+    vi.stubEnv("NODE_ENV", "test");
 
     try {
       const { resolvePaymentProvider } = await import("../payments");
       const result = resolvePaymentProvider("invalid");
       expect(result).toBe("MOCK");
     } finally {
-      process.env.NODE_ENV = originalEnv;
+      vi.unstubAllEnvs();
     }
   });
 

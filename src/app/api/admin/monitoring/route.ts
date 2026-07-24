@@ -126,7 +126,7 @@ export async function GET() {
       recentAudits,
       recentErrors: recentAudits.filter((a) => a.status === 'FAILED').slice(0, 5),
       detailedErrors: apiErrors,
-    })
+    }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } })
   } catch (error) {
     console.error('Monitoring API error:', error)
     return NextResponse.json({ error: 'Failed to fetch monitoring data' }, { status: 500 })

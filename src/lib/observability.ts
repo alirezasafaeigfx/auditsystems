@@ -45,7 +45,7 @@ export function createLogContext(
 function getDailyLogPath(): string {
   const now = new Date();
   const dateStr = now.toISOString().split("T")[0];
-  return path.join(LOG_DIR, `audit-${dateStr}.log`);
+  return path.join(/* turbopackIgnore: true */ LOG_DIR, `audit-${dateStr}.log`);
 }
 
 function ensureLogDir(): void {

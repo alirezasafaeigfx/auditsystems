@@ -96,17 +96,25 @@ export function validateAdminCredentials(username: string, password: string): bo
   const passwordBuffer = Buffer.from(password)
   const expectedPasswordBuffer = Buffer.from(ADMIN_PASSWORD)
 
-  if (
-    usernameBuffer.length !== expectedUsernameBuffer.length ||
-    passwordBuffer.length !== expectedPasswordBuffer.length
-  ) {
-    return false
-  }
+  const maxUserLen = Math.max(usernameBuffer.length, expectedUsernameBuffer.length)
+  const maxPassLen = Math.max(passwordBuffer.length, expectedPasswordBuffer.length)
 
-  return (
-    crypto.timingSafeEqual(usernameBuffer, expectedUsernameBuffer) &&
-    crypto.timingSafeEqual(passwordBuffer, expectedPasswordBuffer)
-  )
+  const paddedUser = Buffer.alloc(maxUserLen, 0)
+  usernameBuffer.copy(paddedUser)
+  const paddedExpectedUser = Buffer.alloc(maxUserLen, 0)
+  expectedUsernameBuffer.copy(paddedExpectedUser)
+
+  const paddedPass = Buffer.alloc(maxPassLen, 0)
+  passwordBuffer.copy(paddedPass)
+  const paddedExpectedPass = Buffer.alloc(maxPassLen, 0)
+  expectedPasswordBuffer.copy(paddedExpectedPass)
+
+  const usernameMatch = usernameBuffer.length === expectedUsernameBuffer.length &&
+    crypto.timingSafeEqual(paddedUser, paddedExpectedUser)
+  const passwordMatch = passwordBuffer.length === expectedPasswordBuffer.length &&
+    crypto.timingSafeEqual(paddedPass, paddedExpectedPass)
+
+  return usernameMatch && passwordMatch
 }
 
 export function isSessionAuthConfigured(): boolean {
