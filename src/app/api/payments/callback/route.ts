@@ -11,6 +11,9 @@ function asProvider(value: string | null): PaymentProvider {
   if (upper === "ZARINPAL") return "ZARINPAL";
   if (upper === "IDPAY") return "IDPAY";
   if (upper === "PAYPING") return "PAYPING";
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(`UNKNOWN_PAYMENT_PROVIDER: ${value}`);
+  }
   return "MOCK";
 }
 
@@ -86,6 +89,14 @@ async function handleCallback(request: NextRequest): Promise<NextResponse> {
 
     const locale = resolveLocale(order.run.locale);
 
+    if (order.provider !== provider && provider !== "MOCK") {
+      logEvent("warn", "payment_provider_mismatch", { requestId, expected: order.provider, received: provider, orderId: order.id });
+      if (shouldRedirectBrowser(request)) {
+        return redirectWithRequestId(requestId, request, buildFailedPath(locale, "PROVIDER_MISMATCH"));
+      }
+      return respondJson({ error: "PROVIDER_MISMATCH", requestId }, requestId, { status: 400, headers: { "Cache-Control": "no-store" } });
+    }
+
     if (order.status === "PAID") {
       const shareToken = order.run.shares[0]?.token;
       if (!shareToken) {
@@ -128,7 +139,7 @@ async function handleCallback(request: NextRequest): Promise<NextResponse> {
     const nextStatus = verification.paid ? "PAID" : "FAILED";
 
     const updated = await prisma.auditOrder.update({
-      where: { id: order.id },
+      where: { id: order.id, status: "PENDING" },
       data: {
         status: nextStatus,
         paidAt: verification.paid ? new Date() : null,
@@ -136,6 +147,13 @@ async function handleCallback(request: NextRequest): Promise<NextResponse> {
       },
       include: { run: { select: { locale: true, shares: { orderBy: { createdAt: "desc" }, take: 1 } } } }
     });
+
+    if (!updated) {
+      if (shouldRedirectBrowser(request)) {
+        return redirectWithRequestId(requestId, request, buildFailedPath(locale, "ALREADY_PROCESSED"));
+      }
+      return respondJson({ ok: true, message: "Already processed", requestId }, requestId, { headers: { "Cache-Control": "no-store" } });
+    }
 
     await prisma.auditOrderEvent.create({
       data: {

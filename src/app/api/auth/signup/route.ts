@@ -86,7 +86,9 @@ export async function POST(request: NextRequest) {
     await createSession(user.id);
 
     if (referralCode) {
-      await trackReferral(referralCode, user.id).catch(() => {});
+      await trackReferral(referralCode, user.id).catch((err) => {
+        logEvent("warn", "referral_tracking_failed", { requestId, error: err instanceof Error ? err.message : String(err) });
+      });
     }
 
     logSecurityEvent({ event: "session_created", userId: user.id, email, ipHash: hashClientIp(getClientIp(request)), requestId });

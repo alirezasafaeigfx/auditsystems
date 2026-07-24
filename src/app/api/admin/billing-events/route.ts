@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     });
 
     logEvent("info", "billing_events_listed", { requestId, organizationId, count: result.total });
-    return respondJson({ events: result.events, total: result.total, requestId }, requestId);
+    return respondJson({ events: result.events, total: result.total, requestId }, requestId, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     logEvent("error", "billing_events_failed", { requestId, error: error instanceof Error ? error.message : String(error) });
     return respondJson({ error: "INTERNAL_ERROR", requestId }, requestId, { status: 500 });

@@ -1,6 +1,12 @@
 import { renderPrometheusMetrics } from "../../../lib/metrics";
+import { validateAdminSession } from "../../../lib/admin-auth";
 
 export async function GET() {
+  const isAuthenticated = await validateAdminSession();
+  if (!isAuthenticated) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
   return new Response(renderPrometheusMetrics(), {
     status: 200,
     headers: {

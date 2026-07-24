@@ -176,7 +176,9 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
           totalFindings: score.totalFindings,
           severityCounts: score.severityCounts as Record<string, number>,
           categoryScores: score.categories as Record<string, number>
-        }).catch(() => {});
+        }).catch((err) => {
+          console.error(`[Worker] notification failed for audit ${run.id}:`, err);
+        });
       }
     }
   } catch (error) {

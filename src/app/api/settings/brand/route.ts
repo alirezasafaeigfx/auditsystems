@@ -26,7 +26,7 @@ export async function GET() {
     }
   });
 
-  return NextResponse.json(org);
+  return NextResponse.json(org, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(request: Request) {

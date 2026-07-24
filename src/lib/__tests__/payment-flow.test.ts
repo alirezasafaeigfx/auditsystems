@@ -315,4 +315,76 @@ describe("Payment flow — checkout → callback → subscription", () => {
     expect(invoice!.status).not.toBe("PENDING");
     expect(invoice!.status).not.toBe("PAID");
   });
+
+  it("MOCK provider rejected in production via resolvePaymentProvider", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("PAYMENT_PROVIDER_DEFAULT", "");
+
+    try {
+      const { resolvePaymentProvider } = await import("../payments");
+      expect(() => resolvePaymentProvider("invalid")).toThrow("PAYMENT_PROVIDER_NOT_CONFIGURED");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("MOCK provider accepted in non-production", async () => {
+    vi.stubEnv("NODE_ENV", "test");
+
+    try {
+      const { resolvePaymentProvider } = await import("../payments");
+      const result = resolvePaymentProvider("invalid");
+      expect(result).toBe("MOCK");
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("createCheckout rejects invalid amounts", async () => {
+    const { createCheckout } = await import("../payments");
+
+    await expect(createCheckout({
+      provider: "MOCK",
+      orderId: "inv-001",
+      callbackRef: "cb-abc123",
+      amountToman: -100,
+      email: "test@example.com",
+    })).rejects.toThrow("AMOUNT_OUT_OF_RANGE");
+
+    await expect(createCheckout({
+      provider: "MOCK",
+      orderId: "inv-001",
+      callbackRef: "cb-abc123",
+      amountToman: NaN,
+      email: "test@example.com",
+    })).rejects.toThrow("INVALID_AMOUNT");
+
+    await expect(createCheckout({
+      provider: "MOCK",
+      orderId: "inv-001",
+      callbackRef: "cb-abc123",
+      amountToman: 200_000_000,
+      email: "test@example.com",
+    })).rejects.toThrow("AMOUNT_OUT_OF_RANGE");
+  });
+
+  it("createCheckout rejects invalid orderId and callbackRef lengths", async () => {
+    const { createCheckout } = await import("../payments");
+
+    await expect(createCheckout({
+      provider: "MOCK",
+      orderId: "x".repeat(65),
+      callbackRef: "cb-abc123",
+      amountToman: 1000,
+      email: "test@example.com",
+    })).rejects.toThrow("INVALID_ORDER_ID");
+
+    await expect(createCheckout({
+      provider: "MOCK",
+      orderId: "inv-001",
+      callbackRef: "x".repeat(129),
+      amountToman: 1000,
+      email: "test@example.com",
+    })).rejects.toThrow("INVALID_CALLBACK_REF");
+  });
 });

@@ -582,3 +582,15 @@ model BillingEvent {
   @@index([organizationId, createdAt])
   @@index([organizationId, eventType])
 }
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String
+  locale    String   @default("fa")
+  subscribedAt DateTime @default(now())
+  unsubscribedAt DateTime?
+
+  @@unique([email])
+  @@index([email])
+  @@index([subscribedAt])
+}

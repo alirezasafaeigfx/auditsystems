@@ -15,7 +15,7 @@ export async function GET() {
     }
 
     const sessions = await listActiveAdminSessions()
-    return NextResponse.json({ sessions })
+    return NextResponse.json({ sessions }, { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } })
   } catch (error) {
     console.error('Admin session list error:', error)
     return NextResponse.json({ error: 'Failed to list admin sessions' }, { status: 500 })
