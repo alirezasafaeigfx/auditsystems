@@ -165,7 +165,7 @@ export default function MonitoringPage() {
       </div>
 
       {error && (
-        <div style={{ padding: '0.75rem', marginBottom: '1rem', backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, color: '#991b1b' }}>
+        <div style={{ padding: '0.75rem', marginBottom: '1rem', backgroundColor: 'color-mix(in srgb, var(--danger) 12%, var(--surface))', border: '1px solid color-mix(in srgb, var(--danger) 30%, var(--line))', borderRadius: 6, color: '#991b1b' }}>
           Refresh failed: {error}
         </div>
       )}
@@ -253,9 +253,9 @@ export default function MonitoringPage() {
             <Section title="Recent Errors (24h)">
               <div style={{ display: 'grid', gap: '0.5rem' }}>
                 {data.detailedErrors.map((err, i) => (
-                  <div key={i} style={{ padding: '0.5rem 0.75rem', borderRadius: 6, border: '1px solid #fecaca', backgroundColor: '#fef2f2', fontSize: '0.85rem' }}>
+                  <div key={i} style={{ padding: '0.5rem 0.75rem', borderRadius: 6, border: '1px solid color-mix(in srgb, var(--danger) 30%, var(--line))', backgroundColor: 'color-mix(in srgb, var(--danger) 12%, var(--surface))', fontSize: '0.85rem' }}>
                     <span style={{ fontWeight: 600, color: '#991b1b' }}>{err.errorCode || 'UNKNOWN'}</span>
-                    {err.errorMessage && <span style={{ color: '#6b7280', marginLeft: 8 }}>{err.errorMessage.slice(0, 120)}</span>}
+                    {err.errorMessage && <span style={{ color: 'var(--muted)', marginLeft: 8 }}>{err.errorMessage.slice(0, 120)}</span>}
                   </div>
                 ))}
               </div>

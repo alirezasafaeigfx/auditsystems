@@ -165,7 +165,7 @@ export default function TeamPage() {
       <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "1.5rem" }}>مدیریت تیم</h1>
 
       {error && (
-        <div style={{ padding: "0.75rem 1rem", background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: "0.5rem", marginBottom: "1rem", color: "#991b1b", fontSize: "0.875rem" }}>
+        <div style={{ padding: "0.75rem 1rem", background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: "0.5rem", marginBottom: "1rem", color: "var(--danger)", fontSize: "0.875rem" }}>
           {error}
         </div>
       )}

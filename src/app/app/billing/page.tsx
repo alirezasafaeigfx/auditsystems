@@ -72,7 +72,7 @@ export default async function BillingPage({
         </div>
       )}
 
-      <div style={{ padding: "1.5rem", background: "var(--brand-bg, #f0fdf4)", border: "1px solid #bbf7d0", borderRadius: "0.5rem", marginBottom: "2rem" }}>
+      <div style={{ padding: "1.5rem", background: "var(--brand-bg, #f0fdf4)", border: "1px solid color-mix(in srgb, var(--success) 30%, var(--line))", borderRadius: "0.5rem", marginBottom: "2rem" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
           <div>
             <div style={{ fontSize: "0.75rem", color: "var(--muted, #6b7280)" }}>پلن فعلی</div>

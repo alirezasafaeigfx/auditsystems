@@ -38,10 +38,10 @@ function VerifyEmailContent() {
       <div style={{ maxWidth: "24rem", width: "100%", padding: "2rem", textAlign: "center" }}>
         <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "1rem" }}>Email Verification</h1>
         {status === "loading" && (
-          <p style={{ color: "#6b7280" }}>Verifying your email...</p>
+          <p style={{ color: "var(--muted)" }}>Verifying your email...</p>
         )}
         {status === "success" && (
-          <div style={{ padding: "1rem", background: "#d1fae5", border: "1px solid #6ee7b7", borderRadius: "0.5rem", color: "#065f46" }}>
+          <div style={{ padding: "1rem", background: "#d1fae5", border: "1px solid #6ee7b7", borderRadius: "0.5rem", color: "var(--success)" }}>
             {message}
             <div style={{ marginTop: "1rem" }}>
               <a href="/app" style={{ color: "#2563eb", fontWeight: 600 }}>Go to Dashboard →</a>
@@ -49,7 +49,7 @@ function VerifyEmailContent() {
           </div>
         )}
         {status === "error" && (
-          <div style={{ padding: "1rem", background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: "0.5rem", color: "#991b1b" }}>
+          <div style={{ padding: "1rem", background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: "0.5rem", color: "var(--danger)" }}>
             {message}
             <div style={{ marginTop: "1rem" }}>
               <a href="/login" style={{ color: "#2563eb", fontWeight: 600 }}>Back to Login</a>
@@ -65,7 +65,7 @@ export default function VerifyEmailPage() {
   return (
     <Suspense fallback={
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <p style={{ color: "#6b7280" }}>Loading...</p>
+        <p style={{ color: "var(--muted)" }}>Loading...</p>
       </div>
     }>
       <VerifyEmailContent />

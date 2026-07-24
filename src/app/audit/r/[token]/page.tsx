@@ -81,7 +81,7 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
         <p>هدف: {share.run.normalizedUrl ?? share.run.url}</p>
         <div className="hero-actions">
           <span className={`badge ${statusClass(share.run.status)}`}>{share.run.status}</span>
-          <span className="badge" style={{ backgroundColor: "#f3f4f6", color: "#374151" }}>
+          <span className="badge" style={{ backgroundColor: "#f3f4f6", color: "var(--text)" }}>
             {share.viewCount + 1} بازدید
           </span>
           <Link className="button secondary" href={`/audit/r/${token}/unlock`}>
@@ -99,7 +99,7 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
             <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap", marginTop: "1rem" }}>
               {Object.entries(categoryScores as Record<string, number>).map(([cat, catScore]) => (
                 <div key={cat} style={{ textAlign: "center", minWidth: "80px" }}>
-                  <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>{categoryLabel(cat as FindingCategory)}</div>
+                  <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{categoryLabel(cat as FindingCategory)}</div>
                   <div style={{ fontSize: "1.25rem", fontWeight: 700 }}>{catScore}</div>
                 </div>
               ))}
@@ -125,7 +125,7 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
                 <strong>{finding.title}</strong>
                 <span className={`badge ${severityClass(finding.severity)}`}>{finding.severity}</span>
               </div>
-              {finding.description ? <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>{finding.description}</p> : null}
+              {finding.description ? <p style={{ color: "var(--muted)", fontSize: "0.875rem" }}>{finding.description}</p> : null}
               {finding.recommendation ? <p><strong>پیشنهاد:</strong> {finding.recommendation}</p> : null}
             </article>
           ))}
@@ -138,7 +138,7 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
         return (
           <section className="card">
             <h2>نقشه اقدام</h2>
-            <p style={{ color: "#6b7280", marginBottom: "1.5rem" }}>اولویت‌بندی اقدامات بر اساس هزینه و تأثیر</p>
+            <p style={{ color: "var(--muted)", marginBottom: "1.5rem" }}>اولویت‌بندی اقدامات بر اساس هزینه و تأثیر</p>
             {quadrants.map((q) => {
               const items = actionPlan.filter((a) => a.quadrant === q);
               if (items.length === 0) return null;
@@ -148,14 +148,14 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
                   <h3 style={{ fontSize: "1rem", fontWeight: 600, color: quadrant.color, marginBottom: "0.5rem" }}>
                     {quadrant.title} ({items.length})
                   </h3>
-                  <p style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "0.5rem" }}>{quadrant.description}</p>
+                  <p style={{ fontSize: "0.75rem", color: "var(--muted)", marginBottom: "0.5rem" }}>{quadrant.description}</p>
                   {items.map((item) => (
-                    <div key={item.code} style={{ padding: "0.75rem", border: "1px solid #e5e7eb", borderRadius: "0.375rem", marginBottom: "0.5rem" }}>
+                    <div key={item.code} style={{ padding: "0.75rem", border: "1px solid var(--line)", borderRadius: "0.375rem", marginBottom: "0.5rem" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <strong style={{ fontSize: "0.875rem" }}>{item.title}</strong>
                         <span className={`badge ${severityClass(item.severity)}`} style={{ fontSize: "0.75rem" }}>{item.severity}</span>
                       </div>
-                      <p style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.25rem" }}>{item.recommendation}</p>
+                      <p style={{ fontSize: "0.75rem", color: "var(--muted)", marginTop: "0.25rem" }}>{item.recommendation}</p>
                     </div>
                   ))}
                 </div>

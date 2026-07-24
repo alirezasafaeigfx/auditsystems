@@ -58,18 +58,18 @@ export default async function ReportsPage({
       <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "1.5rem" }}>تاریخچه گزارش‌ها</h1>
 
       {reports.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "3rem", color: "#6b7280" }}>
+        <div style={{ textAlign: "center", padding: "3rem", color: "var(--muted)" }}>
           <p style={{ marginBottom: "1rem" }}>هنوز گزارشی ثبت نشده است.</p>
-          <Link href="/audit" style={{ padding: "0.75rem 1.5rem", background: "#2563eb", color: "#fff", borderRadius: "0.5rem", textDecoration: "none", fontWeight: 600 }}>
+          <Link href="/audit" style={{ padding: "0.75rem 1.5rem", background: "var(--brand)", color: "#fff", borderRadius: "0.5rem", textDecoration: "none", fontWeight: 600 }}>
             شروع ممیزی
           </Link>
         </div>
       ) : (
         <>
-          <div style={{ border: "1px solid #e5e7eb", borderRadius: "0.5rem", overflow: "hidden" }}>
+          <div style={{ border: "1px solid var(--line)", borderRadius: "0.5rem", overflow: "hidden" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
               <thead>
-                <tr style={{ borderBottom: "1px solid #e5e7eb", background: "#f9fafb" }}>
+                <tr style={{ borderBottom: "1px solid var(--line)", background: "var(--surface-soft)" }}>
                   <th style={{ textAlign: "right", padding: "0.75rem", fontWeight: 600 }}>آدرس</th>
                   <th style={{ textAlign: "right", padding: "0.75rem", fontWeight: 600 }}>پروژه</th>
                   <th style={{ textAlign: "center", padding: "0.75rem", fontWeight: 600 }}>امتیاز</th>
@@ -83,11 +83,11 @@ export default async function ReportsPage({
                   const score = getScore(report);
                   const token = report.shares[0]?.token;
                   return (
-                    <tr key={report.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                    <tr key={report.id} style={{ borderBottom: "1px solid var(--line)" }}>
                       <td style={{ padding: "0.75rem", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {report.normalizedUrl ?? report.url}
                       </td>
-                      <td style={{ padding: "0.75rem", color: "#6b7280" }}>
+                      <td style={{ padding: "0.75rem", color: "var(--muted)" }}>
                         {report.project?.name ?? "—"}
                       </td>
                       <td style={{ padding: "0.75rem", textAlign: "center" }}>
@@ -98,7 +98,7 @@ export default async function ReportsPage({
                       <td style={{ padding: "0.75rem", textAlign: "center" }}>
                         {report._count.findings}
                       </td>
-                      <td style={{ padding: "0.75rem", color: "#6b7280" }}>
+                      <td style={{ padding: "0.75rem", color: "var(--muted)" }}>
                         {new Date(report.createdAt).toLocaleDateString("fa-IR")}
                       </td>
                       <td style={{ padding: "0.75rem", textAlign: "center" }}>
@@ -118,15 +118,15 @@ export default async function ReportsPage({
           {totalPages > 1 && (
             <div style={{ display: "flex", justifyContent: "center", gap: "0.5rem", marginTop: "1.5rem" }}>
               {page > 1 && (
-                <Link href={`?page=${page - 1}`} style={{ padding: "0.5rem 1rem", border: "1px solid #e5e7eb", borderRadius: "0.375rem", textDecoration: "none" }}>
+                <Link href={`?page=${page - 1}`} style={{ padding: "0.5rem 1rem", border: "1px solid var(--line)", borderRadius: "0.375rem", textDecoration: "none" }}>
                   قبلی
                 </Link>
               )}
-              <span style={{ padding: "0.5rem 1rem", color: "#6b7280" }}>
+              <span style={{ padding: "0.5rem 1rem", color: "var(--muted)" }}>
                 صفحه {page} از {totalPages}
               </span>
               {page < totalPages && (
-                <Link href={`?page=${page + 1}`} style={{ padding: "0.5rem 1rem", border: "1px solid #e5e7eb", borderRadius: "0.375rem", textDecoration: "none" }}>
+                <Link href={`?page=${page + 1}`} style={{ padding: "0.5rem 1rem", border: "1px solid var(--line)", borderRadius: "0.375rem", textDecoration: "none" }}>
                   بعدی
                 </Link>
               )}

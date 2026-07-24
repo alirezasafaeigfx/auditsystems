@@ -92,6 +92,6 @@ export const QUADRANT_LABELS: Record<string, { title: string; description: strin
   THANKLESS: {
     title: "کارهای دشوار کم‌تأثیر",
     description: "هزینه زیاد ولی تأثیر کم — آخرین اولویت",
-    color: "#6b7280",
+    color: "var(--muted)",
   },
 };

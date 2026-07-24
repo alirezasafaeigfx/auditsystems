@@ -113,7 +113,7 @@ export default function NotificationsPage() {
         )}
 
         {success && (
-          <div style={{ padding: "0.75rem 1rem", background: "var(--brand-bg, #f0fdf4)", border: "1px solid #bbf7d0", borderRadius: "0.5rem", marginBottom: "1rem", color: "var(--brand-strong, #065f46)", fontSize: "0.875rem" }}>
+          <div style={{ padding: "0.75rem 1rem", background: "var(--brand-bg, #f0fdf4)", border: "1px solid color-mix(in srgb, var(--success) 30%, var(--line))", borderRadius: "0.5rem", marginBottom: "1rem", color: "var(--brand-strong, #065f46)", fontSize: "0.875rem" }}>
             {success}
           </div>
         )}

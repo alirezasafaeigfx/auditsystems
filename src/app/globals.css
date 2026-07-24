@@ -306,7 +306,7 @@ a {
 }
 
 .card {
-  background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(248,250,252,0.9)), var(--surface);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, transparent), color-mix(in srgb, var(--surface-soft) 90%, transparent)), var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: 1.25rem;
@@ -688,13 +688,13 @@ button:disabled {
 }
 
 .status-note.is-success {
-  border-color: #49a88f;
-  background: #e3f7f1;
+  border-color: color-mix(in srgb, var(--success) 40%, var(--line));
+  background: color-mix(in srgb, var(--success) 10%, var(--surface));
 }
 
 .status-note.is-danger {
-  border-color: #d99696;
-  background: #feecec;
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--line));
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
   color: var(--danger);
 }
 
@@ -723,19 +723,19 @@ button:disabled {
   padding: 0.2rem 0.62rem;
   font-size: 0.75rem;
   font-weight: 700;
-  background: #e3f5ef;
-  color: #0a5f50;
+  background: color-mix(in srgb, var(--success) 12%, var(--surface));
+  color: var(--success);
 }
 
 .status-failed,
 .sev-critical,
 .sev-high {
-  background: #fde8e8;
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
   color: var(--danger);
 }
 
 .sev-medium {
-  background: #fff3de;
+  background: color-mix(in srgb, var(--warn) 12%, var(--surface));
   color: var(--warn);
 }
 
@@ -1051,7 +1051,7 @@ html[dir="ltr"] .footer {
 }
 
 .hero-audit-button:hover {
-  background: #e3f7f1;
+  background: color-mix(in srgb, var(--surface) 90%, var(--brand));
   transform: translateY(-1px);
 }
 

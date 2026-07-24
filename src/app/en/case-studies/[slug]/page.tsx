@@ -67,13 +67,13 @@ export default async function EnglishCaseStudyPage({ params }: { params: Promise
         <h2>Score Improvement</h2>
         <div style={{ display: "flex", justifyContent: "center", gap: "3rem", marginTop: "1rem" }}>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>Before</div>
+            <div style={{ fontSize: "0.875rem", color: "var(--muted)" }}>Before</div>
             <div style={{ fontSize: "2.5rem", fontWeight: 800, color: "#dc2626" }}>{study.scoreBefore}<span style={{ fontSize: "1rem" }}>/100</span></div>
           </div>
-          <div style={{ textAlign: "center", fontSize: "2rem", fontWeight: 800, color: "#059669" }}>→</div>
+          <div style={{ textAlign: "center", fontSize: "2rem", fontWeight: 800, color: "var(--success)" }}>→</div>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>After</div>
-            <div style={{ fontSize: "2.5rem", fontWeight: 800, color: "#059669" }}>{study.scoreAfter}<span style={{ fontSize: "1rem" }}>/100</span></div>
+            <div style={{ fontSize: "0.875rem", color: "var(--muted)" }}>After</div>
+            <div style={{ fontSize: "2.5rem", fontWeight: 800, color: "var(--success)" }}>{study.scoreAfter}<span style={{ fontSize: "1rem" }}>/100</span></div>
           </div>
         </div>
       </section>

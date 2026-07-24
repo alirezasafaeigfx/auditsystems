@@ -29,7 +29,7 @@ function ReportPreview({
         border: "1px solid var(--border, #e5e7eb)",
         borderRadius: "0.5rem",
         padding: "1.5rem",
-        background: "white"
+        background: "var(--surface)"
       }}
     >
       <div
@@ -60,13 +60,13 @@ function ReportPreview({
           >
             {brandName || "نام برند"}
           </div>
-          <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
+          <div style={{ fontSize: "0.875rem", color: "var(--muted)" }}>
             گزارش بررسی فنی و امنیتی
           </div>
         </div>
       </div>
 
-      <div style={{ fontSize: "0.875rem", color: "#374151" }}>
+      <div style={{ fontSize: "0.875rem", color: "var(--text)" }}>
         <div style={{ marginBottom: "0.5rem" }}>
           <strong>آدرس سایت:</strong> https://example.com
         </div>
@@ -83,7 +83,7 @@ function ReportPreview({
         style={{
           marginTop: "1rem",
           padding: "0.75rem",
-          background: "#f0fdf4",
+          background: "color-mix(in srgb, var(--success) 8%, var(--surface))",
           borderRadius: "0.375rem",
           borderLeft: `4px solid ${primaryColor || "#059669"}`
         }}
@@ -202,7 +202,7 @@ export default function BrandSettingsPage() {
 
   if (loading) {
     return (
-      <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>
+      <div style={{ textAlign: "center", padding: "2rem", color: "var(--muted)" }}>
         در حال بارگذاری...
       </div>
     );
@@ -242,7 +242,7 @@ export default function BrandSettingsPage() {
                   border: "1px solid #fca5a5",
                   borderRadius: "0.5rem",
                   marginBottom: "1rem",
-                  color: "#991b1b",
+                  color: "var(--danger)",
                   fontSize: "0.875rem"
                 }}
               >
@@ -258,7 +258,7 @@ export default function BrandSettingsPage() {
                   border: "1px solid #6ee7b7",
                   borderRadius: "0.5rem",
                   marginBottom: "1rem",
-                  color: "#065f46",
+                  color: "var(--success)",
                   fontSize: "0.875rem"
                 }}
               >
@@ -299,7 +299,7 @@ export default function BrandSettingsPage() {
               <div
                 style={{
                   fontSize: "0.75rem",
-                  color: "#6b7280",
+                  color: "var(--muted)",
                   marginTop: "0.25rem"
                 }}
               >
@@ -336,7 +336,7 @@ export default function BrandSettingsPage() {
                       color: "#dc2626",
                       border: "1px solid #fca5a5",
                       borderRadius: "0.375rem",
-                      background: "white",
+                      background: "var(--surface)",
                       cursor: "pointer"
                     }}
                   >
@@ -347,7 +347,7 @@ export default function BrandSettingsPage() {
               <div
                 style={{
                   fontSize: "0.75rem",
-                  color: "#6b7280",
+                  color: "var(--muted)",
                   marginTop: "0.25rem"
                 }}
               >
@@ -395,7 +395,7 @@ export default function BrandSettingsPage() {
                     width: "48px",
                     height: "36px",
                     padding: "2px",
-                    border: "1px solid #d1d5db",
+                    border: "1px solid var(--line-strong)",
                     borderRadius: "0.375rem",
                     cursor: "pointer"
                   }}
@@ -448,7 +448,7 @@ export default function BrandSettingsPage() {
                     width: "48px",
                     height: "36px",
                     padding: "2px",
-                    border: "1px solid #d1d5db",
+                    border: "1px solid var(--line-strong)",
                     borderRadius: "0.375rem",
                     cursor: "pointer"
                   }}

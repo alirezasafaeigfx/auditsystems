@@ -220,7 +220,7 @@ export function AdminLeads() {
                     borderRadius: '4px',
                     fontSize: '0.75rem',
                     fontWeight: 600,
-                    background: STATUS_COLORS[lead.status] || '#6b7280',
+                    background: STATUS_COLORS[lead.status] || 'var(--muted)',
                     color: '#fff',
                   }}>
                     {lead.status}
@@ -250,7 +250,7 @@ export function AdminLeads() {
           alignItems: 'center', justifyContent: 'center', zIndex: 1000,
         }} onClick={() => setSelectedLead(null)}>
           <div style={{
-            background: '#fff', borderRadius: '12px', padding: '2rem', maxWidth: '500px',
+            background: 'var(--surface)', borderRadius: '12px', padding: '2rem', maxWidth: '500px',
             width: '90%', maxHeight: '80vh', overflow: 'auto',
           }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>

@@ -92,7 +92,7 @@ export default async function ProjectDetailPage({ params }: Props) {
       </div>
 
       {issueCount > 0 && (
-        <div style={{ padding: "1rem", background: "var(--brand-bg, #f0fdf4)", border: "1px solid #bbf7d0", borderRadius: "0.5rem", marginBottom: "2rem" }}>
+        <div style={{ padding: "1rem", background: "var(--brand-bg, #f0fdf4)", border: "1px solid color-mix(in srgb, var(--success) 30%, var(--line))", borderRadius: "0.5rem", marginBottom: "2rem" }}>
           <div style={{ fontWeight: 600, fontSize: "0.875rem", marginBottom: "0.25rem" }}>خلاصه آخرین ممیزی</div>
           <div style={{ fontSize: "0.875rem", color: "var(--text, #374151)" }}>
             {issueCount} مشکل پیدا شد. {latestAudit?.shares[0]?.token && (

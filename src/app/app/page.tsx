@@ -187,7 +187,7 @@ export default async function AppDashboardPage() {
       {(nextScheduled || !isPaidPlan(currentPlanCode as PlanCode)) && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
           {nextScheduled && (
-            <div className="card" style={{ padding: "1rem", border: "1px solid #bbf7d0", background: "var(--brand-bg, #f0fdf4)" }}>
+            <div className="card" style={{ padding: "1rem", border: "1px solid color-mix(in srgb, var(--success) 30%, var(--line))", background: "var(--brand-bg, #f0fdf4)" }}>
               <div style={{ color: "var(--brand-strong, #065f46)", fontSize: "0.75rem", marginBottom: "0.25rem", fontWeight: 600 }}>ممیزی زمان‌بندی شده بعدی</div>
               <div style={{ fontWeight: 600 }}>{nextScheduled.project.name}</div>
               <div style={{ fontSize: "0.75rem", color: "var(--muted, #6b7280)" }}>

@@ -14,7 +14,7 @@ function scoreColor(score: number): string {
 }
 
 function trendIndicator(scores: number[]): { label: string; color: string; arrow: string } {
-  if (scores.length < 2) return { label: "پایدار", color: "#6b7280", arrow: "→" };
+  if (scores.length < 2) return { label: "پایدار", color: "var(--muted)", arrow: "→" };
   const recent = scores.slice(-3);
   const avg = recent.reduce((a, b) => a + b, 0) / recent.length;
   const older = scores.slice(0, -3);
@@ -22,7 +22,7 @@ function trendIndicator(scores: number[]): { label: string; color: string; arrow
   const diff = avg - olderAvg;
   if (diff > 3) return { label: "بهبود", color: "#3b82f6", arrow: "↑" };
   if (diff < -3) return { label: "کاهش", color: "#ef4444", arrow: "↓" };
-  return { label: "پایدار", color: "#6b7280", arrow: "→" };
+  return { label: "پایدار", color: "var(--muted)", arrow: "→" };
 }
 
 export function ScoreTrend({ audits }: Props) {

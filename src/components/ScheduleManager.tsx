@@ -26,9 +26,9 @@ export function ScheduleManager({
 
   if (!canSchedule) {
     return (
-      <div style={{ padding: "1.5rem", background: "#fef3c7", border: "1px solid #fbbf24", borderRadius: "0.5rem" }}>
-        <p style={{ fontWeight: 600, color: "#92400e" }}>ممیزی زمان‌بندی شده</p>
-        <p style={{ fontSize: "0.875rem", color: "#92400e", marginTop: "0.5rem" }}>
+      <div style={{ padding: "1.5rem", background: "color-mix(in srgb, var(--warn) 15%, var(--surface))", border: "1px solid color-mix(in srgb, var(--warn) 30%, var(--line))", borderRadius: "0.5rem" }}>
+        <p style={{ fontWeight: 600, color: "var(--warn)" }}>ممیزی زمان‌بندی شده</p>
+        <p style={{ fontSize: "0.875rem", color: "var(--warn)", marginTop: "0.5rem" }}>
           برای استفاده از ممیزی زمان‌بندی شده، ابتدا پلن خود را ارتقا دهید.
         </p>
       </div>
@@ -57,7 +57,7 @@ export function ScheduleManager({
   }
 
   return (
-    <div style={{ padding: "1.5rem", border: "1px solid #e5e7eb", borderRadius: "0.5rem" }}>
+    <div style={{ padding: "1.5rem", border: "1px solid var(--line)", borderRadius: "0.5rem" }}>
       <h3 style={{ fontWeight: 600, marginBottom: "1rem" }}>ممیزی زمان‌بندی شده</h3>
 
       <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem", alignItems: "center" }}>
@@ -75,7 +75,7 @@ export function ScheduleManager({
         <select
           value={frequency}
           onChange={(e) => setFrequency(e.target.value)}
-          style={{ padding: "0.5rem", border: "1px solid #d1d5db", borderRadius: "0.375rem" }}
+          style={{ padding: "0.5rem", border: "1px solid var(--line-strong)", borderRadius: "0.375rem" }}
         >
           <option value="WEEKLY">هفتگی</option>
           <option value="MONTHLY">ماهانه</option>
@@ -83,7 +83,7 @@ export function ScheduleManager({
       </div>
 
       {schedule?.nextRunAt && (
-        <p style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: "1rem" }}>
+        <p style={{ fontSize: "0.75rem", color: "var(--muted)", marginBottom: "1rem" }}>
           اجرای بعدی: {new Date(schedule.nextRunAt).toLocaleDateString("fa-IR")}
         </p>
       )}
@@ -91,7 +91,7 @@ export function ScheduleManager({
       <button
         onClick={handleSave}
         disabled={loading}
-        style={{ padding: "0.75rem 1.5rem", background: "#2563eb", color: "#fff", border: "none", borderRadius: "0.375rem", cursor: "pointer", fontWeight: 600 }}
+        style={{ padding: "0.75rem 1.5rem", background: "var(--brand)", color: "#fff", border: "none", borderRadius: "0.375rem", cursor: "pointer", fontWeight: 600 }}
       >
         {loading ? "در حال ذخیره..." : "ذخیره"}
       </button>

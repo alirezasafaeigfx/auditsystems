@@ -73,11 +73,11 @@ export default async function ComparePage({ params }: { params: Promise<{ tokenA
         <h2>تفاوت امتیاز</h2>
         <div style={{ display: "flex", justifyContent: "center", gap: "3rem", alignItems: "center", marginTop: "1rem" }}>
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>قبل</div>
-            <div style={{ fontSize: "2.5rem", fontWeight: 800, color: "#374151" }}>
+            <div style={{ fontSize: "0.875rem", color: "var(--muted)", marginBottom: "0.25rem" }}>قبل</div>
+            <div style={{ fontSize: "2.5rem", fontWeight: 800, color: "var(--text)" }}>
               {comparison.overall.before}<span style={{ fontSize: "1rem" }}>/100</span>
             </div>
-            <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "#374151" }}>{comparison.gradeBefore}</div>
+            <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--text)" }}>{comparison.gradeBefore}</div>
           </div>
 
           <div style={{ textAlign: "center" }}>
@@ -93,7 +93,7 @@ export default async function ComparePage({ params }: { params: Promise<{ tokenA
           </div>
 
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: "0.875rem", color: "#6b7280", marginBottom: "0.25rem" }}>بعد</div>
+            <div style={{ fontSize: "0.875rem", color: "var(--muted)", marginBottom: "0.25rem" }}>بعد</div>
             <div style={{ fontSize: "2.5rem", fontWeight: 800, color: directionColor(comparison.overall.direction) }}>
               {comparison.overall.after}<span style={{ fontSize: "1rem" }}>/100</span>
             </div>
@@ -107,15 +107,15 @@ export default async function ComparePage({ params }: { params: Promise<{ tokenA
         <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "1rem" }}>
           <thead>
             <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
-              <th style={{ textAlign: "right", padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>دسته</th>
-              <th style={{ textAlign: "center", padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>قبل</th>
-              <th style={{ textAlign: "center", padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>بعد</th>
-              <th style={{ textAlign: "center", padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>تفاوت</th>
+              <th style={{ textAlign: "right", padding: "0.75rem", fontSize: "0.875rem", color: "var(--muted)" }}>دسته</th>
+              <th style={{ textAlign: "center", padding: "0.75rem", fontSize: "0.875rem", color: "var(--muted)" }}>قبل</th>
+              <th style={{ textAlign: "center", padding: "0.75rem", fontSize: "0.875rem", color: "var(--muted)" }}>بعد</th>
+              <th style={{ textAlign: "center", padding: "0.75rem", fontSize: "0.875rem", color: "var(--muted)" }}>تفاوت</th>
             </tr>
           </thead>
           <tbody>
             {comparison.categories.map((cat: { category: string; label: string; before: number; after: number; delta: number; direction: string }) => (
-              <tr key={cat.category} style={{ borderBottom: "1px solid #f3f4f6" }}>
+              <tr key={cat.category} style={{ borderBottom: "1px solid var(--line)" }}>
                 <td style={{ padding: "0.75rem", fontWeight: 600 }}>{cat.label}</td>
                 <td style={{ padding: "0.75rem", textAlign: "center" }}>{cat.before}</td>
                 <td style={{ padding: "0.75rem", textAlign: "center" }}>{cat.after}</td>
