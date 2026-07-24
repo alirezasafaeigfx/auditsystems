@@ -117,7 +117,7 @@ export function evaluateAuditRules(ctx: AuditContext): Finding[] {
   }
 
   // 7) STATIC_ASSETS_NO_LONG_CACHE (MVP: فقط هشدار، برای دقیق‌تر شدن باید HEAD چند asset را بزنید)
-  // TODO: در handler: چند asset نمونه را انتخاب کن، HEAD بزن، cache-control را بخوان.
+  // This archived blueprint leaves sampled asset-header collection to the runtime handler.
   // اینجا فقط placeholder می‌گذاریم تا بعداً کامل شود.
   // findings.push({ ... })
 

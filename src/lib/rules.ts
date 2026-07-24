@@ -10,6 +10,10 @@ function findUrls(resources: AuditContext["resources"], pattern: RegExp): string
   return resources.filter((r) => pattern.test(r.url)).map((r) => r.url);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function checkAccessibilityRules(html: string): Array<{ code: string; title: string; severity: FindingSeverity; count: number }> {
   const $ = cheerio.load(html);
   const issues: Array<{ code: string; title: string; severity: FindingSeverity; count: number }> = [];
@@ -37,8 +41,8 @@ function checkAccessibilityRules(html: string): Array<{ code: string; title: str
   }
 
   // Check for form inputs without labels
-  const inputsWithoutLabels = $("input:not([aria-label]):not([placeholder])").filter(function(this: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-    const id = $(this).attr("id");
+  const inputsWithoutLabels = $("input:not([aria-label]):not([placeholder])").filter((_index, element) => {
+    const id = $(element).attr("id");
     return !id || $(`label[for="${id}"]`).length === 0;
   }).length;
 
@@ -73,19 +77,20 @@ function checkStructuredData(html: string): Array<{ code: string; title: string;
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    schemaScripts.each((_i: number, script: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    schemaScripts.each((_i, script) => {
       try {
-        const data = JSON.parse($(script).html() || "{}") as any; // eslint-disable-line @typescript-eslint/no-explicit-any
-        if (Array.isArray(data)) {
-          data.forEach((item: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-            if (item["@type"]) {
-              types.push(item["@type"]);
-              validateSchemaItem(item, errors, warnings);
-            }
-          });
-        } else if (data["@type"]) {
-          types.push(data["@type"]);
-          validateSchemaItem(data, errors, warnings);
+        const data: unknown = JSON.parse($(script).html() || "{}");
+        const items: unknown[] = Array.isArray(data) ? data : [data];
+        for (const item of items) {
+          if (!isRecord(item)) {
+            errors.push("Structured data item must be an object");
+            continue;
+          }
+          const type = item["@type"];
+          if (typeof type === "string") {
+            types.push(type);
+            validateSchemaItem(item, errors, warnings);
+          }
         }
       } catch {
         // Invalid JSON, skip
@@ -165,13 +170,12 @@ function checkStructuredData(html: string): Array<{ code: string; title: string;
 /**
  * Validate individual Schema.org item for common issues
  */
-function validateSchemaItem(item: any, errors: string[], warnings: string[]): void { // eslint-disable-line @typescript-eslint/no-explicit-any
-  if (!item["@type"]) {
+function validateSchemaItem(item: Record<string, unknown>, errors: string[], warnings: string[]): void {
+  const type = item["@type"];
+  if (typeof type !== "string") {
     errors.push("Schema item missing @type property");
     return;
   }
-
-  const type = item["@type"];
 
   // Type-specific validation
   switch (type) {
@@ -596,8 +600,8 @@ function checkLazyLoading(ctx: AuditContext, findings: Finding[]): void {
 
   // Check images that should have lazy loading but don't
   const images = $("img");
-  const imagesWithoutLazy = images.filter(function(this: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-    const $img = $(this);
+  const imagesWithoutLazy = images.filter((_index, element) => {
+    const $img = $(element);
     const loading = $img.attr("loading");
     const isAboveFold = $img.closest("header, hero, .hero, #hero, [role='banner']").length > 0;
     
@@ -621,8 +625,8 @@ function checkLazyLoading(ctx: AuditContext, findings: Finding[]): void {
 
   // Check for iframe lazy loading (e.g., embeds, videos)
   const iframes = $("iframe");
-  const iframesWithoutLazy = iframes.filter(function(this: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-    const $iframe = $(this);
+  const iframesWithoutLazy = iframes.filter((_index, element) => {
+    const $iframe = $(element);
     const loading = $iframe.attr("loading");
     const src = $iframe.attr("src") || "";
     
@@ -652,8 +656,8 @@ function checkLazyLoading(ctx: AuditContext, findings: Finding[]): void {
 
   // Check for scripts that could use async/defer
   const scriptsInBody = $("body script[src]");
-  const scriptsWithoutAsyncDefer = scriptsInBody.filter(function(this: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-    const $script = $(this);
+  const scriptsWithoutAsyncDefer = scriptsInBody.filter((_index, element) => {
+    const $script = $(element);
     const async = $script.attr("async");
     const defer = $script.attr("defer");
     const type = $script.attr("type");

@@ -48,7 +48,7 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
     const firstPartyHosts = new Set([norm.host, `www.${norm.host}`].filter(Boolean));
     const resources = extractResourcesFromHtml(main.html, { baseUrl: main.finalUrl, firstPartyHosts });
 
-    // TODO: اجرای Lighthouse در child process + timeout
+    // This archived blueprint intentionally omits Lighthouse process orchestration.
     const lighthouse = undefined;
 
     const ctx = {
