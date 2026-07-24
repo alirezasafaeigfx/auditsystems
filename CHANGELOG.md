@@ -2,6 +2,59 @@
 
 ## Unreleased
 
+## v0.7.0 - 2026-07-24
+### Audit Remediation, Security Hardening, Rebrand, and Dark Mode Fix
+
+#### Security
+- **CRITICAL**: Block MOCK payment provider selection from external input in production
+- Reject unknown providers with error instead of silent MOCK fallback in callbacks
+- Add amount, orderId, and callbackRef validation to createCheckout
+- Validate provider matches stored provider in billing/payment callbacks
+- Use atomic `WHERE status=PENDING` update to prevent race conditions on payment status
+- Fix timing leak in validateAdminCredentials by padding buffers before timingSafeEqual
+- Add admin session auth to `/api/metrics` endpoint (was publicly exposed)
+- Add `Cache-Control: no-store` to 7 admin/user API routes
+- Add error logging to previously silent catch blocks (audit notifications, referral tracking)
+
+#### Infrastructure
+- Fix CI pipeline: exclude `worktrees/` from ESLint (was blocking all quality gates)
+- Add `worktrees/` to `.gitignore`
+- Add `NewsletterSubscriber` Prisma model with migration
+- Newsletter endpoint stores signups in database with dedup and resubscribe support
+- Add turbopackIgnore comment to suppress NFT build warning
+
+#### Design — Green to Blue Rebrand
+- Replace all green hex values (`#0f7a66`, `#22c55e`, `#16a34a`) with blue (`#2563eb`/`#3b82f6`)
+- Update CSS variables, status colors, score colors, CTA buttons, gradients across 24 files
+
+#### Design — PersianToolbox Visual Language
+- Deep navy dark mode palette (`#0b1120` / `#111a2e` / `#18243a`)
+- Glass morphism navigation with `backdrop-blur-xl`
+- PersianToolbox shadow system (subtle/medium/strong)
+- Gradient buttons with brand-tinted box-shadows
+- Card glass effect with hover shadow transitions
+- CSS custom properties for radius, motion, brand-rgb
+- ThemeProvider adds `.light` class for media query override
+
+#### Dark Mode Comprehensive Fix
+- Replace ALL hardcoded light-only colors across 23 files with CSS variables
+- Key replacements: `#6b7280`→`var(--muted)`, `#374151`→`var(--text)`, `#e5e7eb`→`var(--line)`, `#f9fafb/#f3f4f6`→`var(--surface-soft)`, `#fff/white`→`var(--surface)`
+- Fix `.card` gradient (rgba→color-mix), `.badge`, `.sev-*`, `.status-note` with dark-aware color-mix()
+- Fix hero button hover, success/danger/warn borders and backgrounds
+
+#### Testing
+- 745/745 tests pass (4 new payment security regression tests)
+- All quality gates green: lint, typecheck, build, smoke tests, secret scan
+
+#### Deployment
+- 4 production deployments to `ubuntu@193.93.169.32:3012`
+- Real audit verified: URL crawled, findings generated, report delivered
+
+#### Merged PRs
+- PR #75: Audit remediation (5 commits) — MERGED
+- PR #74: Remove explicit any from Cheerio callbacks — MERGED
+- PR #73: Superseded by #75 — CLOSED
+
 ### Release safety
 - Classify tracked database dump/backup paths independently and allow only canonical Prisma migration SQL.
 - Enforce the dump guard in the package quality gate and required CI with adversarial fixtures.
