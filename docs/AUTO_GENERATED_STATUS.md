@@ -1,11 +1,11 @@
 # Auto Generated Project Status
 
-Generated at: 2026-07-30T12:24:00.088Z
+Generated at: 2026-07-30T12:40:38.717Z
 
 ## Overview
 - API routes: 48
 - Page routes: 72
-- Test files: 74
+- Test files: 77
 - NPM scripts: 66
 
 ## Roadmap Phases
@@ -157,9 +157,6 @@ Generated at: 2026-07-30T12:24:00.088Z
 - `APP_BASE_URL_STRICT`
 - `NEXT_PUBLIC_SITE_URL`
 - `ZARINPAL_MERCHANT_ID`
-- `PAYPING_API_KEY`
-- `IDPAY_API_KEY`
-- `IDPAY_SANDBOX`
 - `NEXT_PUBLIC_GA4_MEASUREMENT_ID`
 - `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`
 - `ADMIN_USERNAME`
