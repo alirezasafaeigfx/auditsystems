@@ -1,14 +1,12 @@
-import { describe, expect, it, beforeEach } from "vitest";
-import { createCheckout, verifyCheckout, resolvePaymentProvider } from "./payments";
 import { PaymentProvider } from "@prisma/client";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createCheckout, resolvePaymentProvider, verifyCheckout } from "./payments";
 
 describe("payments", () => {
   beforeEach(() => {
-    // Clear environment variables
+    vi.unstubAllEnvs();
     delete process.env.ZARINPAL_MERCHANT_ID;
-    delete process.env.PAYPING_API_KEY;
-    delete process.env.IDPAY_API_KEY;
-    delete process.env.IDPAY_SANDBOX;
+    delete process.env.PAYMENT_PROVIDER_DEFAULT;
   });
 
   describe("resolvePaymentProvider", () => {
@@ -17,24 +15,33 @@ describe("payments", () => {
       expect(resolvePaymentProvider("ZARINPAL")).toBe("ZARINPAL");
     });
 
-    it("resolves IDPAY provider", () => {
-      expect(resolvePaymentProvider("idpay")).toBe("IDPAY");
-      expect(resolvePaymentProvider("IDPAY")).toBe("IDPAY");
+    it("rejects unsupported providers", () => {
+      expect(() => resolvePaymentProvider("idpay")).toThrow("PAYMENT_PROVIDER_NOT_CONFIGURED");
+      expect(() => resolvePaymentProvider("PAYPING")).toThrow("PAYMENT_PROVIDER_NOT_CONFIGURED");
+      expect(() => resolvePaymentProvider("unknown")).toThrow("PAYMENT_PROVIDER_NOT_CONFIGURED");
     });
 
-    it("resolves PAYPING provider", () => {
-      expect(resolvePaymentProvider("payping")).toBe("PAYPING");
-      expect(resolvePaymentProvider("PAYPING")).toBe("PAYPING");
-    });
-
-    it("resolves MOCK provider as default", () => {
-      expect(resolvePaymentProvider("unknown")).toBe("MOCK");
+    it("uses MOCK only outside production", () => {
+      expect(resolvePaymentProvider("MOCK")).toBe("MOCK");
       expect(resolvePaymentProvider(null)).toBe("MOCK");
+    });
+
+    it("requires an implemented provider in production", () => {
+      vi.stubEnv("NODE_ENV", "production");
+      expect(() => resolvePaymentProvider()).toThrow("PAYMENT_PROVIDER_NOT_CONFIGURED");
+      expect(() => resolvePaymentProvider("MOCK")).toThrow("PAYMENT_PROVIDER_NOT_CONFIGURED");
+      expect(() => resolvePaymentProvider("IDPAY")).toThrow("PAYMENT_PROVIDER_NOT_CONFIGURED");
+    });
+
+    it("accepts ZARINPAL as the production default", () => {
+      vi.stubEnv("NODE_ENV", "production");
+      vi.stubEnv("PAYMENT_PROVIDER_DEFAULT", "ZARINPAL");
+      expect(resolvePaymentProvider()).toBe("ZARINPAL");
     });
   });
 
   describe("createCheckout", () => {
-    it("creates MOCK checkout successfully", async () => {
+    it("creates MOCK checkout outside production", async () => {
       const result = await createCheckout({
         provider: "MOCK",
         orderId: "order-123",
@@ -48,6 +55,19 @@ describe("payments", () => {
       expect(result.callbackRef).toBe("ref-456");
     });
 
+    it("rejects MOCK checkout in production", async () => {
+      vi.stubEnv("NODE_ENV", "production");
+      await expect(
+        createCheckout({
+          provider: "MOCK",
+          orderId: "order-123",
+          callbackRef: "ref-456",
+          amountToman: 100000,
+          email: "test@example.com"
+        })
+      ).rejects.toThrow("PAYMENT_PROVIDER_NOT_CONFIGURED");
+    });
+
     it("throws error for ZARINPAL without merchant ID", async () => {
       await expect(
         createCheckout({
@@ -60,31 +80,21 @@ describe("payments", () => {
       ).rejects.toThrow("PAYMENT_PROVIDER_NOT_CONFIGURED");
     });
 
-    it("throws error for PAYPING without API key", async () => {
-      await expect(
-        createCheckout({
-          provider: "PAYPING",
-          orderId: "order-123",
-          callbackRef: "ref-456",
-          amountToman: 100000,
-          email: "test@example.com"
-        })
-      ).rejects.toThrow("PAYMENT_PROVIDER_NOT_CONFIGURED");
+    it("rejects direct PAYPING and IDPAY checkout as unimplemented", async () => {
+      for (const provider of ["PAYPING", "IDPAY"] as PaymentProvider[]) {
+        await expect(
+          createCheckout({
+            provider,
+            orderId: "order-123",
+            callbackRef: "ref-456",
+            amountToman: 100000,
+            email: "test@example.com"
+          })
+        ).rejects.toThrow("PAYMENT_PROVIDER_NOT_IMPLEMENTED");
+      }
     });
 
-    it("throws error for IDPAY without API key", async () => {
-      await expect(
-        createCheckout({
-          provider: "IDPAY",
-          orderId: "order-123",
-          callbackRef: "ref-456",
-          amountToman: 100000,
-          email: "test@example.com"
-        })
-      ).rejects.toThrow("PAYMENT_PROVIDER_NOT_CONFIGURED");
-    });
-
-    it("throws error for unimplemented provider", async () => {
+    it("throws error for an unknown provider", async () => {
       await expect(
         createCheckout({
           provider: "UNKNOWN" as PaymentProvider,
@@ -98,7 +108,7 @@ describe("payments", () => {
   });
 
   describe("verifyCheckout", () => {
-    it("verifies MOCK checkout successfully", async () => {
+    it("verifies MOCK checkout outside production", async () => {
       const result = await verifyCheckout({
         provider: "MOCK",
         providerRef: "MOCK-order-123",
@@ -110,14 +120,25 @@ describe("payments", () => {
       expect(result.providerRef).toBe("MOCK-order-123");
     });
 
-    it("verifies MOCK checkout with failed status", async () => {
+    it("rejects MOCK verification in production", async () => {
+      vi.stubEnv("NODE_ENV", "production");
+      await expect(
+        verifyCheckout({
+          provider: "MOCK",
+          providerRef: "MOCK-order-123",
+          amountToman: 100000,
+          callbackStatus: "OK"
+        })
+      ).rejects.toThrow("PAYMENT_PROVIDER_NOT_CONFIGURED");
+    });
+
+    it("returns false for a failed MOCK status", async () => {
       const result = await verifyCheckout({
         provider: "MOCK",
         providerRef: "MOCK-order-123",
         amountToman: 100000,
         callbackStatus: "FAILED"
       });
-
       expect(result.paid).toBe(false);
     });
 
@@ -131,27 +152,19 @@ describe("payments", () => {
       ).rejects.toThrow("PAYMENT_PROVIDER_NOT_CONFIGURED");
     });
 
-    it("throws error for PAYPING without API key", async () => {
-      await expect(
-        verifyCheckout({
-          provider: "PAYPING",
-          providerRef: "ref-123",
-          amountToman: 100000
-        })
-      ).rejects.toThrow("PAYMENT_PROVIDER_NOT_CONFIGURED");
+    it("rejects direct PAYPING and IDPAY verification as unimplemented", async () => {
+      for (const provider of ["PAYPING", "IDPAY"] as PaymentProvider[]) {
+        await expect(
+          verifyCheckout({
+            provider,
+            providerRef: "ref-123",
+            amountToman: 100000
+          })
+        ).rejects.toThrow("PAYMENT_PROVIDER_NOT_IMPLEMENTED");
+      }
     });
 
-    it("throws error for IDPAY without API key", async () => {
-      await expect(
-        verifyCheckout({
-          provider: "IDPAY",
-          providerRef: "id-123",
-          amountToman: 100000
-        })
-      ).rejects.toThrow("PAYMENT_PROVIDER_NOT_CONFIGURED");
-    });
-
-    it("throws error for unimplemented provider", async () => {
+    it("throws error for an unknown provider", async () => {
       await expect(
         verifyCheckout({
           provider: "UNKNOWN" as PaymentProvider,

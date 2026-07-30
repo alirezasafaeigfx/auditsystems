@@ -6,15 +6,11 @@ import { verifyCheckout } from "../../../../lib/payments";
 import { PaymentProvider } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 
-function asProvider(value: string | null): PaymentProvider {
-  const upper = (value ?? "").toUpperCase();
+function parseProvider(value: string | null): PaymentProvider | null {
+  const upper = (value ?? "").trim().toUpperCase();
   if (upper === "ZARINPAL") return "ZARINPAL";
-  if (upper === "IDPAY") return "IDPAY";
-  if (upper === "PAYPING") return "PAYPING";
-  if (process.env.NODE_ENV === "production") {
-    throw new Error(`UNKNOWN_PAYMENT_PROVIDER: ${value}`);
-  }
-  return "MOCK";
+  if (upper === "MOCK" && process.env.NODE_ENV !== "production") return "MOCK";
+  return null;
 }
 
 function resolveLocale(locale: string | null | undefined): "fa" | "en" {
@@ -52,8 +48,22 @@ async function handleCallback(request: NextRequest): Promise<NextResponse> {
   try {
     const query = request.nextUrl.searchParams;
     const body = request.method === "POST" ? await request.json().catch(() => ({})) : {};
+    const rawProvider = String(query.get("provider") ?? (body as { provider?: string }).provider ?? "");
+    const provider = parseProvider(rawProvider);
 
-    const provider = asProvider(String(query.get("provider") ?? (body as { provider?: string }).provider ?? "MOCK"));
+    if (!provider) {
+      statusCode = 400;
+      logEvent("warn", "payment_callback_provider_rejected", { requestId, provider: rawProvider || null });
+      if (shouldRedirectBrowser(request)) {
+        statusCode = 302;
+        return redirectWithRequestId(requestId, request, buildFailedPath("fa", "UNSUPPORTED_PROVIDER"));
+      }
+      return respondJson({ error: "UNSUPPORTED_PROVIDER", requestId }, requestId, {
+        status: 400,
+        headers: { "Cache-Control": "no-store" }
+      });
+    }
+
     const callbackRef = String(query.get("callbackRef") ?? (body as { callbackRef?: string }).callbackRef ?? "").trim();
     const providerRef = String(query.get("Authority") ?? (body as { Authority?: string; providerRef?: string }).Authority ?? (body as { providerRef?: string }).providerRef ?? "").trim();
     const callbackStatus = String(query.get("Status") ?? (body as { Status?: string; status?: string }).Status ?? (body as { status?: string }).status ?? "").trim();
@@ -89,7 +99,7 @@ async function handleCallback(request: NextRequest): Promise<NextResponse> {
 
     const locale = resolveLocale(order.run.locale);
 
-    if (order.provider !== provider && provider !== "MOCK") {
+    if (order.provider !== provider) {
       logEvent("warn", "payment_provider_mismatch", { requestId, expected: order.provider, received: provider, orderId: order.id });
       if (shouldRedirectBrowser(request)) {
         return redirectWithRequestId(requestId, request, buildFailedPath(locale, "PROVIDER_MISMATCH"));

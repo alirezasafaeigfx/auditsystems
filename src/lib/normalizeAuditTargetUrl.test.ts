@@ -43,15 +43,34 @@ describe("normalizeAuditTargetUrl", () => {
     await expect(normalizeAuditTargetUrl("http://service.internal")).rejects.toThrow("SSRF_BLOCKED_HOSTNAME");
   });
 
-  it("blocks private IPv4", async () => {
+  it("blocks private and documentation IPv4 ranges", async () => {
     await expect(normalizeAuditTargetUrl("http://10.10.0.1")).rejects.toThrow("SSRF_BLOCKED_PRIVATE_IP");
     await expect(normalizeAuditTargetUrl("http://192.168.1.20")).rejects.toThrow("SSRF_BLOCKED_PRIVATE_IP");
+    await expect(normalizeAuditTargetUrl("http://192.0.2.10")).rejects.toThrow("SSRF_BLOCKED_PRIVATE_IP");
+    await expect(normalizeAuditTargetUrl("http://198.51.100.10")).rejects.toThrow("SSRF_BLOCKED_PRIVATE_IP");
+    await expect(normalizeAuditTargetUrl("http://203.0.113.10")).rejects.toThrow("SSRF_BLOCKED_PRIVATE_IP");
   });
 
-  it("blocks loopback IPv6", async () => {
-    await expect(normalizeAuditTargetUrl("http://[::1]"))
-      .rejects
-      .toThrow("SSRF_BLOCKED_PRIVATE_IP");
+  it("blocks loopback, unspecified, mapped, NAT64, documentation, ULA, and link-local IPv6", async () => {
+    const blocked = [
+      "http://[::1]",
+      "http://[::]",
+      "http://[::ffff:127.0.0.1]",
+      "http://[::ffff:169.254.169.254]",
+      "http://[64:ff9b::7f00:1]",
+      "http://[2001:db8::1]",
+      "http://[fc00::1]",
+      "http://[fe80::1]"
+    ];
+
+    for (const url of blocked) {
+      await expect(normalizeAuditTargetUrl(url)).rejects.toThrow("SSRF_BLOCKED_PRIVATE_IP");
+    }
+  });
+
+  it("accepts a public IPv6 literal", async () => {
+    const out = await normalizeAuditTargetUrl("https://[2606:4700:4700::1111]");
+    expect(out.normalizedUrl).toBe("https://[2606:4700:4700::1111]/");
   });
 
   it("blocks protocol other than http/https", async () => {
@@ -71,13 +90,31 @@ describe("normalizeAuditTargetUrl", () => {
     await expect(normalizeAuditTargetUrl("https://exa mple.com")).rejects.toThrow("INVALID_URL_PARSE");
   });
 
-  it("rejects dns lookup that resolves to private ip", async () => {
+  it("rejects dns lookup that resolves to private IPv4", async () => {
     await expect(
       normalizeAuditTargetUrl("https://example.com", {
         verifyDnsPublicIp: true,
         dnsLookup: async () => [{ address: "10.0.0.2", family: 4 }]
       })
     ).rejects.toThrow("SSRF_BLOCKED_DNS_PRIVATE_IP");
+  });
+
+  it("rejects dns lookup that resolves to mapped private IPv6", async () => {
+    await expect(
+      normalizeAuditTargetUrl("https://example.com", {
+        verifyDnsPublicIp: true,
+        dnsLookup: async () => [{ address: "::ffff:7f00:1", family: 6 }]
+      })
+    ).rejects.toThrow("SSRF_BLOCKED_DNS_PRIVATE_IP");
+  });
+
+  it("rejects malformed dns records", async () => {
+    await expect(
+      normalizeAuditTargetUrl("https://example.com", {
+        verifyDnsPublicIp: true,
+        dnsLookup: async () => [{ address: "not-an-ip", family: 4 }]
+      })
+    ).rejects.toThrow("DNS_LOOKUP_INVALID_RECORD");
   });
 
   it("accepts dns lookup with public records", async () => {

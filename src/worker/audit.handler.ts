@@ -8,35 +8,11 @@ import { buildAuditSummaryV1 } from "../lib/summary";
 import { calculateScore } from "../lib/scoring";
 import { createAuditLogger } from "../lib/logger";
 import { createRequestId } from "../lib/observability";
-import { isDnsLookupFailure } from "../lib/security";
 import { sendAuditCompleteNotification } from "../lib/notifications";
 import { recordFunnelEvent } from "../lib/funnel-events";
+import { fetchAuditHtml } from "../lib/safeAuditFetch";
 
 export type JobHandler = (job: Job, signal: AbortSignal) => Promise<void>;
-
-async function fetchMainHtml(url: string, signal: AbortSignal): Promise<{
-  finalUrl: string;
-  status: number;
-  headers: Record<string, string>;
-  html: string;
-  responseMs: number;
-}> {
-  const start = Date.now();
-  const response = await fetch(url, { redirect: "follow", signal });
-  const html = await response.text();
-  const headers: Record<string, string> = {};
-  response.headers.forEach((value, key) => {
-    headers[key] = value;
-  });
-
-  return {
-    finalUrl: response.url,
-    status: response.status,
-    headers,
-    html,
-    responseMs: Date.now() - start
-  };
-}
 
 export const auditRunHandler: JobHandler = async (job, signal) => {
   const payload = job.payload as { runId?: string };
@@ -49,27 +25,31 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
     throw new Error("RUN_NOT_FOUND");
   }
 
-  const verifyDns = String(process.env.AUDIT_DNS_GUARD ?? "true").toLowerCase() !== "false";
-  const failOpenOnDnsLookupFailure = String(process.env.AUDIT_DNS_FAIL_OPEN ?? "true").toLowerCase() === "true";
-  const normalized = await withResolvedAuditTarget(run.url, verifyDns, failOpenOnDnsLookupFailure);
+  const normalized = await normalizeAuditTargetUrl(run.url, { verifyDnsPublicIp: false });
 
   await prisma.auditRun.update({
     where: { id: run.id },
-      data: {
-        normalizedUrl: normalized.normalizedUrl,
-        status: "RUNNING",
-        reportStatus: "RUNNING",
-        startedAt: new Date(),
-        errorCode: null,
-        errorMessage: null
+    data: {
+      normalizedUrl: normalized.normalizedUrl,
+      status: "RUNNING",
+      reportStatus: "RUNNING",
+      startedAt: new Date(),
+      errorCode: null,
+      errorMessage: null
     }
   });
 
   const started = Date.now();
 
   try {
-    const main = await fetchMainHtml(normalized.normalizedUrl, signal);
-    const firstPartyHosts = new Set([normalized.host, `www.${normalized.host}`]);
+    const main = await fetchAuditHtml(normalized.normalizedUrl, signal);
+    const finalTarget = await normalizeAuditTargetUrl(main.finalUrl, { verifyDnsPublicIp: false });
+    const firstPartyHosts = new Set([
+      normalized.host,
+      `www.${normalized.host}`,
+      finalTarget.host,
+      `www.${finalTarget.host}`
+    ]);
     const resources = extractResourcesFromHtml(main.html, { baseUrl: main.finalUrl, firstPartyHosts });
     const seo = parseSeoBasics(main.html);
 
@@ -199,21 +179,3 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
 export const handlers: Record<JobType, JobHandler> = {
   AUDIT_RUN: auditRunHandler
 };
-
-async function withResolvedAuditTarget(
-  url: string,
-  verifyDns: boolean,
-  failOpenOnDnsLookupFailure: boolean
-): ReturnType<typeof normalizeAuditTargetUrl> {
-  try {
-    return await normalizeAuditTargetUrl(url, { verifyDnsPublicIp: verifyDns });
-  } catch (error) {
-    if (verifyDns && failOpenOnDnsLookupFailure && isDnsLookupFailure(error)) {
-      const requestId = createRequestId();
-      const logger = createAuditLogger(requestId, "unknown");
-      logger.warn("worker_audit_dns_lookup_failed_fallback", { url, backend: "dns" });
-      return normalizeAuditTargetUrl(url, { verifyDnsPublicIp: false });
-    }
-    throw error;
-  }
-}

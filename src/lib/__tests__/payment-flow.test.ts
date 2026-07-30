@@ -191,11 +191,6 @@ describe("Payment flow — checkout → callback → subscription", () => {
 
     expect(invoice).not.toBeNull();
     expect(invoice!.status).toBe("PAID");
-
-    if (invoice!.status === "PAID") {
-      expect(true).toBe(true);
-    }
-
     expect(prisma.subscription.create).not.toHaveBeenCalled();
   });
 
@@ -328,13 +323,13 @@ describe("Payment flow — checkout → callback → subscription", () => {
     }
   });
 
-  it("MOCK provider accepted in non-production", async () => {
+  it("unsupported provider is rejected in non-production while explicit MOCK remains available", async () => {
     vi.stubEnv("NODE_ENV", "test");
 
     try {
       const { resolvePaymentProvider } = await import("../payments");
-      const result = resolvePaymentProvider("invalid");
-      expect(result).toBe("MOCK");
+      expect(() => resolvePaymentProvider("invalid")).toThrow("PAYMENT_PROVIDER_NOT_CONFIGURED");
+      expect(resolvePaymentProvider("MOCK")).toBe("MOCK");
     } finally {
       vi.unstubAllEnvs();
     }

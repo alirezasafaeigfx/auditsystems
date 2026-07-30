@@ -6,15 +6,11 @@ import { createRequestId, logEvent, respondJson } from "../../../../lib/observab
 import { csrfProtection } from "../../../../lib/csrf";
 import { PaymentProvider } from "@prisma/client";
 
-function asProvider(value: string | null): PaymentProvider {
-  const upper = (value ?? "").toUpperCase();
+function parseProvider(value: string | null): PaymentProvider | null {
+  const upper = (value ?? "").trim().toUpperCase();
   if (upper === "ZARINPAL") return "ZARINPAL";
-  if (upper === "IDPAY") return "IDPAY";
-  if (upper === "PAYPING") return "PAYPING";
-  if (process.env.NODE_ENV === "production") {
-    throw new Error(`UNKNOWN_PAYMENT_PROVIDER: ${value}`);
-  }
-  return "MOCK";
+  if (upper === "MOCK" && process.env.NODE_ENV !== "production") return "MOCK";
+  return null;
 }
 
 export async function GET(request: NextRequest) {
@@ -36,8 +32,17 @@ async function handleBillingCallback(request: NextRequest): Promise<NextResponse
   try {
     const query = request.nextUrl.searchParams;
     const body = request.method === "POST" ? await request.json().catch(() => ({})) : {};
+    const rawProvider = String(query.get("provider") ?? (body as { provider?: string }).provider ?? "");
+    const provider = parseProvider(rawProvider);
 
-    const provider = asProvider(String(query.get("provider") ?? (body as { provider?: string }).provider ?? "MOCK"));
+    if (!provider) {
+      logEvent("warn", "billing_callback_provider_rejected", { requestId, provider: rawProvider || null });
+      return respondJson({ error: "UNSUPPORTED_PROVIDER", requestId }, requestId, {
+        status: 400,
+        headers: { "Cache-Control": "no-store" }
+      });
+    }
+
     const callbackRef = String(query.get("callbackRef") ?? (body as { callbackRef?: string }).callbackRef ?? "").trim();
     const providerRef = String(query.get("Authority") ?? (body as { Authority?: string; providerRef?: string }).Authority ?? (body as { providerRef?: string }).providerRef ?? "").trim();
     const callbackStatus = String(query.get("Status") ?? (body as { Status?: string; status?: string }).Status ?? (body as { status?: string }).status ?? "").trim();
@@ -75,7 +80,7 @@ async function handleBillingCallback(request: NextRequest): Promise<NextResponse
       }, requestId, { status: 409, headers: { "Cache-Control": "no-store" } });
     }
 
-    if (invoice.provider !== provider && provider !== "MOCK") {
+    if (invoice.provider !== provider) {
       logEvent("warn", "provider_mismatch", { requestId, expected: invoice.provider, received: provider });
       return respondJson({ error: "PROVIDER_MISMATCH", requestId }, requestId, { status: 400, headers: { "Cache-Control": "no-store" } });
     }

@@ -3,6 +3,7 @@ import path from "node:path";
 import { getLocalRedisUrl, pingLocalRedis } from "../lib/localRedis";
 
 type Level = "info" | "warn" | "error";
+type Provider = "MOCK" | "ZARINPAL" | "UNSUPPORTED";
 
 type Check = {
   id: string;
@@ -24,21 +25,18 @@ async function loadDotEnvFileIfNeeded(): Promise<void> {
       if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
       const [key, ...rest] = trimmed.split("=");
       const value = rest.join("=").trim().replace(/^"(.*)"$/, "$1");
-      if (!process.env[key]) {
-        process.env[key] = value;
-      }
+      if (!process.env[key]) process.env[key] = value;
     }
   } catch {
     // ignore missing .env
   }
 }
 
-function provider(): "MOCK" | "ZARINPAL" | "IDPAY" | "PAYPING" {
+function provider(): Provider {
   const value = env("PAYMENT_PROVIDER_DEFAULT").toUpperCase();
   if (value === "ZARINPAL") return "ZARINPAL";
-  if (value === "IDPAY") return "IDPAY";
-  if (value === "PAYPING") return "PAYPING";
-  return "MOCK";
+  if (!value || value === "MOCK") return "MOCK";
+  return "UNSUPPORTED";
 }
 
 async function checkRedis(): Promise<Check> {
@@ -110,14 +108,26 @@ async function main(): Promise<void> {
   await loadDotEnvFileIfNeeded();
   const strict = process.argv.includes("--strict");
   const checks: Check[] = [];
-
-  const p = provider();
+  const configuredProvider = env("PAYMENT_PROVIDER_DEFAULT").toUpperCase();
+  const selectedProvider = provider();
+  const production = env("NODE_ENV").toLowerCase() === "production";
 
   checks.push({
-    id: "provider-selected",
-    level: "info",
-    ok: true,
-    message: `PAYMENT_PROVIDER_DEFAULT=${p}`
+    id: "provider-supported",
+    level: "error",
+    ok: selectedProvider !== "UNSUPPORTED",
+    message: selectedProvider === "UNSUPPORTED"
+      ? `Unsupported PAYMENT_PROVIDER_DEFAULT=${configuredProvider || "<empty>"}. Supported providers: ZARINPAL (production), MOCK (development/test).`
+      : `PAYMENT_PROVIDER_DEFAULT=${selectedProvider}`
+  });
+
+  checks.push({
+    id: "provider-production-safe",
+    level: "error",
+    ok: !production || selectedProvider === "ZARINPAL",
+    message: !production || selectedProvider === "ZARINPAL"
+      ? "Payment provider is valid for the current environment."
+      : "Production requires PAYMENT_PROVIDER_DEFAULT=ZARINPAL; MOCK is development/test only."
   });
 
   const baseUrl = env("APP_BASE_URL");
@@ -136,7 +146,7 @@ async function main(): Promise<void> {
     message: downloadSecret.length >= 16 ? "DOWNLOAD_TOKEN_SECRET length is acceptable" : "DOWNLOAD_TOKEN_SECRET must be at least 16 chars"
   });
 
-  if (p === "ZARINPAL") {
+  if (selectedProvider === "ZARINPAL") {
     const merchantId = env("ZARINPAL_MERCHANT_ID");
     checks.push({
       id: "zarinpal-merchant-id",
@@ -148,8 +158,8 @@ async function main(): Promise<void> {
 
   checks.push(await checkRedis());
 
-  const hasErrors = checks.some((c) => !c.ok && c.level === "error");
-  const hasWarnings = checks.some((c) => !c.ok && c.level === "warn");
+  const hasErrors = checks.some((check) => !check.ok && check.level === "error");
+  const hasWarnings = checks.some((check) => !check.ok && check.level === "warn");
 
   const out = {
     generatedAt: new Date().toISOString(),
@@ -157,8 +167,8 @@ async function main(): Promise<void> {
     checks,
     summary: {
       total: checks.length,
-      failedErrors: checks.filter((c) => !c.ok && c.level === "error").length,
-      warnings: checks.filter((c) => !c.ok && c.level === "warn").length
+      failedErrors: checks.filter((check) => !check.ok && check.level === "error").length,
+      warnings: checks.filter((check) => !check.ok && check.level === "warn").length
     }
   };
 
@@ -173,13 +183,8 @@ async function main(): Promise<void> {
   }
   console.log(`Report: ${outPath}`);
 
-  if (strict && (hasErrors || hasWarnings)) {
-    process.exit(1);
-  }
-
-  if (!strict && hasErrors) {
-    process.exit(1);
-  }
+  if (strict && (hasErrors || hasWarnings)) process.exit(1);
+  if (!strict && hasErrors) process.exit(1);
 }
 
 main().catch((error) => {

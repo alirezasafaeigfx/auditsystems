@@ -6,7 +6,7 @@ import { observeApiRequest } from "../../../../lib/metrics";
 import { createRequestId, respondJson } from "../../../../lib/observability";
 import { createLogger } from "../../../../lib/logger";
 import { consumeDistributedRateLimit, isDistributedRateLimitRequired } from "../../../../lib/rateLimit";
-import { getClientIp, hashClientIp, isDnsLookupFailure, sanitizeApiError } from "../../../../lib/security";
+import { getClientIp, hashClientIp, sanitizeApiError } from "../../../../lib/security";
 import { csrfProtection } from "../../../../lib/csrf";
 import { NextRequest } from "next/server";
 
@@ -20,14 +20,13 @@ export async function POST(request: NextRequest) {
   let statusCode = 200;
 
   try {
-    // CSRF protection check
     const csrfCheck = await csrfProtection(request);
     if (!csrfCheck.valid) {
       statusCode = 403;
       logger.warn("audit_run_csrf_validation_failed", { error: csrfCheck.error });
-      return respondJson({ error: "FORBIDDEN", requestId, details: csrfCheck.error }, requestId, { 
-        status: statusCode, 
-        headers: { "Cache-Control": "no-store" } 
+      return respondJson({ error: "FORBIDDEN", requestId }, requestId, {
+        status: statusCode,
+        headers: { "Cache-Control": "no-store" }
       });
     }
 
@@ -39,7 +38,7 @@ export async function POST(request: NextRequest) {
       return respondJson({ error: "INVALID_JSON", requestId }, requestId, { status: statusCode, headers: { "Cache-Control": "no-store" } });
     }
 
-    if (!body || typeof body !== "object") {
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
       statusCode = 400;
       return respondJson({ error: "INVALID_PAYLOAD", requestId }, requestId, {
         status: statusCode,
@@ -126,24 +125,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const verifyDns = String(process.env.AUDIT_DNS_GUARD ?? "true").toLowerCase() !== "false";
-    const failOpenOnDnsLookupFailure = String(process.env.AUDIT_DNS_FAIL_OPEN ?? "true").toLowerCase() === "true";
-
-    let normalized;
-    try {
-      normalized = await normalizeAuditTargetUrl(inputUrl, { verifyDnsPublicIp: verifyDns });
-    } catch (error) {
-      if (verifyDns && failOpenOnDnsLookupFailure && isDnsLookupFailure(error)) {
-        logger.warn("audit_run_dns_lookup_failed_fallback", {
-          url: normalizedUrlSafe(inputUrl),
-          backend: "dns"
-        });
-        normalized = await normalizeAuditTargetUrl(inputUrl, { verifyDnsPublicIp: false });
-      } else {
-        throw error;
-      }
-    }
-
+    const verifyDns = process.env.NODE_ENV === "production" || String(process.env.AUDIT_DNS_GUARD ?? "true").toLowerCase() !== "false";
+    const normalized = await normalizeAuditTargetUrl(inputUrl, { verifyDnsPublicIp: verifyDns });
     const explicitLocale = request.headers.get("x-asdev-locale") === "en" ? "en" : "fa";
 
     const run = await prisma.auditRun.create({
@@ -188,8 +171,4 @@ export async function POST(request: NextRequest) {
   } finally {
     observeApiRequest("/api/audit/runs", statusCode, Date.now() - startedAt);
   }
-}
-
-function normalizedUrlSafe(value: string): string {
-  return value.length > 220 ? `${value.slice(0, 220)}...` : value;
 }
