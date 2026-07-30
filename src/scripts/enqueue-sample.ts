@@ -1,28 +1,20 @@
 import { prisma } from "../lib/db";
-import { enqueueJob } from "../worker/queue";
+import { enqueueAuditAtomically } from "../lib/audit-enqueue";
 
 async function main(): Promise<void> {
-  const run = await prisma.auditRun.create({
-    data: {
-      url: "https://example.com",
-      depth: "QUICK",
-      status: "QUEUED"
-    }
+  const queued = await enqueueAuditAtomically({
+    url: "https://example.com",
+    depth: "QUICK",
+    source: "SAMPLE_SCRIPT",
+    locale: "en",
   });
 
-  const share = await prisma.reportShare.create({
-    data: {
-      runId: run.id,
-      token: crypto.randomUUID().replace(/-/g, "")
-    }
-  });
-
-  const job = await enqueueJob({
-    type: "AUDIT_RUN",
-    payload: { runId: run.id }
-  });
-
-  console.log(JSON.stringify({ runId: run.id, token: share.token, jobId: job.id }, null, 2));
+  console.log(JSON.stringify({
+    runId: queued.run.id,
+    token: queued.share.token,
+    jobId: queued.job.id,
+    reused: queued.reused,
+  }, null, 2));
 }
 
 main()

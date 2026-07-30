@@ -1,6 +1,17 @@
 import { prisma } from "../lib/db";
-import { createReportToken } from "../lib/token";
-import { enqueueJob } from "../worker/queue";
+import {
+  AuditEnqueueError,
+  buildAuditIdempotencyKey,
+  enqueueAuditAtomically,
+} from "../lib/audit-enqueue";
+import { getCurrentPlan } from "../lib/usage";
+
+function getNextRunAt(now: Date, frequency: string): Date {
+  if (frequency === "WEEKLY") {
+    return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  }
+  return new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+}
 
 async function runScheduledAudits() {
   console.log("Checking for due scheduled audits...");
@@ -26,44 +37,55 @@ async function runScheduledAudits() {
 
   for (const schedule of dueSchedules) {
     try {
+      const plan = await getCurrentPlan(schedule.organizationId);
+      if (!plan.scheduledAudits) {
+        console.warn(`  Skipped schedule ${schedule.id}: plan ${plan.code} does not allow scheduled audits.`);
+        continue;
+      }
+
       const url = schedule.project.normalizedUrl || `https://${schedule.project.domain}`;
-
-      const run = await prisma.auditRun.create({
-        data: {
-          url,
-          normalizedUrl: schedule.project.normalizedUrl,
-          depth: "QUICK",
-          status: "QUEUED",
-          projectId: schedule.projectId,
-          organizationId: schedule.organizationId,
-          locale: "fa"
-        }
+      const occurrence = schedule.nextRunAt.toISOString();
+      const idempotencyKey = buildAuditIdempotencyKey({
+        source: "SCHEDULED_AUDIT",
+        scope: schedule.id,
+        rawKey: occurrence,
       });
 
-      await prisma.reportShare.create({
-        data: {
-          runId: run.id,
-          token: createReportToken()
-        }
-      });
-
-      await enqueueJob({
-        type: "AUDIT_RUN",
-        payload: { runId: run.id }
+      const queued = await enqueueAuditAtomically({
+        url,
+        normalizedUrl: schedule.project.normalizedUrl,
+        depth: "QUICK",
+        projectId: schedule.projectId,
+        organizationId: schedule.organizationId,
+        locale: "fa",
+        source: "SCHEDULED_AUDIT",
+        idempotencyKey,
+        auditLimit: plan.monthlyAuditLimit,
+        usage: {
+          type: "SCHEDULED_AUDIT",
+          metadata: {
+            projectId: schedule.projectId,
+            scheduleId: schedule.id,
+            occurrence,
+          },
+        },
+        now,
       });
 
       await prisma.scheduledAudit.update({
         where: { id: schedule.id },
         data: {
           lastRunAt: now,
-          nextRunAt: schedule.frequency === "WEEKLY"
-            ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
-            : new Date(now.getFullYear(), now.getMonth() + 1, now.getDate())
+          nextRunAt: getNextRunAt(now, schedule.frequency),
         }
       });
 
-      console.log(`  Enqueued audit for project ${schedule.projectId} (${url})`);
+      console.log(`  ${queued.reused ? "Recovered" : "Enqueued"} audit ${queued.run.id} for project ${schedule.projectId} (${url})`);
     } catch (error) {
+      if (error instanceof AuditEnqueueError && error.code === "AUDIT_LIMIT_REACHED") {
+        console.warn(`  Skipped schedule ${schedule.id}: monthly audit limit reached.`);
+        continue;
+      }
       console.error(`  Failed to enqueue audit for schedule ${schedule.id}:`, error);
     }
   }

@@ -1,11 +1,14 @@
 import { NextRequest } from "next/server";
 import { prisma } from "../../../../../lib/db";
 import { validateSession, getOrganizationForUser } from "../../../../../lib/auth";
-import { enqueueJob } from "../../../../../worker/queue";
-import { createReportToken } from "../../../../../lib/token";
 import { createRequestId, logEvent, respondJson } from "../../../../../lib/observability";
 import { csrfProtection } from "../../../../../lib/csrf";
-import { canRunAudit, recordAuditUsage } from "../../../../../lib/usage";
+import { getCurrentPlan } from "../../../../../lib/usage";
+import {
+  AuditEnqueueError,
+  buildAuditIdempotencyKey,
+  enqueueAuditAtomically,
+} from "../../../../../lib/audit-enqueue";
 
 type RouteParams = { projectId: string };
 
@@ -14,6 +17,7 @@ export async function POST(
   { params }: { params: Promise<RouteParams> }
 ) {
   const requestId = createRequestId();
+  let auditLimit: number | undefined;
 
   try {
     const user = await validateSession();
@@ -41,47 +45,72 @@ export async function POST(
       return respondJson({ error: "PROJECT_NOT_FOUND", requestId }, requestId, { status: 404, headers: { "Cache-Control": "no-store" } });
     }
 
-    const auditCheck = await canRunAudit(orgId);
-    if (!auditCheck.allowed) {
-      return respondJson(
-        { error: "AUDIT_LIMIT_REACHED", message: `Free plan allows ${auditCheck.limit} audits per month. Upgrade to run more.`, requestId },
-        requestId,
-        { status: 403, headers: { "Cache-Control": "no-store" } }
-      );
-    }
+    const plan = await getCurrentPlan(orgId);
+    auditLimit = plan.monthlyAuditLimit;
 
-    const run = await prisma.auditRun.create({
-      data: {
-        url: project.normalizedUrl || `https://${project.domain}`,
-        normalizedUrl: project.normalizedUrl,
-        depth: "QUICK",
-        status: "QUEUED",
-        projectId: project.id,
-        organizationId: orgId,
-        userAgent: request.headers.get("user-agent") ?? null,
-        locale: "fa"
-      }
+    const rawIdempotencyKey = request.headers.get("idempotency-key")?.trim();
+    const idempotencyKey = rawIdempotencyKey
+      ? buildAuditIdempotencyKey({
+          source: "PROJECT_API",
+          scope: `${orgId}:${project.id}`,
+          rawKey: rawIdempotencyKey,
+        })
+      : undefined;
+
+    const queued = await enqueueAuditAtomically({
+      url: project.normalizedUrl || `https://${project.domain}`,
+      normalizedUrl: project.normalizedUrl,
+      depth: "QUICK",
+      projectId: project.id,
+      organizationId: orgId,
+      userAgent: request.headers.get("user-agent"),
+      locale: "fa",
+      source: "PROJECT_API",
+      idempotencyKey,
+      auditLimit,
+      usage: {
+        type: "AUDIT_RUN",
+        metadata: { projectId: project.id },
+      },
     });
 
-    const share = await prisma.reportShare.create({
-      data: {
-        runId: run.id,
-        token: createReportToken()
-      }
+    logEvent("info", "project_audit_created", {
+      requestId,
+      runId: queued.run.id,
+      projectId: project.id,
+      reused: queued.reused,
     });
-
-    await enqueueJob({
-      type: "AUDIT_RUN",
-      payload: { runId: run.id }
-    });
-
-    await recordAuditUsage(orgId, run.id);
-
-    logEvent("info", "project_audit_created", { requestId, runId: run.id, projectId: project.id });
-    return respondJson({ runId: run.id, token: share.token, status: run.status, requestId }, requestId, {
+    return respondJson({
+      runId: queued.run.id,
+      token: queued.share.token,
+      status: queued.run.status,
+      reused: queued.reused,
+      requestId,
+    }, requestId, {
       headers: { "Cache-Control": "no-store" }
     });
   } catch (error) {
+    if (error instanceof AuditEnqueueError) {
+      const status = error.code === "AUDIT_LIMIT_REACHED"
+        ? 403
+        : error.code === "PROJECT_NOT_FOUND"
+          ? 404
+          : error.code === "IDEMPOTENCY_KEY_CONFLICT"
+            ? 409
+            : 400;
+      const body = error.code === "AUDIT_LIMIT_REACHED"
+        ? {
+            error: error.code,
+            message: `Current plan allows ${auditLimit ?? 0} audits per month. Upgrade to run more.`,
+            requestId,
+          }
+        : { error: error.code, requestId };
+      return respondJson(body, requestId, {
+        status,
+        headers: { "Cache-Control": "no-store" },
+      });
+    }
+
     logEvent("error", "project_audit_create_failed", { requestId, error: error instanceof Error ? error.message : String(error) });
     return respondJson({ error: "INTERNAL_ERROR", requestId }, requestId, { status: 500, headers: { "Cache-Control": "no-store" } });
   }

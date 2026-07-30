@@ -1,13 +1,16 @@
-import { enqueueJob } from "../../../../worker/queue";
 import { prisma } from "../../../../lib/db";
 import { normalizeAuditTargetUrl } from "../../../../lib/normalizeAuditTargetUrl";
-import { createReportToken } from "../../../../lib/token";
 import { observeApiRequest } from "../../../../lib/metrics";
 import { createRequestId, respondJson } from "../../../../lib/observability";
 import { createLogger } from "../../../../lib/logger";
 import { consumeDistributedRateLimit, isDistributedRateLimitRequired } from "../../../../lib/rateLimit";
 import { getClientIp, hashClientIp, sanitizeApiError } from "../../../../lib/security";
 import { csrfProtection } from "../../../../lib/csrf";
+import {
+  AuditEnqueueError,
+  buildAuditIdempotencyKey,
+  enqueueAuditAtomically,
+} from "../../../../lib/audit-enqueue";
 import { NextRequest } from "next/server";
 
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
@@ -128,36 +131,47 @@ export async function POST(request: NextRequest) {
     const verifyDns = process.env.NODE_ENV === "production" || String(process.env.AUDIT_DNS_GUARD ?? "true").toLowerCase() !== "false";
     const normalized = await normalizeAuditTargetUrl(inputUrl, { verifyDnsPublicIp: verifyDns });
     const explicitLocale = request.headers.get("x-asdev-locale") === "en" ? "en" : "fa";
+    const rawIdempotencyKey = request.headers.get("idempotency-key")?.trim();
+    const idempotencyKey = rawIdempotencyKey
+      ? buildAuditIdempotencyKey({ source: "PUBLIC_API", scope: ipHash, rawKey: rawIdempotencyKey })
+      : undefined;
 
-    const run = await prisma.auditRun.create({
-      data: {
-        url: inputUrl,
-        normalizedUrl: normalized.normalizedUrl,
-        depth,
-        status: "QUEUED",
-        ipHash,
-        userAgent: request.headers.get("user-agent") ?? null,
-        locale: explicitLocale
-      }
+    const queued = await enqueueAuditAtomically({
+      url: inputUrl,
+      normalizedUrl: normalized.normalizedUrl,
+      depth,
+      ipHash,
+      userAgent: request.headers.get("user-agent"),
+      locale: explicitLocale,
+      source: "PUBLIC_API",
+      idempotencyKey,
     });
 
-    const share = await prisma.reportShare.create({
-      data: {
-        runId: run.id,
-        token: createReportToken()
-      }
+    logger.info("audit_run_created", {
+      runId: queued.run.id,
+      durationMs: Date.now() - startedAt,
+      depth,
+      reused: queued.reused,
     });
-
-    await enqueueJob({
-      type: "AUDIT_RUN",
-      payload: { runId: run.id }
-    });
-
-    logger.info("audit_run_created", { runId: run.id, durationMs: Date.now() - startedAt, depth });
-    return respondJson({ runId: run.id, token: share.token, status: run.status, requestId }, requestId, {
+    return respondJson({
+      runId: queued.run.id,
+      token: queued.share.token,
+      status: queued.run.status,
+      reused: queued.reused,
+      requestId,
+    }, requestId, {
       headers: { "Cache-Control": "no-store" }
     });
   } catch (error) {
+    if (error instanceof AuditEnqueueError) {
+      statusCode = error.code === "IDEMPOTENCY_KEY_CONFLICT" ? 409 : 400;
+      logger.warn("audit_run_enqueue_rejected", { code: error.code });
+      return respondJson({ error: error.code, requestId }, requestId, {
+        status: statusCode,
+        headers: { "Cache-Control": "no-store" },
+      });
+    }
+
     const safeError = sanitizeApiError(error);
     statusCode = safeError.status;
     logger.error("audit_run_create_failed", {
