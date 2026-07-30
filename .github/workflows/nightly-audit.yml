@@ -58,17 +58,47 @@ jobs:
         run: pnpm run build
 
       - name: Local smoke test
+        env:
+          APP_BASE_URL: "http://127.0.0.1:3120"
+          DOWNLOAD_TOKEN_SECRET: "ci-nightly-download-secret-min-16"
+          PAYMENT_PROVIDER_DEFAULT: "MOCK"
+          REQUIRE_DISTRIBUTED_RATE_LIMIT: "false"
         run: |
-          PORT=3120 pnpm run start >/tmp/nightly-smoke.log 2>&1 &
+          set -euo pipefail
+          LOG_FILE="${RUNNER_TEMP}/nightly-smoke.log"
+          BODY_FILE="${RUNNER_TEMP}/nightly-ready.json"
+          PORT=3120 pnpm run start >"$LOG_FILE" 2>&1 &
           APP_PID=$!
-          trap "kill $APP_PID >/dev/null 2>&1 || true" EXIT
-          for i in {1..40}; do
-            if curl -fsS http://127.0.0.1:3120/api/ready >/dev/null 2>&1; then
+          trap 'kill "$APP_PID" >/dev/null 2>&1 || true' EXIT
+
+          READY_STATUS="000"
+          for _ in $(seq 1 40); do
+            READY_STATUS=$(curl -sS -o "$BODY_FILE" -w "%{http_code}" --max-time 3 http://127.0.0.1:3120/api/ready || true)
+            if [ "$READY_STATUS" = "200" ] || [ "$READY_STATUS" = "503" ]; then
               break
             fi
             sleep 1
           done
-          curl -fsS http://127.0.0.1:3120/api/ready | grep -q '"status":"ready"\|"status":"degraded"'
+
+          if [ "$READY_STATUS" != "200" ] && [ "$READY_STATUS" != "503" ]; then
+            echo "::error::Local app did not expose readiness; last HTTP status was ${READY_STATUS}"
+            cat "$LOG_FILE" || true
+            exit 1
+          fi
+
+          READY_HTTP_STATUS="$READY_STATUS" READY_BODY_FILE="$BODY_FILE" node <<'NODE'
+          const fs = require('node:fs');
+          const statusCode = Number(process.env.READY_HTTP_STATUS);
+          const payload = JSON.parse(fs.readFileSync(process.env.READY_BODY_FILE, 'utf8'));
+          const validState = payload.status === 'ready' || payload.status === 'degraded';
+          const validPair = (payload.status === 'ready' && payload.ok === true && statusCode === 200)
+            || (payload.status === 'degraded' && payload.ok === false && statusCode === 503);
+          if (!validState || !validPair || !Array.isArray(payload.checks)) {
+            console.error('Invalid readiness contract', { statusCode, payload });
+            process.exit(1);
+          }
+          console.log(`Readiness contract valid: ${payload.status} (${statusCode})`);
+          NODE
 
       - name: Upload build artifacts
         if: failure() || github.event_name == 'workflow_dispatch'
