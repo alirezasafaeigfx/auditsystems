@@ -53,6 +53,7 @@ jobs:
         run: |
           bash scripts/tests/test-database-dump-guard.sh
           bash scripts/tests/test-release-safety.sh
+          bash scripts/tests/test-deploy-workflow-integrity.sh
 
       - name: Run automation hard gate
         env:

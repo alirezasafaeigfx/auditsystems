@@ -4,43 +4,108 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: "Target environment (production is disabled; use the authorized release runbook)"
+        description: "Target environment (production remains disabled)"
         required: true
         type: choice
         options: [staging]
       release_ref:
-        description: "Git ref (tag/branch/SHA)"
+        description: "Git ref (tag/branch/SHA) resolved to an exact commit"
         required: true
         default: "main"
+      run_migrations:
+        description: "Run forward database migrations (requires protected environment approval variable)"
+        required: true
+        type: boolean
+        default: false
       approved:
-        description: "Type YES to confirm real deployment"
+        description: "Type YES to confirm a real staging deployment"
         required: true
         default: "NO"
 
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.repository }}-${{ inputs.environment }}
+  cancel-in-progress: false
+
 env:
-  VPS_BASE_DIR: /var/www/asdev-audit-ir
-  PUBLIC_URL: https://audit.alirezasafaeisystems.ir
   PUBLIC_HEALTH: /api/ready
-  PROD_PORT: "3010"
-  STAGING_PORT: "3011"
 
 jobs:
   deploy:
-    if: github.event.inputs.approved == 'YES' && github.event.inputs.environment == 'staging'
+    if: inputs.approved == 'YES' && inputs.environment == 'staging'
     runs-on: [self-hosted, linux, x64, asdev-ci]
-    environment: ${{ github.event.inputs.environment }}
-    permissions:
-      contents: read
+    timeout-minutes: 45
+    environment: ${{ inputs.environment }}
+    env:
+      VPS_BASE_DIR: ${{ vars.VPS_BASE_DIR }}
+      PUBLIC_URL: ${{ vars.PUBLIC_URL }}
+      APP_PORT: ${{ vars.APP_PORT }}
+      MIGRATION_EXECUTION_APPROVED: ${{ vars.MIGRATION_EXECUTION_APPROVED }}
     outputs:
       deploy_status: ${{ steps.deploy.outcome }}
       smoke_status: ${{ steps.smoke.outcome }}
-      release_id: ${{ steps.release_id.outputs.id }}
+      release_id: ${{ steps.release.outputs.release_id }}
+      release_sha: ${{ steps.release.outputs.release_sha }}
 
     steps:
-      - name: Checkout
+      - name: Checkout requested release
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          ref: ${{ github.event.inputs.release_ref }}
+          ref: ${{ inputs.release_ref }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Resolve exact release
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          RELEASE_SHA="$(git rev-parse HEAD)"
+          BUILT_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          RELEASE_ID="$(date -u +%Y%m%dT%H%M%SZ)-${RELEASE_SHA:0:12}-gh-${GITHUB_RUN_NUMBER}"
+          [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          echo "release_sha=$RELEASE_SHA" >> "$GITHUB_OUTPUT"
+          echo "release_id=$RELEASE_ID" >> "$GITHUB_OUTPUT"
+          echo "built_at=$BUILT_AT" >> "$GITHUB_OUTPUT"
+          echo "Resolved release: $RELEASE_SHA"
+
+      - name: Validate protected deployment inputs
+        id: preflight
+        env:
+          SSH_HOST: ${{ secrets.VPS_HOST }}
+          SSH_USER: ${{ secrets.VPS_USER }}
+          SSH_PORT: ${{ secrets.VPS_PORT || '22' }}
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          RUN_MIGRATIONS: ${{ inputs.run_migrations }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(SSH_HOST SSH_USER SSH_PORT SSH_PRIVATE_KEY VPS_KNOWN_HOSTS VPS_BASE_DIR PUBLIC_URL APP_PORT)
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::$name is required through the protected staging environment"
+              exit 1
+            fi
+          done
+
+          [[ "$SSH_PORT" =~ ^[0-9]{1,5}$ ]] && (( SSH_PORT >= 1 && SSH_PORT <= 65535 ))
+          [[ "$APP_PORT" =~ ^[0-9]{1,5}$ ]] && (( APP_PORT >= 1 && APP_PORT <= 65535 ))
+          [[ "$VPS_BASE_DIR" =~ ^/[A-Za-z0-9._/-]+$ ]]
+          [[ "$PUBLIC_URL" =~ ^https://[^/[:space:]]+(:[0-9]{1,5})?$ ]]
+
+          PUBLIC_URL="${PUBLIC_URL%/}"
+          if [[ "$PUBLIC_URL" == "https://audit.alirezasafaeisystems.ir" ]]; then
+            echo "::error::The staging PUBLIC_URL resolves to the known production URL"
+            exit 1
+          fi
+
+          if [[ "$RUN_MIGRATIONS" == "true" && "$MIGRATION_EXECUTION_APPROVED" != "true" ]]; then
+            echo "::error::run_migrations requires protected environment variable MIGRATION_EXECUTION_APPROVED=true"
+            exit 1
+          fi
 
       - name: Setup pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
@@ -53,24 +118,30 @@ jobs:
           node-version: 22
           cache: pnpm
 
-      - name: Install deps
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build & validate
+      - name: Validate source without duplicate build
+        env:
+          APP_BASE_URL: ${{ env.PUBLIC_URL }}
+          DOWNLOAD_TOKEN_SECRET: ci-deploy-download-secret-minimum-32
+          PAYMENT_PROVIDER_DEFAULT: MOCK
+          REQUIRE_DISTRIBUTED_RATE_LIMIT: "false"
         run: |
-          pnpm run check
-          pnpm run build
+          set -euo pipefail
+          pnpm scan:secrets
+          pnpm check:actions-pinned
+          pnpm check:no-database-dumps
+          pnpm lint
+          pnpm typecheck
+          pnpm test
 
-      - name: Generate release ID
-        id: release_id
+      - name: Package source artifact
+        env:
+          RELEASE_ID: ${{ steps.release.outputs.release_id }}
         run: |
-          RELEASE_ID="$(date -u +%Y%m%dT%H%M%SZ)-gh-${{ github.run_number }}"
-          echo "id=$RELEASE_ID" >> "$GITHUB_OUTPUT"
-          echo "Release ID: $RELEASE_ID"
-
-      - name: Package artifact
-        run: |
-          tar -czf /tmp/asdev-audit-ir-${{ steps.release_id.outputs.id }}.tar.gz \
+          set -euo pipefail
+          tar -czf "/tmp/asdev-audit-ir-${RELEASE_ID}.tar.gz" \
             --exclude='.git' \
             --exclude='.github' \
             --exclude='node_modules' \
@@ -86,59 +157,93 @@ jobs:
             --exclude='.env.staging' \
             .
 
-      - name: Configure SSH
+      - name: Configure pinned SSH identity
+        id: configure_ssh
+        env:
+          SSH_HOST: ${{ secrets.VPS_HOST }}
+          SSH_PORT: ${{ secrets.VPS_PORT || '22' }}
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        shell: bash
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p ${{ secrets.VPS_PORT || 22 }} ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+          set -euo pipefail
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/deploy_key"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/deploy_key" "$HOME/.ssh/known_hosts"
+          ssh-keygen -l -f "$HOME/.ssh/known_hosts" >/dev/null
 
-      - name: Deploy to VPS
+          TARGET="$SSH_HOST"
+          if [[ "$SSH_PORT" != "22" ]]; then TARGET="[$SSH_HOST]:$SSH_PORT"; fi
+          if ! ssh-keygen -F "$TARGET" -f "$HOME/.ssh/known_hosts" >/dev/null; then
+            echo "::error::VPS_KNOWN_HOSTS does not contain the configured SSH target"
+            exit 1
+          fi
+
+      - name: Deploy exact release to staging
         id: deploy
         env:
-          SSH_KEY: ~/.ssh/deploy_key
+          SSH_KEY: ${{ github.workspace }}/../_temp/deploy-key-placeholder
           SSH_HOST: ${{ secrets.VPS_HOST }}
           SSH_USER: ${{ secrets.VPS_USER }}
           SSH_PORT: ${{ secrets.VPS_PORT || '22' }}
-          ENV: ${{ github.event.inputs.environment }}
-          RELEASE_ID: ${{ steps.release_id.outputs.id }}
+          DEPLOY_ENV: ${{ inputs.environment }}
+          RELEASE_ID: ${{ steps.release.outputs.release_id }}
+          RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
+          RELEASE_BUILT_AT: ${{ steps.release.outputs.built_at }}
+          RUN_MIGRATIONS: ${{ inputs.run_migrations }}
+        shell: bash
         run: |
-          REMOTE_TMP="/tmp/asdev-audit-ir-${RELEASE_ID}"
+          set -euo pipefail
+          SSH_KEY="$HOME/.ssh/deploy_key"
+          KNOWN_HOSTS="$HOME/.ssh/known_hosts"
+          REMOTE_TMP="/tmp/asdev-audit-ir-${RELEASE_ID}.tar.gz"
+          SSH_COMMAND="ssh -i $SSH_KEY -p $SSH_PORT -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KNOWN_HOSTS"
 
-          echo "==> Uploading release bundle..."
-          rsync -az --delete \
-            -e "ssh -i $SSH_KEY -p $SSH_PORT -o StrictHostKeyChecking=no" \
-            /tmp/asdev-audit-ir-${RELEASE_ID}.tar.gz \
-            "${SSH_USER}@${SSH_HOST}:${REMOTE_TMP}.tar.gz"
+          echo "==> Uploading exact release ${RELEASE_SHA}..."
+          rsync -az \
+            -e "$SSH_COMMAND" \
+            "/tmp/asdev-audit-ir-${RELEASE_ID}.tar.gz" \
+            "${SSH_USER}@${SSH_HOST}:${REMOTE_TMP}"
 
-          echo "==> Running remote deploy..."
-          ssh -i "$SSH_KEY" -p "$SSH_PORT" -o StrictHostKeyChecking=no \
+          echo "==> Running remote staging deploy..."
+          ssh -i "$SSH_KEY" -p "$SSH_PORT" \
+            -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS" \
             "${SSH_USER}@${SSH_HOST}" bash -s <<REMOTE_DEPLOY
           set -euo pipefail
 
-          BASE_DIR="${{ env.VPS_BASE_DIR }}"
+          BASE_DIR="${VPS_BASE_DIR}"
           SHARED_DIR="\$BASE_DIR/shared"
-          ENV_FILE="\$SHARED_DIR/env/${ENV}.env"
-          RELEASES_DIR="\$BASE_DIR/releases/${ENV}"
-          CURRENT_LINK="\$BASE_DIR/current/${ENV}"
+          ENV_FILE="\$SHARED_DIR/env/${DEPLOY_ENV}.env"
+          RELEASES_DIR="\$BASE_DIR/releases/${DEPLOY_ENV}"
+          CURRENT_LINK="\$BASE_DIR/current/${DEPLOY_ENV}"
           RELEASE_DIR="\$RELEASES_DIR/${RELEASE_ID}"
-          PORT="${ENV:+3010}"
-          [[ "${ENV}" == "staging" ]] && PORT="3011"
-          APP_NAME="asdev-audit-ir-${ENV}"
+          PORT="${APP_PORT}"
+          APP_NAME="asdev-audit-ir-${DEPLOY_ENV}"
 
-          # Save current release for rollback
+          [[ -f "\$ENV_FILE" ]] || { echo "[deploy] missing environment file" >&2; exit 1; }
+          mkdir -p "\$RELEASES_DIR" "\$SHARED_DIR/logs"
+          [[ ! -e "\$RELEASE_DIR" ]] || { echo "[deploy] release directory already exists" >&2; exit 1; }
+          mkdir "\$RELEASE_DIR"
+
           PREV_RELEASE=""
           if [[ -L "\$CURRENT_LINK" ]]; then
             PREV_RELEASE="\$(readlink -f "\$CURRENT_LINK")"
-            echo "[deploy] previous release: \$PREV_RELEASE"
+            case "\$PREV_RELEASE" in
+              "\$RELEASES_DIR"/*) ;;
+              *) echo "[deploy] current symlink escapes release directory" >&2; exit 1 ;;
+            esac
           fi
 
-          # Extract release
-          mkdir -p "\$RELEASE_DIR"
-          tar -xzf "${REMOTE_TMP}.tar.gz" -C "\$RELEASE_DIR"
-          rm -f "${REMOTE_TMP}.tar.gz"
+          printf '%s\n' "\$PREV_RELEASE" > "\$RELEASE_DIR/.previous-release"
+          tar -xzf "${REMOTE_TMP}" -C "\$RELEASE_DIR"
+          rm -f "${REMOTE_TMP}"
 
-          # Install + build + migrate
+          cat > "\$RELEASE_DIR/release-manifest.json" <<MANIFEST
+          {"commitSha":"${RELEASE_SHA}","releaseId":"${RELEASE_ID}","builtAt":"${RELEASE_BUILT_AT}","environment":"${DEPLOY_ENV}"}
+          MANIFEST
+
           cd "\$RELEASE_DIR"
           pnpm install --frozen-lockfile
           pnpm prisma generate
@@ -146,15 +251,18 @@ jobs:
           set -a
           source "\$ENV_FILE"
           set +a
+          export NODE_ENV=production HOSTNAME=127.0.0.1 PORT
+          export RELEASE_SHA="${RELEASE_SHA}"
+          export RELEASE_ID="${RELEASE_ID}"
+          export RELEASE_BUILT_AT="${RELEASE_BUILT_AT}"
 
-          export NODE_ENV=production
-          export HOSTNAME=127.0.0.1
-          export PORT
+          if [[ "${RUN_MIGRATIONS}" == "true" ]]; then
+            pnpm prisma migrate deploy
+          else
+            echo "[deploy] database migrations intentionally disabled"
+          fi
 
           pnpm run build
-          pnpm prisma migrate deploy
-
-          # Prepare standalone output
           cp -r .next/static .next/standalone/.next/
           cp -r public .next/standalone/
 
@@ -163,7 +271,6 @@ jobs:
           WORKER_NAME="\${APP_NAME}-worker"
           LOG_DIR="\$SHARED_DIR/logs"
 
-          # Write ecosystem config
           cat > ecosystem.config.cjs <<ECOSYSTEM
           module.exports = {
             apps: [
@@ -173,7 +280,10 @@ jobs:
                 script: '\$NODE_BIN',
                 args: '.next/standalone/server.js',
                 env_file: '\$ENV_FILE',
-                env: { NODE_ENV: 'production', HOSTNAME: '127.0.0.1', PORT: '\$PORT' },
+                env: {
+                  NODE_ENV: 'production', HOSTNAME: '127.0.0.1', PORT: '\$PORT',
+                  RELEASE_SHA: '${RELEASE_SHA}', RELEASE_ID: '${RELEASE_ID}', RELEASE_BUILT_AT: '${RELEASE_BUILT_AT}'
+                },
                 max_restarts: 10,
                 restart_delay: 3000,
                 out_file: '\$LOG_DIR/\$WEB_NAME.out.log',
@@ -187,7 +297,10 @@ jobs:
                 script: 'pnpm',
                 args: 'run worker:dev',
                 env_file: '\$ENV_FILE',
-                env: { NODE_ENV: 'production' },
+                env: {
+                  NODE_ENV: 'production', RELEASE_SHA: '${RELEASE_SHA}',
+                  RELEASE_ID: '${RELEASE_ID}', RELEASE_BUILT_AT: '${RELEASE_BUILT_AT}'
+                },
                 max_restarts: 10,
                 restart_delay: 3000,
                 out_file: '\$LOG_DIR/\$WORKER_NAME.out.log',
@@ -199,147 +312,155 @@ jobs:
           };
           ECOSYSTEM
 
-          # Restart services
           pm2 delete "\$WEB_NAME" 2>/dev/null || true
           pm2 delete "\$WORKER_NAME" 2>/dev/null || true
           pm2 start ecosystem.config.cjs --update-env
           pm2 save 2>/dev/null || true
 
-          # Symlink current
-          ln -sfn "\$RELEASE_DIR" "\$CURRENT_LINK"
-
-          # Health check loop
-          echo "[deploy] waiting for health check on port \$PORT..."
           for attempt in \$(seq 1 30); do
-            if curl -fsS "http://127.0.0.1:\$PORT${{ env.PUBLIC_HEALTH }}" >/dev/null 2>&1; then
-              echo "[deploy] health check PASSED on attempt \$attempt"
-              exit 0
+            if curl -fsS "http://127.0.0.1:\$PORT/api/ready" >/dev/null 2>&1; then
+              VERSION_JSON="\$(curl -fsS "http://127.0.0.1:\$PORT/api/version")"
+              ACTUAL_SHA="\$(printf '%s' "\$VERSION_JSON" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const j=JSON.parse(d);process.stdout.write(j.release?.commitSha||"")})')"
+              if [[ "\$ACTUAL_SHA" == "${RELEASE_SHA}" ]]; then
+                ln -sfn "\$RELEASE_DIR" "\$CURRENT_LINK"
+                echo "[deploy] exact release verified on localhost"
+                exit 0
+              fi
             fi
             sleep 2
           done
-          echo "[deploy] health check FAILED after 30 attempts" >&2
+
+          echo "[deploy] exact-SHA local verification failed" >&2
           exit 1
           REMOTE_DEPLOY
 
-      - name: Post-deploy smoke test
+      - name: Verify exact release through staging URL
         id: smoke
         env:
-          DEPLOY_ENV: ${{ github.event.inputs.environment }}
-          PUBLIC_URL: ${{ env.PUBLIC_URL }}
+          EXPECTED_SHA: ${{ steps.release.outputs.release_sha }}
+        shell: bash
         run: |
-          echo "==> Running smoke tests against ${PUBLIC_URL}..."
+          set -euo pipefail
+          PUBLIC_URL="${PUBLIC_URL%/}"
           PASS=0
           FAIL=0
 
           check() {
-            local path="$1" expected="$2" desc="$3"
-            local url="${PUBLIC_URL}${path}"
+            local path="$1" expected="$2" description="$3"
             local status
-            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$url" 2>/dev/null || echo "000")
-            if [ "$status" = "$expected" ]; then
-              echo "  ✓ ${desc} (${path}) -> ${status}"
+            status="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "${PUBLIC_URL}${path}" || true)"
+            if [[ "$status" == "$expected" ]]; then
+              echo "✓ $description -> $status"
               PASS=$((PASS + 1))
             else
-              echo "  ✗ ${desc} (${path}) -> ${status} (expected ${expected})"
+              echo "✗ $description -> $status (expected $expected)"
               FAIL=$((FAIL + 1))
             fi
           }
 
-          echo "Health & readiness..."
           check "/api/ready" "200" "API ready"
           check "/api/health" "200" "API health"
-          echo ""
-
-          echo "Core pages..."
           check "/" "200" "Homepage"
           check "/audit" "200" "Audit form"
           check "/pricing" "200" "Pricing"
           check "/sample-report" "200" "Sample report"
-          echo ""
-
-          echo "API security..."
           check "/api/csrf" "200" "CSRF endpoint"
-          check "/api/billing/current" "401" "Billing (unauth)"
-          echo ""
+          check "/api/billing/current" "401" "Billing unauthenticated"
+          check "/api/version" "200" "Release attestation"
 
-          echo "Results: ${PASS} passed, ${FAIL} failed"
-          if [ "$FAIL" -gt 0 ]; then
-            echo "::error::Smoke test failed with ${FAIL} failures"
-            exit 1
+          VERSION_JSON="$(curl -fsS --max-time 15 "${PUBLIC_URL}/api/version")"
+          ACTUAL_SHA="$(printf '%s' "$VERSION_JSON" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const j=JSON.parse(d);process.stdout.write(j.release?.commitSha||"")})')"
+          if [[ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]]; then
+            echo "::error::Staging reports $ACTUAL_SHA but expected $EXPECTED_SHA"
+            FAIL=$((FAIL + 1))
+          else
+            echo "✓ Staging exact SHA verified: $EXPECTED_SHA"
+            PASS=$((PASS + 1))
           fi
 
-      - name: Rollback on failure
-        if: failure() && steps.deploy.outcome == 'success'
+          echo "Results: ${PASS} passed, ${FAIL} failed"
+          (( FAIL == 0 ))
+
+      - name: Roll back to exact previous release on failure
+        if: failure() && steps.configure_ssh.outcome == 'success' && steps.release.outputs.release_id != ''
         env:
-          SSH_KEY: ~/.ssh/deploy_key
           SSH_HOST: ${{ secrets.VPS_HOST }}
           SSH_USER: ${{ secrets.VPS_USER }}
           SSH_PORT: ${{ secrets.VPS_PORT || '22' }}
-          ENV: ${{ github.event.inputs.environment }}
+          DEPLOY_ENV: ${{ inputs.environment }}
+          RELEASE_ID: ${{ steps.release.outputs.release_id }}
+        shell: bash
         run: |
-          echo "==> Deploy succeeded but smoke test failed. Rolling back..."
-          ssh -i "$SSH_KEY" -p "$SSH_PORT" -o StrictHostKeyChecking=no \
+          set -euo pipefail
+          SSH_KEY="$HOME/.ssh/deploy_key"
+          KNOWN_HOSTS="$HOME/.ssh/known_hosts"
+
+          ssh -i "$SSH_KEY" -p "$SSH_PORT" \
+            -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS" \
             "${SSH_USER}@${SSH_HOST}" bash -s <<ROLLBACK
           set -euo pipefail
-          BASE_DIR="${{ env.VPS_BASE_DIR }}"
-          RELEASES_DIR="\$BASE_DIR/releases/${ENV}"
-          CURRENT_LINK="\$BASE_DIR/current/${ENV}"
+          BASE_DIR="${VPS_BASE_DIR}"
+          RELEASES_DIR="\$BASE_DIR/releases/${DEPLOY_ENV}"
+          CURRENT_LINK="\$BASE_DIR/current/${DEPLOY_ENV}"
+          FAILED_RELEASE="\$RELEASES_DIR/${RELEASE_ID}"
+          MARKER="\$FAILED_RELEASE/.previous-release"
+          PORT="${APP_PORT}"
 
-          # Find the previous release (second newest by timestamp)
-          PREV_RELEASE=\$(ls -1dt "\$RELEASES_DIR"/* 2>/dev/null | sed -n '2p')
-          if [[ -z "\$PREV_RELEASE" ]]; then
-            echo "[rollback] no previous release found, cannot rollback"
-            exit 1
-          fi
+          [[ -f "\$MARKER" ]] || { echo "[rollback] previous-release marker missing" >&2; exit 1; }
+          PREV_RELEASE="\$(cat "\$MARKER")"
+          [[ -n "\$PREV_RELEASE" && -d "\$PREV_RELEASE" ]] || { echo "[rollback] exact previous release unavailable" >&2; exit 1; }
+          case "\$PREV_RELEASE" in
+            "\$RELEASES_DIR"/*) ;;
+            *) echo "[rollback] marker escapes release directory" >&2; exit 1 ;;
+          esac
 
-          echo "[rollback] reverting to: \$PREV_RELEASE"
           ln -sfn "\$PREV_RELEASE" "\$CURRENT_LINK"
-
-          # Restart with previous release
           cd "\$PREV_RELEASE"
-          APP_NAME="asdev-audit-ir-${ENV}"
-          PORT="${ENV:+3010}"
-          [[ "${ENV}" == "staging" ]] && PORT="3011"
-
-          pm2 delete "\${APP_NAME}-web" 2>/dev/null || true
-          pm2 delete "\${APP_NAME}-worker" 2>/dev/null || true
+          pm2 delete "asdev-audit-ir-${DEPLOY_ENV}-web" 2>/dev/null || true
+          pm2 delete "asdev-audit-ir-${DEPLOY_ENV}-worker" 2>/dev/null || true
           pm2 start ecosystem.config.cjs --update-env
           pm2 save 2>/dev/null || true
 
-          echo "[rollback] complete"
+          for attempt in \$(seq 1 30); do
+            if curl -fsS "http://127.0.0.1:\$PORT/api/ready" >/dev/null 2>&1; then
+              echo "[rollback] exact previous release restored"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "[rollback] restored process did not become ready" >&2
+          exit 1
           ROLLBACK
 
       - name: Deployment summary
         if: always()
+        env:
+          RELEASE_ID: ${{ steps.release.outputs.release_id }}
+          RELEASE_SHA: ${{ steps.release.outputs.release_sha }}
+          DEPLOY_STATUS: ${{ steps.deploy.outcome }}
+          SMOKE_STATUS: ${{ steps.smoke.outcome }}
         run: |
-          ENV="${{ github.event.inputs.environment }}"
-          REF="${{ github.event.inputs.release_ref }}"
-          RUN="${{ github.run_id }}"
-          DEPLOY="${{ steps.deploy.outcome }}"
-          SMOKE="${{ steps.smoke.outcome }}"
-          RELEASE="${{ steps.release_id.outputs.id }}"
+          {
+            echo "## Staging Deployment Summary"
+            echo
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Environment | \`${{ inputs.environment }}\` |"
+            echo "| Requested ref | \`${{ inputs.release_ref }}\` |"
+            echo "| Exact SHA | \`$RELEASE_SHA\` |"
+            echo "| Release ID | \`$RELEASE_ID\` |"
+            echo "| Migrations requested | \`${{ inputs.run_migrations }}\` |"
+            echo "| Deploy | \`$DEPLOY_STATUS\` |"
+            echo "| External exact-SHA smoke | \`$SMOKE_STATUS\` |"
+            echo "| URL | $PUBLIC_URL |"
+            echo "| Workflow | [${GITHUB_RUN_ID}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}) |"
+          } >> "$GITHUB_STEP_SUMMARY"
 
-          echo "## Deployment Summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Environment | \`$ENV\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Ref | \`$REF\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Release ID | \`$RELEASE\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Deploy | \`$DEPLOY\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Smoke Test | \`$SMOKE\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| URL | ${{ env.PUBLIC_URL }} |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Workflow Run | [#$RUN](https://github.com/${{ github.repository }}/actions/runs/$RUN) |" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-
-          if [ "$DEPLOY" = "success" ] && [ "$SMOKE" = "success" ]; then
-            echo "**Status: SUCCESS** — deployed and verified." >> "$GITHUB_STEP_SUMMARY"
-          elif [ "$DEPLOY" = "success" ] && [ "$SMOKE" = "failure" ]; then
-            echo "**Status: ROLLED BACK** — deploy succeeded but smoke test failed. Automatic rollback triggered." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "**Status: FAILED** — deployment step failed." >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Cleanup SSH key
+      - name: Cleanup deployment credentials and package
         if: always()
-        run: rm -f ~/.ssh/deploy_key
+        env:
+          RELEASE_ID: ${{ steps.release.outputs.release_id }}
+        run: |
+          rm -f "$HOME/.ssh/deploy_key" "$HOME/.ssh/known_hosts"
+          if [[ -n "$RELEASE_ID" ]]; then rm -f "/tmp/asdev-audit-ir-${RELEASE_ID}.tar.gz"; fi
