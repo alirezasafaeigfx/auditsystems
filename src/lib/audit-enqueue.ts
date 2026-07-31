@@ -284,6 +284,14 @@ async function createInTransaction(
   return { run, share, job, reused: false };
 }
 
+export async function enqueueAuditInTransaction(
+  tx: Prisma.TransactionClient,
+  input: AtomicAuditEnqueueInput,
+): Promise<AtomicAuditEnqueueResult> {
+  validateInput(input);
+  return createInTransaction(tx, input, stableFingerprint(input), createReportToken());
+}
+
 async function readCommittedExisting(
   idempotencyKey: string,
   fingerprint: string,

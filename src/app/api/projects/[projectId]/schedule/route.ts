@@ -4,18 +4,9 @@ import { validateSession, getOrganizationForUser } from "../../../../../lib/auth
 import { createRequestId, logEvent, respondJson } from "../../../../../lib/observability";
 import { csrfProtection } from "../../../../../lib/csrf";
 import { canScheduleAudit } from "../../../../../lib/usage";
+import { firstScheduledRun } from "../../../../../lib/schedule-time";
 
 type RouteParams = { projectId: string };
-
-function getNextRunDate(frequency: string): Date {
-  const now = new Date();
-  if (frequency === "WEEKLY") {
-    now.setDate(now.getDate() + 7);
-  } else {
-    now.setMonth(now.getMonth() + 1);
-  }
-  return now;
-}
 
 export async function GET(
   _request: NextRequest,
@@ -130,13 +121,15 @@ export async function POST(
       return respondJson({ error: "SCHEDULE_EXISTS", requestId }, requestId, { status: 409, headers: { "Cache-Control": "no-store" } });
     }
 
+    const createdAt = new Date();
     const schedule = await prisma.scheduledAudit.create({
       data: {
         organizationId: orgId,
         projectId,
         frequency,
         enabled: true,
-        nextRunAt: getNextRunDate(frequency)
+        createdAt,
+        nextRunAt: firstScheduledRun(frequency, createdAt)
       }
     });
 
