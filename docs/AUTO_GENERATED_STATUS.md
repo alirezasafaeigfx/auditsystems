@@ -1,11 +1,11 @@
 # Auto Generated Project Status
 
-Generated at: 2026-07-31T14:51:26.725Z
+Generated at: 2026-07-31T15:32:25.624Z
 
 ## Overview
-- API routes: 48
+- API routes: 49
 - Page routes: 72
-- Test files: 82
+- Test files: 83
 - NPM scripts: 66
 
 ## Roadmap Phases
@@ -62,6 +62,7 @@ Generated at: 2026-07-31T14:51:26.725Z
 - `/api/settings/brand`
 - `/api/stats`
 - `/api/team`
+- `/api/version`
 
 ## Page Routes
 - `/`
