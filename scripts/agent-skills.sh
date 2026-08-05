@@ -65,6 +65,18 @@ for (const source of lock.sources) {
 NODE
 }
 
+is_initialized_submodule() {
+  local module_path="$1"
+  [[ -d "$ROOT/$module_path" ]] || return 1
+
+  local module_top expected_top resolved_top
+  module_top="$(git -C "$ROOT/$module_path" rev-parse --show-toplevel 2>/dev/null || true)"
+  [[ -n "$module_top" ]] || return 1
+  expected_top="$(cd "$ROOT/$module_path" && pwd -P)"
+  resolved_top="$(cd "$module_top" && pwd -P)"
+  [[ "$resolved_top" == "$expected_top" ]]
+}
+
 source_rows() {
   node - "$LOCK_FILE" <<'NODE'
 const fs = require('node:fs');
@@ -106,7 +118,7 @@ verify_source() {
   [[ "$actual_sha" == "$expected_sha" ]] || fail "$id: gitlink SHA mismatch ($actual_sha)"
   [[ -f "$ROOT/$adapter" ]] || fail "$id: adapter is missing: $adapter"
 
-  if git -C "$ROOT/$module_path" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  if is_initialized_submodule "$module_path"; then
     local checked_out_sha
     checked_out_sha="$(git -C "$ROOT/$module_path" rev-parse HEAD)"
     [[ "$checked_out_sha" == "$expected_sha" ]] || fail "$id: checked-out SHA mismatch ($checked_out_sha)"
@@ -140,7 +152,7 @@ status_all() {
   validate_lock
   while IFS=$'\t' read -r id repository commit module_path adapter required_files; do
     local_state="not-initialized"
-    if git -C "$ROOT/$module_path" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    if is_initialized_submodule "$module_path"; then
       local_state="$(git -C "$ROOT/$module_path" rev-parse --short=12 HEAD)"
     fi
     printf '%-22s %s expected=%s local=%s\n' "$id" "$module_path" "${commit:0:12}" "$local_state"

@@ -37,6 +37,11 @@ NODE
 
 git -C "$fixture" commit -qm 'test fixture'
 
+# actions/checkout creates empty gitlink directories even when submodules are disabled.
+mkdir -p "$fixture/.vendor/skills/ui-ux-pro-max" \
+  "$fixture/.vendor/skills/superpowers" \
+  "$fixture/.agents/marketingskills"
+
 (cd "$fixture" && bash scripts/agent-skills.sh verify >/dev/null)
 
 cp "$fixture/.gitmodules" "$TMP_ROOT/gitmodules.good"
