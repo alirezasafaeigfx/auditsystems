@@ -3,6 +3,11 @@ import { prisma } from "./db";
 
 const VERIFICATION_LEASE_MS = 2 * 60 * 1000;
 const MAX_TRANSACTION_RETRIES = 3;
+const VERIFICATION_EVENT_KINDS = [
+  "PAYMENT_VERIFICATION_STARTED",
+  "PAYMENT_VERIFICATION_ERROR",
+  "PAYMENT_VERIFICATION_RELEASED",
+] as const;
 
 const CALLBACK_ORDER_INCLUDE = {
   run: {
@@ -12,7 +17,7 @@ const CALLBACK_ORDER_INCLUDE = {
     },
   },
   events: {
-    where: { kind: "PAYMENT_VERIFICATION_STARTED" },
+    where: { kind: { in: [...VERIFICATION_EVENT_KINDS] } },
     orderBy: { createdAt: "desc" as const },
     take: 1,
   },
@@ -68,8 +73,9 @@ async function lockById(tx: Prisma.TransactionClient, orderId: string): Promise<
   `;
 }
 
-function latestLease(order: CallbackOrder) {
-  return order.events[0] ?? null;
+function activeLease(order: CallbackOrder) {
+  const latest = order.events[0] ?? null;
+  return latest?.kind === "PAYMENT_VERIFICATION_STARTED" ? latest : null;
 }
 
 export async function claimPaymentVerification(input: {
@@ -94,7 +100,7 @@ export async function claimPaymentVerification(input: {
       return { kind: "TERMINAL", order };
     }
 
-    const lease = latestLease(order);
+    const lease = activeLease(order);
     if (lease && lease.createdAt > staleBefore) {
       const remainingMs = VERIFICATION_LEASE_MS - (now.getTime() - lease.createdAt.getTime());
       return {
@@ -141,7 +147,7 @@ export async function finalizePaymentVerification(input: {
     if (order.status !== "PENDING") {
       throw new PaymentCallbackStateError("PAYMENT_STATE_CHANGED");
     }
-    if (latestLease(order)?.id !== input.leaseEventId) {
+    if (activeLease(order)?.id !== input.leaseEventId) {
       throw new PaymentCallbackStateError("STALE_PAYMENT_VERIFICATION");
     }
 
@@ -187,7 +193,7 @@ export async function releasePaymentVerification(input: {
       include: CALLBACK_ORDER_INCLUDE,
     });
     if (!order || order.status !== "PENDING") return;
-    if (latestLease(order)?.id !== input.leaseEventId) return;
+    if (activeLease(order)?.id !== input.leaseEventId) return;
 
     await tx.auditOrderEvent.create({
       data: {
