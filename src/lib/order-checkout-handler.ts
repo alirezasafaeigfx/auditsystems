@@ -8,6 +8,7 @@ import {
   OrderCheckoutError,
   completeOrderCheckout,
   failOrderCheckout,
+  markOrderCheckoutProviderRequestStarted,
   prepareOrderCheckout,
 } from "./order-checkout";
 import { createCheckout, resolvePaymentProvider } from "./payments";
@@ -77,6 +78,7 @@ export async function handleOrderCheckoutRequest(
   let statusCode = 200;
   let tokenHash: string | undefined;
   let claimedOrder: { id: string; callbackRef: string } | null = null;
+  let providerRequestStarted = false;
 
   try {
     const contentLength = Number(request.headers.get("content-length") ?? 0);
@@ -264,6 +266,13 @@ export async function handleOrderCheckoutRequest(
     }
 
     claimedOrder = { id: prepared.order.id, callbackRef: prepared.callbackRef };
+    await markOrderCheckoutProviderRequestStarted({
+      orderId: prepared.order.id,
+      callbackRef: prepared.callbackRef,
+      provider,
+    });
+    providerRequestStarted = true;
+
     let checkout;
     try {
       checkout = await createCheckout({
@@ -281,6 +290,7 @@ export async function handleOrderCheckoutRequest(
         code,
       });
       claimedOrder = null;
+      providerRequestStarted = false;
       statusCode = code === "PAYMENT_PROVIDER_TIMEOUT" ? 504
         : code === "PAYMENT_PROVIDER_NOT_CONFIGURED" ? 503
           : code.startsWith("PAYMENT_PROVIDER_") ? 502
@@ -303,6 +313,7 @@ export async function handleOrderCheckoutRequest(
       provider,
     });
     claimedOrder = null;
+    providerRequestStarted = false;
 
     logEvent("info", "order_checkout_created", {
       requestId,
@@ -323,7 +334,7 @@ export async function handleOrderCheckoutRequest(
       requestId,
     }, requestId, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    if (claimedOrder) {
+    if (claimedOrder && !providerRequestStarted) {
       await failOrderCheckout({
         orderId: claimedOrder.id,
         callbackRef: claimedOrder.callbackRef,
@@ -331,14 +342,24 @@ export async function handleOrderCheckoutRequest(
       }).catch(() => undefined);
     }
 
-    statusCode = error instanceof OrderCheckoutError && error.code === "ORDER_CHECKOUT_STATE_CHANGED" ? 409 : 500;
+    const code = error instanceof OrderCheckoutError ? error.code : safeFailureCode(error);
+    const reconciliationRequired = providerRequestStarted || code === "ORDER_CHECKOUT_RECONCILIATION_REQUIRED";
+    statusCode = reconciliationRequired || code === "ORDER_CHECKOUT_STATE_CHANGED" ? 409 : 500;
     logEvent("error", "order_checkout_failed", {
       requestId,
       tokenHash,
-      code: error instanceof OrderCheckoutError ? error.code : safeFailureCode(error),
+      orderId: claimedOrder?.id,
+      code: reconciliationRequired ? "ORDER_CHECKOUT_RECONCILIATION_REQUIRED" : code,
     });
     return respondJson(
-      { error: statusCode === 409 ? "CHECKOUT_RETRY_REQUIRED" : "INTERNAL_ERROR", requestId },
+      {
+        error: reconciliationRequired
+          ? "CHECKOUT_RECONCILIATION_REQUIRED"
+          : statusCode === 409
+            ? "CHECKOUT_RETRY_REQUIRED"
+            : "INTERNAL_ERROR",
+        requestId,
+      },
       requestId,
       { status: statusCode, headers: { "Cache-Control": "no-store" } },
     );
