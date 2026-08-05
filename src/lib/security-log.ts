@@ -16,7 +16,7 @@ export type SecurityEvent =
 export type SecurityLogEntry = {
   event: SecurityEvent;
   userId?: string;
-  email?: string;
+  identifierHash?: string;
   ipHash?: string;
   requestId?: string;
   detail?: string;
@@ -30,7 +30,7 @@ export function logSecurityEvent(entry: SecurityLogEntry): void {
 
   logEvent(level, `security:${entry.event}`, {
     userId: entry.userId,
-    email: entry.email,
+    identifierHash: entry.identifierHash,
     ipHash: entry.ipHash,
     requestId: entry.requestId,
     detail: entry.detail,
