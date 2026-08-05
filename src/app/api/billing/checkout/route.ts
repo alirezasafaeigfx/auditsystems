@@ -7,7 +7,7 @@ import { createInvoice } from "../../../../lib/subscription";
 import { createRequestId, respondJson } from "../../../../lib/observability";
 import { createPaymentLogger } from "../../../../lib/logger";
 import { csrfProtection } from "../../../../lib/csrf";
-import { checkAuthRateLimit } from "../../../../lib/authRateLimit";
+import { enforceAuthAbuseLimit } from "../../../../lib/authRateLimit";
 import crypto from "node:crypto";
 
 export async function POST(request: NextRequest) {
@@ -26,9 +26,24 @@ export async function POST(request: NextRequest) {
       return respondJson({ error, requestId }, requestId, { status: error === "UNAUTHORIZED" ? 401 : 400, headers: { "Cache-Control": "no-store" } });
     }
 
-    const rateCheck = checkAuthRateLimit(`billing:checkout:${user.id}`);
-    if (!rateCheck.allowed) {
-      return respondJson({ error: "RATE_LIMITED", requestId }, requestId, { status: 429, headers: { "Cache-Control": "no-store" } });
+    const abuse = await enforceAuthAbuseLimit({
+      action: "billing-checkout",
+      subject: user.id,
+      request,
+    });
+    if (!abuse.allowed) {
+      const unavailable = abuse.reason === "CLIENT_IDENTITY_UNAVAILABLE" || abuse.reason === "BACKEND_UNAVAILABLE";
+      return respondJson(
+        { error: unavailable ? "AUTH_ABUSE_CONTROL_UNAVAILABLE" : "RATE_LIMITED", requestId },
+        requestId,
+        {
+          status: unavailable ? 503 : 429,
+          headers: {
+            "Cache-Control": "no-store",
+            "Retry-After": String(Math.max(1, abuse.retryAfterSec)),
+          },
+        },
+      );
     }
 
     const body = await request.json().catch(() => ({}));
@@ -49,8 +64,8 @@ export async function POST(request: NextRequest) {
       where: {
         organizationId: membership.organizationId,
         status: "ACTIVE",
-        currentPeriodEnd: { gt: new Date() }
-      }
+        currentPeriodEnd: { gt: new Date() },
+      },
     });
 
     if (existingActive) {
@@ -64,13 +79,13 @@ export async function POST(request: NextRequest) {
       organizationId: membership.organizationId,
       planId: planRecord.id,
       amountToman: planConfig.priceMonthlyToman,
-      provider
+      provider,
     });
 
     const callbackRef = crypto.randomUUID().replace(/-/g, "");
     await prisma.invoice.update({
       where: { id: invoice.id },
-      data: { callbackRef }
+      data: { callbackRef },
     });
 
     const checkout = await createCheckout({
@@ -78,26 +93,25 @@ export async function POST(request: NextRequest) {
       orderId: invoice.id,
       callbackRef,
       amountToman: planConfig.priceMonthlyToman,
-      email: user.email
+      email: user.email,
     });
 
     await prisma.invoice.update({
       where: { id: invoice.id },
       data: {
         callbackRef: checkout.callbackRef,
-        providerRef: checkout.providerRef
-      }
+        providerRef: checkout.providerRef,
+      },
     });
 
     paymentId = invoice.id;
     const paymentLogger = createPaymentLogger(requestId, invoice.id, user.id);
-
     paymentLogger.info("billing_checkout_created", {
       invoiceId: invoice.id,
       planCode,
       organizationId: membership.organizationId,
       provider,
-      durationMs: Date.now() - startedAt
+      durationMs: Date.now() - startedAt,
     });
 
     return respondJson({
@@ -105,12 +119,12 @@ export async function POST(request: NextRequest) {
       status: "PENDING",
       provider,
       redirectUrl: checkout.redirectUrl,
-      requestId
+      requestId,
     }, requestId, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     const logger = createPaymentLogger(requestId, paymentId || "unknown");
     logger.error("billing_checkout_failed", {
-      code: error instanceof Error ? error.message : String(error)
+      code: error instanceof Error ? error.message : String(error),
     });
     return respondJson({ error: "INTERNAL_ERROR", requestId }, requestId, { status: 500, headers: { "Cache-Control": "no-store" } });
   }
