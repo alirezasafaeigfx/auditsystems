@@ -9,6 +9,7 @@ import {
   claimPaymentVerification,
   finalizePaymentVerification,
   releasePaymentVerification,
+  type CallbackOrder,
 } from "../../../../lib/payment-callback-state";
 import { verifyCheckout } from "../../../../lib/payments";
 import { consumeDistributedRateLimit } from "../../../../lib/rateLimit";
@@ -91,7 +92,7 @@ async function readCallbackBody(request: NextRequest): Promise<Record<string, un
 async function respondForTerminalOrder(
   request: NextRequest,
   requestId: string,
-  order: Awaited<ReturnType<typeof claimPaymentVerification>> extends { order: infer T } ? T : never,
+  order: CallbackOrder,
 ): Promise<NextResponse> {
   const locale = resolveLocale(order.run.locale);
   const shareToken = order.run.shares[0]?.token;
