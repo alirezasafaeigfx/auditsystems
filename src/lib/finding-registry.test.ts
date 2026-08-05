@@ -9,9 +9,9 @@ import {
 import type { FindingCategory } from "./types";
 
 describe("finding-registry", () => {
-  it("has entries for all 31 finding codes", () => {
+  it("has entries for all 35 finding codes", () => {
     const codes = getAllFindingCodes();
-    expect(codes.length).toBe(31);
+    expect(codes.length).toBe(35);
   });
 
   it("every entry has required fields", () => {
