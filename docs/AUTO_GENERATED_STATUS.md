@@ -1,11 +1,11 @@
 # Auto Generated Project Status
 
-Generated at: 2026-08-05T15:03:54.189Z
+Generated at: 2026-08-05T15:40:51.031Z
 
 ## Overview
-- API routes: 49
-- Page routes: 72
-- Test files: 84
+- API routes: 50
+- Page routes: 73
+- Test files: 88
 - NPM scripts: 66
 
 ## Roadmap Phases
@@ -62,6 +62,7 @@ Generated at: 2026-08-05T15:03:54.189Z
 - `/api/settings/brand`
 - `/api/stats`
 - `/api/team`
+- `/api/team/accept`
 - `/api/version`
 
 ## Page Routes
@@ -83,6 +84,7 @@ Generated at: 2026-08-05T15:03:54.189Z
 - `/app/settings`
 - `/app/settings/brand`
 - `/app/team`
+- `/app/team/accept`
 - `/asdev`
 - `/audit`
 - `/audit-readiness`
@@ -157,6 +159,8 @@ Generated at: 2026-08-05T15:03:54.189Z
 - `PAYMENT_PROVIDER_DEFAULT`
 - `APP_BASE_URL_STRICT`
 - `NEXT_PUBLIC_SITE_URL`
+- `TEAM_INVITE_DELIVERY_WEBHOOK_URL`
+- `TEAM_INVITE_DELIVERY_WEBHOOK_SECRET`
 - `ZARINPAL_MERCHANT_ID`
 - `NEXT_PUBLIC_GA4_MEASUREMENT_ID`
 - `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`
