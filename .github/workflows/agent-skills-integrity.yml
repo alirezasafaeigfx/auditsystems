@@ -1,0 +1,61 @@
+name: agent-skills-integrity
+
+on:
+  pull_request:
+    paths:
+      - ".agents/**"
+      - ".codex/**"
+      - ".vendor/**"
+      - ".gitmodules"
+      - "skills-lock.json"
+      - "scripts/agent-skills.sh"
+      - "scripts/tests/test-agent-skills-integrity.sh"
+      - ".github/workflows/agent-skills-integrity.yml"
+      - "docs/agent-skills/**"
+      - "AGENTS.md"
+  push:
+    branches: ["main"]
+    paths:
+      - ".agents/**"
+      - ".codex/**"
+      - ".vendor/**"
+      - ".gitmodules"
+      - "skills-lock.json"
+      - "scripts/agent-skills.sh"
+      - "scripts/tests/test-agent-skills-integrity.sh"
+      - ".github/workflows/agent-skills-integrity.yml"
+      - "docs/agent-skills/**"
+      - "AGENTS.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-skills-integrity-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify pinned agent skills
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout without executing third-party submodules
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: Verify lock, gitlinks, and adapters
+        run: bash scripts/agent-skills.sh verify
+
+      - name: Run tamper tests
+        run: bash scripts/tests/test-agent-skills-integrity.sh

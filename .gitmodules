@@ -1,0 +1,15 @@
+[submodule ".vendor/skills/ui-ux-pro-max"]
+	path = .vendor/skills/ui-ux-pro-max
+	url = https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git
+	update = checkout
+	shallow = true
+[submodule ".vendor/skills/superpowers"]
+	path = .vendor/skills/superpowers
+	url = https://github.com/obra/superpowers.git
+	update = checkout
+	shallow = true
+[submodule ".agents/marketingskills"]
+	path = .agents/marketingskills
+	url = https://github.com/coreyhaines31/marketingskills.git
+	update = checkout
+	shallow = true
