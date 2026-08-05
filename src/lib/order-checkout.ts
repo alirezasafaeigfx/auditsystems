@@ -33,8 +33,11 @@ export class OrderCheckoutError extends Error {
 }
 
 function isRetryable(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError
-    && (error.code === "P2034" || error.code === "P2002");
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+  if (error.code === "P2034" || error.code === "P2002") return true;
+  if (error.code !== "P2010") return false;
+  const sqlState = String(error.meta?.code ?? "");
+  return sqlState === "40001" || sqlState === "40P01";
 }
 
 async function withSerializableRetry<T>(work: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
@@ -77,8 +80,8 @@ async function resolvePersistedCheckoutUrl(
 ): Promise<string | null> {
   const eventUrl = checkoutUrlFromEvents(order);
   if (eventUrl) return eventUrl;
-  if (!order.providerRef && !order.callbackRef) return null;
-  if (!order.providerRef || !order.callbackRef) {
+  if (!order.providerRef) return null;
+  if (!order.callbackRef) {
     throw new OrderCheckoutError("ORDER_CHECKOUT_RECONCILIATION_REQUIRED");
   }
 

@@ -39,7 +39,11 @@ export class PaymentCallbackStateError extends Error {
 }
 
 function isRetryable(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+  if (error.code === "P2034") return true;
+  if (error.code !== "P2010") return false;
+  const sqlState = String(error.meta?.code ?? "");
+  return sqlState === "40001" || sqlState === "40P01";
 }
 
 async function withSerializableRetry<T>(work: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
@@ -115,6 +119,7 @@ export async function claimPaymentVerification(input: {
         orderId: order.id,
         kind: "PAYMENT_VERIFICATION_STARTED",
         payload: { provider: input.provider },
+        createdAt: now,
       },
     });
     const claimedOrder = await tx.auditOrder.findUniqueOrThrow({
