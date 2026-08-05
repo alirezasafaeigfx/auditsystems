@@ -225,8 +225,9 @@ function parseFieldMetrics(payload: Record<string, unknown>): PerformanceEvidenc
     : null;
 
   return FIELD_DEFINITIONS.map((definition) => {
-    const providerMetric = isRecord(metrics[definition.providerKey]) ? metrics[definition.providerKey] : null;
-    let value = providerMetric ? finiteNumber(providerMetric.percentile) : null;
+    const rawMetric = metrics[definition.providerKey];
+    const providerMetric: Record<string, unknown> | null = isRecord(rawMetric) ? rawMetric : null;
+    let value = providerMetric ? finiteNumber(providerMetric["percentile"]) : null;
     if (definition.key === "cls" && value !== null && value > 1) value /= 100;
     if (value === null) {
       return {
@@ -262,8 +263,9 @@ function parseLabMetrics(payload: Record<string, unknown>, strategy: PageSpeedSt
   const audits = lighthouse && isRecord(lighthouse.audits) ? lighthouse.audits : {};
 
   return LAB_DEFINITIONS.map((definition) => {
-    const audit = isRecord(audits[definition.providerKey]) ? audits[definition.providerKey] : null;
-    const value = audit ? finiteNumber(audit.numericValue) : null;
+    const rawAudit = audits[definition.providerKey];
+    const audit: Record<string, unknown> | null = isRecord(rawAudit) ? rawAudit : null;
+    const value = audit ? finiteNumber(audit["numericValue"]) : null;
     const baseLimitation = "Lighthouse lab result; not real-user field data.";
     if (value === null) {
       return {

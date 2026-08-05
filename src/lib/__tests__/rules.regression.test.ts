@@ -952,9 +952,9 @@ describe("INPUT_MISSING_LABEL", () => {
 // CROSS-CUTTING: severity and category consistency with registry
 // ===========================================================================
 describe("Severity and category consistency with registry", () => {
-  it("all 31 finding codes exist in FINDING_REGISTRY", () => {
+  it("all 35 finding codes exist in FINDING_REGISTRY", () => {
     const codes = getAllFindingCodes();
-    expect(codes.length).toBe(31);
+    expect(codes.length).toBe(35);
     for (const code of codes) {
       expect(FINDING_REGISTRY[code]).toBeDefined();
     }
