@@ -11,6 +11,11 @@ import { reconstructCheckoutRedirect } from "./payments";
 export const REPORT_UNLOCK_AMOUNT_TOMAN = 290_000;
 const CHECKOUT_INITIALIZATION_TIMEOUT_MS = 2 * 60 * 1000;
 const MAX_TRANSACTION_RETRIES = 3;
+const VERIFICATION_EVENT_KINDS = [
+  "PAYMENT_VERIFICATION_STARTED",
+  "PAYMENT_VERIFICATION_ERROR",
+  "PAYMENT_VERIFICATION_RELEASED",
+] as const;
 
 type OrderWithEvents = AuditOrder & { events: AuditOrderEvent[] };
 
@@ -56,8 +61,14 @@ function checkoutUrlFromEvents(order: OrderWithEvents): string | null {
   return redirectUrl;
 }
 
-function latestVerificationLease(order: OrderWithEvents): AuditOrderEvent | null {
-  return order.events.find((candidate) => candidate.kind === "PAYMENT_VERIFICATION_STARTED") ?? null;
+function activeVerificationLease(order: OrderWithEvents): AuditOrderEvent | null {
+  const latest = order.events.find((candidate) =>
+    VERIFICATION_EVENT_KINDS.includes(candidate.kind as (typeof VERIFICATION_EVENT_KINDS)[number]));
+  return latest?.kind === "PAYMENT_VERIFICATION_STARTED" ? latest : null;
+}
+
+function hasProviderRequestMarker(order: OrderWithEvents): boolean {
+  return order.events.some((candidate) => candidate.kind === "CHECKOUT_PROVIDER_REQUEST_STARTED");
 }
 
 async function resolvePersistedCheckoutUrl(
@@ -153,7 +164,15 @@ async function readPending(
     },
     include: {
       events: {
-        where: { kind: { in: ["CHECKOUT_CREATED", "PAYMENT_VERIFICATION_STARTED"] } },
+        where: {
+          kind: {
+            in: [
+              "CHECKOUT_CREATED",
+              "CHECKOUT_PROVIDER_REQUEST_STARTED",
+              ...VERIFICATION_EVENT_KINDS,
+            ],
+          },
+        },
         orderBy: { createdAt: "desc" },
       },
     },
@@ -180,7 +199,7 @@ export async function prepareOrderCheckout(input: {
 
     let pending = await readPending(tx, input);
     if (pending) {
-      const lease = latestVerificationLease(pending);
+      const lease = activeVerificationLease(pending);
       if (lease && lease.createdAt > staleBefore) {
         const remainingMs = CHECKOUT_INITIALIZATION_TIMEOUT_MS - (now.getTime() - lease.createdAt.getTime());
         return {
@@ -202,6 +221,9 @@ export async function prepareOrderCheckout(input: {
       const redirectUrl = await resolvePersistedCheckoutUrl(tx, pending);
       if (pending.providerRef && redirectUrl) {
         return { kind: "READY", order: pending, redirectUrl, reused: true };
+      }
+      if (hasProviderRequestMarker(pending)) {
+        throw new OrderCheckoutError("ORDER_CHECKOUT_RECONCILIATION_REQUIRED");
       }
 
       if (pending.createdAt > staleBefore) {
@@ -238,6 +260,9 @@ export async function prepareOrderCheckout(input: {
         if (refreshed.providerRef && refreshedUrl) {
           return { kind: "READY", order: refreshed, redirectUrl: refreshedUrl, reused: true };
         }
+        if (hasProviderRequestMarker(refreshed)) {
+          throw new OrderCheckoutError("ORDER_CHECKOUT_RECONCILIATION_REQUIRED");
+        }
         return { kind: "INITIALIZING", order: refreshed, retryAfterSec: 2 };
       }
     }
@@ -271,6 +296,43 @@ export async function prepareOrderCheckout(input: {
     });
 
     return { kind: "CLAIMED", order, callbackRef, reused: false };
+  });
+}
+
+export async function markOrderCheckoutProviderRequestStarted(input: {
+  orderId: string;
+  callbackRef: string;
+  provider: PaymentProvider;
+}): Promise<void> {
+  await withSerializableRetry(async (tx) => {
+    await tx.$executeRaw`
+      UPDATE "AuditOrder"
+      SET "status" = "status"
+      WHERE "id" = ${input.orderId}
+    `;
+    const order = await tx.auditOrder.findUnique({
+      where: { id: input.orderId },
+      include: {
+        events: {
+          where: { kind: "CHECKOUT_PROVIDER_REQUEST_STARTED" },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+      },
+    });
+    if (!order || order.status !== "PENDING" || order.callbackRef !== input.callbackRef || order.provider !== input.provider) {
+      throw new OrderCheckoutError("ORDER_CHECKOUT_NOT_PENDING");
+    }
+    if (order.providerRef) throw new OrderCheckoutError("ORDER_CHECKOUT_ALREADY_INITIALIZED");
+    if (order.events.length > 0) return;
+
+    await tx.auditOrderEvent.create({
+      data: {
+        orderId: order.id,
+        kind: "CHECKOUT_PROVIDER_REQUEST_STARTED",
+        payload: { provider: input.provider },
+      },
+    });
   });
 }
 
@@ -313,7 +375,7 @@ export async function completeOrderCheckout(input: {
       where: { id: input.orderId },
       include: {
         events: {
-          where: { kind: { in: ["CHECKOUT_CREATED", "PAYMENT_VERIFICATION_STARTED"] } },
+          where: { kind: { in: ["CHECKOUT_CREATED", "CHECKOUT_PROVIDER_REQUEST_STARTED"] } },
           orderBy: { createdAt: "desc" },
         },
       },
