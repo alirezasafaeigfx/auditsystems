@@ -6,6 +6,7 @@ import {
   Prisma,
 } from "@prisma/client";
 import { prisma } from "./db";
+import { reconstructCheckoutRedirect } from "./payments";
 
 export const REPORT_UNLOCK_AMOUNT_TOMAN = 290_000;
 const CHECKOUT_INITIALIZATION_TIMEOUT_MS = 2 * 60 * 1000;
@@ -53,6 +54,42 @@ function checkoutUrlFromEvents(order: OrderWithEvents): string | null {
   const redirectUrl = (payload as Record<string, unknown>).redirectUrl;
   if (typeof redirectUrl !== "string" || !redirectUrl.trim()) return null;
   return redirectUrl;
+}
+
+async function resolvePersistedCheckoutUrl(
+  tx: Prisma.TransactionClient,
+  order: OrderWithEvents,
+): Promise<string | null> {
+  const eventUrl = checkoutUrlFromEvents(order);
+  if (eventUrl) return eventUrl;
+  if (!order.providerRef && !order.callbackRef) return null;
+  if (!order.providerRef || !order.callbackRef) {
+    throw new OrderCheckoutError("ORDER_CHECKOUT_RECONCILIATION_REQUIRED");
+  }
+
+  const recoveredUrl = reconstructCheckoutRedirect({
+    provider: order.provider,
+    providerRef: order.providerRef,
+    callbackRef: order.callbackRef,
+    orderId: order.id,
+  });
+  if (!recoveredUrl) {
+    throw new OrderCheckoutError("ORDER_CHECKOUT_RECONCILIATION_REQUIRED");
+  }
+
+  await tx.auditOrderEvent.create({
+    data: {
+      orderId: order.id,
+      kind: "CHECKOUT_CREATED",
+      payload: {
+        provider: order.provider,
+        callbackRef: order.callbackRef,
+        redirectUrl: recoveredUrl,
+        recovered: true,
+      },
+    },
+  });
+  return recoveredUrl;
 }
 
 async function updateLeadForOrder(
@@ -140,8 +177,8 @@ export async function prepareOrderCheckout(input: {
 
     let pending = await readPending(tx, input);
     if (pending) {
-      const redirectUrl = checkoutUrlFromEvents(pending);
-      if (pending.providerRef && pending.callbackRef && redirectUrl) {
+      const redirectUrl = await resolvePersistedCheckoutUrl(tx, pending);
+      if (pending.providerRef && redirectUrl) {
         return { kind: "READY", order: pending, redirectUrl, reused: true };
       }
 
@@ -175,8 +212,8 @@ export async function prepareOrderCheckout(input: {
       } else {
         const refreshed = await readPending(tx, input);
         if (!refreshed) throw new OrderCheckoutError("ORDER_CHECKOUT_STATE_CHANGED");
-        const refreshedUrl = checkoutUrlFromEvents(refreshed);
-        if (refreshed.providerRef && refreshed.callbackRef && refreshedUrl) {
+        const refreshedUrl = await resolvePersistedCheckoutUrl(tx, refreshed);
+        if (refreshed.providerRef && refreshedUrl) {
           return { kind: "READY", order: refreshed, redirectUrl: refreshedUrl, reused: true };
         }
         return { kind: "INITIALIZING", order: refreshed, retryAfterSec: 2 };
@@ -263,7 +300,7 @@ export async function completeOrderCheckout(input: {
     if (!existing || existing.status !== "PENDING") {
       throw new OrderCheckoutError("ORDER_CHECKOUT_NOT_PENDING");
     }
-    const redirectUrl = checkoutUrlFromEvents(existing);
+    const redirectUrl = await resolvePersistedCheckoutUrl(tx, existing);
     if (!existing.providerRef || !redirectUrl) {
       throw new OrderCheckoutError("ORDER_CHECKOUT_STATE_INVALID");
     }
