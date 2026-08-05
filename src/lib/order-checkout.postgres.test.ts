@@ -154,15 +154,23 @@ describePostgres("order checkout — PostgreSQL", () => {
 
   it("expires an abandoned initializer before creating a new order", async () => {
     const data = await fixture();
+    const initializedAt = new Date("2026-08-05T12:00:00.000Z");
     const first = await prepareOrderCheckout({
       runId: data.run.id,
       email: data.email,
       provider: "MOCK",
       domain: data.domain,
       normalizedUrl: data.normalizedUrl,
-      now: new Date("2026-08-05T12:00:00.000Z"),
+      now: initializedAt,
     });
     if (first.kind !== "CLAIMED") throw new Error("expected claimed checkout");
+
+    // createdAt is database-authored in production. Backdate the persisted row
+    // explicitly so this test does not depend on the runner's wall clock.
+    await prisma.auditOrder.update({
+      where: { id: first.order.id },
+      data: { createdAt: initializedAt },
+    });
 
     const second = await prepareOrderCheckout({
       runId: data.run.id,
