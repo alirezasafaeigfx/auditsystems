@@ -38,6 +38,34 @@ export function resolvePaymentProvider(value?: string | null): PaymentProvider {
   throw new Error("PAYMENT_PROVIDER_NOT_CONFIGURED");
 }
 
+function isValidCheckoutReference(value: string, maxLength: number): boolean {
+  return value.length > 0
+    && value.length <= maxLength
+    && /^[A-Za-z0-9_-]+$/.test(value);
+}
+
+export function reconstructCheckoutRedirect(input: {
+  provider: PaymentProvider;
+  providerRef: string;
+  callbackRef: string;
+  orderId: string;
+}): string | null {
+  if (!isValidCheckoutReference(input.orderId, 64)) return null;
+  if (!isValidCheckoutReference(input.callbackRef, 128)) return null;
+  if (!isValidCheckoutReference(input.providerRef, 128)) return null;
+
+  if (input.provider === "ZARINPAL") {
+    return `https://www.zarinpal.com/pg/StartPay/${encodeURIComponent(input.providerRef)}`;
+  }
+
+  if (input.provider === "MOCK" && !isProduction()) {
+    if (input.providerRef !== `MOCK-${input.orderId}`) return null;
+    return `${getBaseUrl()}/api/payments/callback?provider=MOCK&callbackRef=${encodeURIComponent(input.callbackRef)}&Status=OK&Authority=${encodeURIComponent(input.providerRef)}`;
+  }
+
+  return null;
+}
+
 export async function createCheckout(input: {
   provider: PaymentProvider;
   orderId: string;
@@ -67,7 +95,7 @@ export async function createCheckout(input: {
     return {
       redirectUrl,
       providerRef: `MOCK-${input.orderId}`,
-      callbackRef: input.callbackRef
+      callbackRef: input.callbackRef,
     };
   }
 
@@ -88,8 +116,8 @@ export async function createCheckout(input: {
           amount: input.amountToman * 10,
           callback_url: callbackUrl,
           description: `Audit order ${input.orderId}`,
-          metadata: { email: input.email }
-        })
+          metadata: { email: input.email },
+        }),
       });
 
       if (!response.ok) throw new Error(`PAYMENT_PROVIDER_HTTP_${response.status}`);
@@ -103,7 +131,7 @@ export async function createCheckout(input: {
         redirectUrl: `https://www.zarinpal.com/pg/StartPay/${authority}`,
         providerRef: authority,
         callbackRef: input.callbackRef,
-        raw: body
+        raw: body,
       };
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
@@ -130,7 +158,7 @@ export async function verifyCheckout(input: {
     if (isProduction()) throw new Error("PAYMENT_PROVIDER_NOT_CONFIGURED");
     return {
       paid: (input.callbackStatus ?? "").toUpperCase() === "OK",
-      providerRef: input.providerRef
+      providerRef: input.providerRef,
     };
   }
 
@@ -149,8 +177,8 @@ export async function verifyCheckout(input: {
         body: JSON.stringify({
           merchant_id: merchantId,
           amount: input.amountToman * 10,
-          authority: input.providerRef
-        })
+          authority: input.providerRef,
+        }),
       });
 
       if (!response.ok) throw new Error(`PAYMENT_PROVIDER_HTTP_${response.status}`);
@@ -160,7 +188,7 @@ export async function verifyCheckout(input: {
       return {
         paid: code === 100 || code === 101,
         providerRef: body.data?.ref_id ? String(body.data.ref_id) : input.providerRef,
-        raw: body
+        raw: body,
       };
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
