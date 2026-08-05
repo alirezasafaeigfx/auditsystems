@@ -18,7 +18,7 @@ const CALLBACK_ORDER_INCLUDE = {
   },
 } satisfies Prisma.AuditOrderInclude;
 
-type CallbackOrder = Prisma.AuditOrderGetPayload<{ include: typeof CALLBACK_ORDER_INCLUDE }>;
+export type CallbackOrder = Prisma.AuditOrderGetPayload<{ include: typeof CALLBACK_ORDER_INCLUDE }>;
 
 export type PaymentVerificationClaim =
   | { kind: "NOT_FOUND" }
@@ -90,26 +90,18 @@ export async function claimPaymentVerification(input: {
     if (order.provider !== input.provider) {
       throw new PaymentCallbackStateError("PROVIDER_MISMATCH");
     }
-    if (order.status === "PAID" || !["PENDING", "VERIFYING"].includes(order.status)) {
+    if (order.status !== "PENDING") {
       return { kind: "TERMINAL", order };
     }
 
-    if (order.status === "VERIFYING") {
-      const lease = latestLease(order);
-      if (lease && lease.createdAt > staleBefore) {
-        const remainingMs = VERIFICATION_LEASE_MS - (now.getTime() - lease.createdAt.getTime());
-        return {
-          kind: "PROCESSING",
-          order,
-          retryAfterSec: Math.max(1, Math.ceil(remainingMs / 1000)),
-        };
-      }
-    } else {
-      const claimed = await tx.auditOrder.updateMany({
-        where: { id: order.id, status: "PENDING" },
-        data: { status: "VERIFYING" },
-      });
-      if (claimed.count !== 1) throw new PaymentCallbackStateError("PAYMENT_STATE_CHANGED");
+    const lease = latestLease(order);
+    if (lease && lease.createdAt > staleBefore) {
+      const remainingMs = VERIFICATION_LEASE_MS - (now.getTime() - lease.createdAt.getTime());
+      return {
+        kind: "PROCESSING",
+        order,
+        retryAfterSec: Math.max(1, Math.ceil(remainingMs / 1000)),
+      };
     }
 
     const leaseEvent = await tx.auditOrderEvent.create({
@@ -146,7 +138,7 @@ export async function finalizePaymentVerification(input: {
     if (order.status === "PAID" || order.status === "FAILED") {
       return { order, reused: true };
     }
-    if (order.status !== "VERIFYING") {
+    if (order.status !== "PENDING") {
       throw new PaymentCallbackStateError("PAYMENT_STATE_CHANGED");
     }
     if (latestLease(order)?.id !== input.leaseEventId) {
@@ -194,13 +186,9 @@ export async function releasePaymentVerification(input: {
       where: { id: input.orderId },
       include: CALLBACK_ORDER_INCLUDE,
     });
-    if (!order || order.status !== "VERIFYING") return;
+    if (!order || order.status !== "PENDING") return;
     if (latestLease(order)?.id !== input.leaseEventId) return;
 
-    await tx.auditOrder.update({
-      where: { id: order.id },
-      data: { status: "PENDING" },
-    });
     await tx.auditOrderEvent.create({
       data: {
         orderId: order.id,
