@@ -56,6 +56,10 @@ function checkoutUrlFromEvents(order: OrderWithEvents): string | null {
   return redirectUrl;
 }
 
+function latestVerificationLease(order: OrderWithEvents): AuditOrderEvent | null {
+  return order.events.find((candidate) => candidate.kind === "PAYMENT_VERIFICATION_STARTED") ?? null;
+}
+
 async function resolvePersistedCheckoutUrl(
   tx: Prisma.TransactionClient,
   order: OrderWithEvents,
@@ -136,7 +140,7 @@ async function updateLeadForOrder(
   });
 }
 
-async function readPending(
+async function readActive(
   tx: Prisma.TransactionClient,
   input: { runId: string; email: string; provider: PaymentProvider },
 ): Promise<OrderWithEvents | null> {
@@ -145,13 +149,12 @@ async function readPending(
       runId: input.runId,
       email: input.email,
       provider: input.provider,
-      status: "PENDING",
+      status: { in: ["PENDING", "VERIFYING"] },
     },
     include: {
       events: {
-        where: { kind: "CHECKOUT_CREATED" },
+        where: { kind: { in: ["CHECKOUT_CREATED", "PAYMENT_VERIFICATION_STARTED"] } },
         orderBy: { createdAt: "desc" },
-        take: 1,
       },
     },
   });
@@ -175,25 +178,52 @@ export async function prepareOrderCheckout(input: {
     });
     if (paid) return { kind: "PAID", order: paid };
 
-    let pending = await readPending(tx, input);
-    if (pending) {
-      const redirectUrl = await resolvePersistedCheckoutUrl(tx, pending);
-      if (pending.providerRef && redirectUrl) {
-        return { kind: "READY", order: pending, redirectUrl, reused: true };
-      }
-
-      if (pending.createdAt > staleBefore) {
-        const remainingMs = CHECKOUT_INITIALIZATION_TIMEOUT_MS - (now.getTime() - pending.createdAt.getTime());
+    let active = await readActive(tx, input);
+    if (active?.status === "VERIFYING") {
+      const lease = latestVerificationLease(active);
+      if (lease && lease.createdAt > staleBefore) {
+        const remainingMs = CHECKOUT_INITIALIZATION_TIMEOUT_MS - (now.getTime() - lease.createdAt.getTime());
         return {
           kind: "INITIALIZING",
-          order: pending,
+          order: active,
+          retryAfterSec: Math.max(1, Math.ceil(remainingMs / 1000)),
+        };
+      }
+
+      const released = await tx.auditOrder.updateMany({
+        where: { id: active.id, status: "VERIFYING" },
+        data: { status: "PENDING" },
+      });
+      if (released.count !== 1) throw new OrderCheckoutError("ORDER_CHECKOUT_STATE_CHANGED");
+      await tx.auditOrderEvent.create({
+        data: {
+          orderId: active.id,
+          kind: "PAYMENT_VERIFICATION_RELEASED",
+          payload: { reason: "LEASE_EXPIRED", leaseEventId: lease?.id ?? null },
+        },
+      });
+      active = await readActive(tx, input);
+      if (!active) throw new OrderCheckoutError("ORDER_CHECKOUT_STATE_CHANGED");
+    }
+
+    if (active) {
+      const redirectUrl = await resolvePersistedCheckoutUrl(tx, active);
+      if (active.providerRef && redirectUrl) {
+        return { kind: "READY", order: active, redirectUrl, reused: true };
+      }
+
+      if (active.createdAt > staleBefore) {
+        const remainingMs = CHECKOUT_INITIALIZATION_TIMEOUT_MS - (now.getTime() - active.createdAt.getTime());
+        return {
+          kind: "INITIALIZING",
+          order: active,
           retryAfterSec: Math.max(1, Math.ceil(remainingMs / 1000)),
         };
       }
 
       const abandoned = await tx.auditOrder.updateMany({
         where: {
-          id: pending.id,
+          id: active.id,
           status: "PENDING",
           providerRef: null,
           createdAt: { lte: staleBefore },
@@ -203,17 +233,17 @@ export async function prepareOrderCheckout(input: {
       if (abandoned.count === 1) {
         await tx.auditOrderEvent.create({
           data: {
-            orderId: pending.id,
+            orderId: active.id,
             kind: "CHECKOUT_ABANDONED",
             payload: { reason: "INITIALIZATION_TIMEOUT" },
           },
         });
-        pending = null;
+        active = null;
       } else {
-        const refreshed = await readPending(tx, input);
+        const refreshed = await readActive(tx, input);
         if (!refreshed) throw new OrderCheckoutError("ORDER_CHECKOUT_STATE_CHANGED");
         const refreshedUrl = await resolvePersistedCheckoutUrl(tx, refreshed);
-        if (refreshed.providerRef && refreshedUrl) {
+        if (refreshed.status === "PENDING" && refreshed.providerRef && refreshedUrl) {
           return { kind: "READY", order: refreshed, redirectUrl: refreshedUrl, reused: true };
         }
         return { kind: "INITIALIZING", order: refreshed, retryAfterSec: 2 };
@@ -291,9 +321,8 @@ export async function completeOrderCheckout(input: {
       where: { id: input.orderId },
       include: {
         events: {
-          where: { kind: "CHECKOUT_CREATED" },
+          where: { kind: { in: ["CHECKOUT_CREATED", "PAYMENT_VERIFICATION_STARTED"] } },
           orderBy: { createdAt: "desc" },
-          take: 1,
         },
       },
     });
