@@ -8,7 +8,11 @@ on:
       - "src/lib/order-checkout.postgres.test.ts"
       - "src/lib/order-checkout-handler.ts"
       - "src/lib/order-checkout-handler.test.ts"
+      - "src/lib/payment-callback-state.ts"
+      - "src/lib/payment-callback-state.postgres.test.ts"
+      - "src/lib/payments.ts"
       - "src/app/api/orders/**"
+      - "src/app/api/payments/callback/**"
       - "src/app/api/reports/[token]/unlock/**"
       - "src/app/audit/r/[token]/unlock/**"
       - "src/app/en/audit/r/[token]/unlock/**"
@@ -71,10 +75,12 @@ jobs:
       - name: Apply migrations to ephemeral PostgreSQL
         run: pnpm exec prisma migrate deploy
 
-      - name: Run checkout policy and PostgreSQL suites
+      - name: Run checkout and callback suites
         run: >-
           pnpm exec vitest run
           src/lib/order-checkout-handler.test.ts
           src/app/api/orders/route.test.ts
           src/lib/order-checkout.postgres.test.ts
+          src/lib/payment-callback-state.postgres.test.ts
+          src/app/api/payments/callback/route.test.ts
           --no-file-parallelism
