@@ -31,6 +31,30 @@ function pageSpeedPayload() {
   };
 }
 
+function partialPageSpeedPayload() {
+  const payload = pageSpeedPayload();
+  const {
+    INTERACTION_TO_NEXT_PAINT: _removedInp,
+    ...fieldMetrics
+  } = payload.loadingExperience.metrics;
+  const {
+    "cumulative-layout-shift": _removedCls,
+    ...labAudits
+  } = payload.lighthouseResult.audits;
+
+  return {
+    ...payload,
+    loadingExperience: {
+      ...payload.loadingExperience,
+      metrics: fieldMetrics,
+    },
+    lighthouseResult: {
+      ...payload.lighthouseResult,
+      audits: labAudits,
+    },
+  };
+}
+
 function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), {
     status,
@@ -85,11 +109,10 @@ describe("PageSpeed performance evidence policy", () => {
       expect.objectContaining({ key: "tbt", value: 210, evidenceClass: "OBSERVED", provider: "GOOGLE_LIGHTHOUSE", strategy: "mobile" }),
     ]));
     expect(result.labMetrics.some((metric) => metric.key === "inp")).toBe(false);
-    const serialized = JSON.stringify(result);
-    expect(serialized).not.toContain("secret-provider-key");
+    expect(JSON.stringify(result)).not.toContain("secret-provider-key");
   });
 
-  it("preserves mobile and desktop strategy identity", async () => {
+  it("keeps mobile and desktop cache and lab identities separate", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(pageSpeedPayload()));
 
     const mobile = await collectPageSpeedStrategy({
@@ -113,10 +136,7 @@ describe("PageSpeed performance evidence policy", () => {
   });
 
   it("returns partial and null unavailable slots for incomplete payloads", async () => {
-    const payload = pageSpeedPayload();
-    delete payload.loadingExperience.metrics.INTERACTION_TO_NEXT_PAINT;
-    delete payload.lighthouseResult.audits["cumulative-layout-shift"];
-    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(payload));
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse(partialPageSpeedPayload()));
 
     const result = await collectPageSpeedStrategy({
       requestedUrl: "https://example.com/",
@@ -178,16 +198,17 @@ describe("PageSpeed performance evidence policy", () => {
     });
     expect(invalid.status).toBe("INVALID_RESPONSE");
 
+    const oversizedBody = "x".repeat(2048);
     const oversized = await collectPageSpeedStrategy({
       requestedUrl: "https://example.com/",
       strategy: "mobile",
       apiKey: "key",
-      fetchImpl: vi.fn().mockResolvedValue(new Response("x".repeat(256), {
+      fetchImpl: vi.fn().mockResolvedValue(new Response(oversizedBody, {
         status: 200,
-        headers: { "content-length": "256" },
+        headers: { "content-length": String(oversizedBody.length) },
       })),
       now: NOW,
-      maxResponseBytes: 64,
+      maxResponseBytes: 1024,
     });
     expect(oversized.status).toBe("INVALID_RESPONSE");
   });

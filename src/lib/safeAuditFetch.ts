@@ -30,6 +30,7 @@ export type AuditHtmlResponse = {
   status: number;
   headers: Record<string, string>;
   html: string;
+  ttfbMs: number;
   responseMs: number;
 };
 
@@ -197,6 +198,7 @@ export async function fetchAuditHtml(
     const address = selectAddress(records);
     const target = new URL(normalized.normalizedUrl);
     const response = await performPinnedRequest(target, address, signal, timeoutMs);
+    const headerArrivalMs = Date.now() - startedAt;
     const abortResponse = () => response.destroy();
     signal.addEventListener("abort", abortResponse, { once: true });
 
@@ -219,6 +221,7 @@ export async function fetchAuditHtml(
         status,
         headers: responseHeaders(response),
         html,
+        ttfbMs: headerArrivalMs,
         responseMs: Date.now() - startedAt
       };
     } catch (error) {

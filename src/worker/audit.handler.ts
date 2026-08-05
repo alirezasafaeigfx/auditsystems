@@ -2,6 +2,11 @@ import { Job, JobType, Prisma } from "@prisma/client";
 import { prisma } from "../lib/db";
 import { extractResourcesFromHtml } from "../lib/extractResources";
 import { normalizeAuditTargetUrl } from "../lib/normalizeAuditTargetUrl";
+import {
+  buildPerformanceDiagnostics,
+  collectPerformanceEvidenceBundle,
+} from "../lib/performance-evidence";
+import { applyPerformanceEvidencePolicy } from "../lib/performance-rules";
 import { evaluateAuditRules } from "../lib/rules";
 import { parseSeoBasics } from "../lib/seo";
 import { buildAuditSummaryV1 } from "../lib/summary";
@@ -11,6 +16,7 @@ import { createRequestId } from "../lib/observability";
 import { sendAuditCompleteNotification } from "../lib/notifications";
 import { recordFunnelEvent } from "../lib/funnel-events";
 import { fetchAuditHtml } from "../lib/safeAuditFetch";
+import type { AuditContext } from "../lib/types";
 
 export type JobHandler = (job: Job, signal: AbortSignal) => Promise<void>;
 
@@ -52,8 +58,7 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
     ]);
     const resources = extractResourcesFromHtml(main.html, { baseUrl: main.finalUrl, firstPartyHosts });
     const seo = parseSeoBasics(main.html);
-
-    const findings = evaluateAuditRules({
+    const context: AuditContext = {
       target: {
         normalizedUrl: normalized.normalizedUrl,
         origin: normalized.origin,
@@ -68,11 +73,38 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
         html: main.html,
         metrics: {
           responseMs: main.responseMs,
-          ttfbMs: main.responseMs
+          ttfbMs: main.ttfbMs
         }
       },
       resources,
       seo
+    };
+
+    const findings = applyPerformanceEvidencePolicy(context, evaluateAuditRules(context));
+    const blockingScriptCount = resources.filter((resource) =>
+      resource.kind === "script"
+      && resource.isThirdParty
+      && resource.inHead === true
+      && resource.attrs?.async !== true
+      && resource.attrs?.defer !== true).length;
+    const imagesWithoutDimensions = resources.filter((resource) =>
+      (resource.kind === "img" || resource.kind === "image")
+      && (!resource.attrs?.width || !resource.attrs?.height)).length;
+    const diagnostics = buildPerformanceDiagnostics({
+      requestedUrl: normalized.normalizedUrl,
+      finalUrl: main.finalUrl,
+      responseMs: main.responseMs,
+      ttfbMs: main.ttfbMs,
+      resourceCount: resources.length,
+      blockingScriptCount,
+      imagesWithoutDimensions,
+    });
+    const performance = await collectPerformanceEvidenceBundle({
+      requestedUrl: normalized.normalizedUrl,
+      finalUrl: main.finalUrl,
+      depth: run.depth,
+      diagnostics,
+      apiKey: process.env.PAGESPEED_API_KEY,
     });
 
     const summary = buildAuditSummaryV1({
@@ -85,7 +117,8 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
       headers: main.headers,
       resources,
       findings,
-      seo
+      seo,
+      performance,
     });
 
     const score = calculateScore(findings);
@@ -123,7 +156,7 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
           reportStatus: "REVIEW",
           finishedAt: new Date(),
           summary: {
-            ...(summary as Record<string, unknown>),
+            ...(summary as unknown as Record<string, unknown>),
             score: score.overall,
             grade: score.grade,
             categoryScores: score.categories,

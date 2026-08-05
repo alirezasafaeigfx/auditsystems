@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { applyPerformanceEvidencePolicy } from "./performance-rules";
 import { evaluateAuditRules } from "./rules";
 import type { AuditContext } from "./types";
 
@@ -44,8 +45,9 @@ function context(): AuditContext {
 }
 
 describe("performance diagnostic finding policy", () => {
-  it("does not emit legacy Core Web Vitals proxy codes or a synthetic good result", () => {
-    const findings = evaluateAuditRules(context());
+  it("does not serialize legacy Core Web Vitals proxy codes or a synthetic good result", () => {
+    const ctx = context();
+    const findings = applyPerformanceEvidencePolicy(ctx, evaluateAuditRules(ctx));
     const codes = findings.map((finding) => finding.code);
 
     expect(codes.some((code) => String(code).startsWith("CWV_"))).toBe(false);
@@ -53,7 +55,9 @@ describe("performance diagnostic finding policy", () => {
   });
 
   it("labels local risk indicators as diagnostics rather than CWV measurements", () => {
-    const findings = evaluateAuditRules(context()).filter((finding) => String(finding.code).startsWith("PERF_DIAGNOSTIC_"));
+    const ctx = context();
+    const findings = applyPerformanceEvidencePolicy(ctx, evaluateAuditRules(ctx))
+      .filter((finding) => String(finding.code).startsWith("PERF_DIAGNOSTIC_"));
 
     expect(findings.length).toBeGreaterThan(0);
     for (const finding of findings) {

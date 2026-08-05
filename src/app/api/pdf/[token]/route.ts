@@ -2,6 +2,8 @@ import { prisma } from "../../../../lib/db";
 import { verifyDownloadToken } from "../../../../lib/downloadToken";
 import { observeApiRequest } from "../../../../lib/metrics";
 import { createRequestId, respondJson } from "../../../../lib/observability";
+import { isPerformanceEvidenceBundle } from "../../../../lib/performance-evidence";
+import { appendPerformanceEvidencePage } from "../../../../lib/performance-report";
 import { buildAuditReportPdf } from "../../../../lib/pdf";
 import { isReportShareAccessible } from "../../../../lib/reportShare";
 import { calculateScore } from "../../../../lib/scoring";
@@ -16,6 +18,12 @@ function hexToRgb(hex: string): [number, number, number] {
     parseInt(result[2], 16) / 255,
     parseInt(result[3], 16) / 255
   ];
+}
+
+function performanceFromSummary(summary: unknown) {
+  if (!summary || typeof summary !== "object" || Array.isArray(summary)) return undefined;
+  const performance = (summary as Record<string, unknown>).performance;
+  return isPerformanceEvidenceBundle(performance) ? performance : undefined;
 }
 
 export async function GET(request: NextRequest, context: { params: Promise<{ token: string }> }) {
@@ -105,15 +113,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tok
       });
       agencyName = org?.brandName ?? org?.name ?? undefined;
       agencyLogo = org?.brandLogoBase64 ?? undefined;
-      if (org?.primaryColor) {
-        primaryColor = hexToRgb(org.primaryColor);
-      }
-      if (org?.secondaryColor) {
-        secondaryColor = hexToRgb(org.secondaryColor);
-      }
+      if (org?.primaryColor) primaryColor = hexToRgb(org.primaryColor);
+      if (org?.secondaryColor) secondaryColor = hexToRgb(org.secondaryColor);
     }
 
-    const pdfBytes = await buildAuditReportPdf({
+    const basePdfBytes = await buildAuditReportPdf({
       reportTitle: "Iran Readiness Audit Report",
       targetUrl: share.run.normalizedUrl ?? share.run.url,
       status: share.run.status,
@@ -132,6 +136,10 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tok
       primaryColor,
       secondaryColor
     });
+    const pdfBytes = await appendPerformanceEvidencePage(
+      basePdfBytes,
+      performanceFromSummary(share.run.summary),
+    );
 
     return new Response(Buffer.from(pdfBytes), {
       status: 200,

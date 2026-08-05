@@ -1,11 +1,11 @@
 # Auto Generated Project Status
 
-Generated at: 2026-08-05T18:57:39.581Z
+Generated at: 2026-08-05T19:36:45.351Z
 
 ## Overview
 - API routes: 50
 - Page routes: 73
-- Test files: 92
+- Test files: 94
 - NPM scripts: 66
 
 ## Roadmap Phases
@@ -156,6 +156,8 @@ Generated at: 2026-08-05T18:57:39.581Z
 - `UPSTASH_REDIS_REST_TOKEN`
 - `REDIS_URL`
 - `REQUIRE_DISTRIBUTED_RATE_LIMIT`
+- `AUTH_TRUST_PROXY_HEADERS`
+- `AUTH_CLIENT_IP_HEADER`
 - `PAYMENT_PROVIDER_DEFAULT`
 - `APP_BASE_URL_STRICT`
 - `NEXT_PUBLIC_SITE_URL`

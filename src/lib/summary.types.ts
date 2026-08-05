@@ -1,3 +1,4 @@
+import type { PerformanceEvidenceBundle } from "./performance-evidence";
 import { Finding } from "./types";
 
 export type AuditSummaryV1 = {
@@ -39,6 +40,7 @@ export type AuditSummaryV1 = {
     canonical: "present" | "missing";
     openGraph: "present" | "missing";
   };
+  performance?: PerformanceEvidenceBundle;
   findings: Finding[];
   highlights: {
     topFixes: Array<{

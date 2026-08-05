@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatPerformanceEvidenceLines } from "./pdf";
+import { formatPerformanceEvidenceLines } from "./performance-report";
 import { buildAuditSummaryV1 } from "./summary";
 import type { PerformanceEvidenceBundle } from "./performance-evidence";
 
