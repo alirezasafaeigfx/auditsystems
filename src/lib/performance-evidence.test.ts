@@ -33,24 +33,22 @@ function pageSpeedPayload() {
 
 function partialPageSpeedPayload() {
   const payload = pageSpeedPayload();
-  const {
-    INTERACTION_TO_NEXT_PAINT: _removedInp,
-    ...fieldMetrics
-  } = payload.loadingExperience.metrics;
-  const {
-    "cumulative-layout-shift": _removedCls,
-    ...labAudits
-  } = payload.lighthouseResult.audits;
-
   return {
     ...payload,
     loadingExperience: {
       ...payload.loadingExperience,
-      metrics: fieldMetrics,
+      metrics: {
+        LARGEST_CONTENTFUL_PAINT_MS: payload.loadingExperience.metrics.LARGEST_CONTENTFUL_PAINT_MS,
+        CUMULATIVE_LAYOUT_SHIFT_SCORE: payload.loadingExperience.metrics.CUMULATIVE_LAYOUT_SHIFT_SCORE,
+      },
     },
     lighthouseResult: {
       ...payload.lighthouseResult,
-      audits: labAudits,
+      audits: {
+        "largest-contentful-paint": payload.lighthouseResult.audits["largest-contentful-paint"],
+        "first-contentful-paint": payload.lighthouseResult.audits["first-contentful-paint"],
+        "total-blocking-time": payload.lighthouseResult.audits["total-blocking-time"],
+      },
     },
   };
 }
