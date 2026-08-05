@@ -35,6 +35,28 @@ function safeFailureCode(error: unknown): string {
   return "UNEXPECTED_CHECKOUT_FAILURE";
 }
 
+function isDefinitiveCheckoutInitializationFailure(code: string): boolean {
+  if ([
+    "PAYMENT_PROVIDER_NOT_CONFIGURED",
+    "PAYMENT_PROVIDER_NOT_IMPLEMENTED",
+    "PAYMENT_PROVIDER_REQUEST_FAILED",
+    "INVALID_AMOUNT",
+    "AMOUNT_OUT_OF_RANGE",
+    "INVALID_ORDER_ID",
+    "INVALID_CALLBACK_REF",
+  ].includes(code)) {
+    return true;
+  }
+
+  const httpStatus = /^PAYMENT_PROVIDER_HTTP_([0-9]{3})$/.exec(code);
+  if (!httpStatus) return false;
+  const status = Number(httpStatus[1]);
+  if (status < 400 || status >= 500) return false;
+
+  // These statuses can represent an indeterminate transport or duplicate state.
+  return ![408, 409, 425, 429].includes(status);
+}
+
 function paymentFailureResponse(error: unknown, requestId: string) {
   const code = safeFailureCode(error);
   if (code === "PAYMENT_PROVIDER_NOT_CONFIGURED") {
@@ -284,6 +306,18 @@ export async function handleOrderCheckoutRequest(
       });
     } catch (error) {
       const code = safeFailureCode(error);
+      if (!isDefinitiveCheckoutInitializationFailure(code)) {
+        logEvent("error", "order_checkout_provider_ambiguous", {
+          requestId,
+          orderId: prepared.order.id,
+          tokenHash,
+          provider,
+          code: "ORDER_CHECKOUT_RECONCILIATION_REQUIRED",
+          providerFailureCode: code,
+        });
+        throw new OrderCheckoutError("ORDER_CHECKOUT_RECONCILIATION_REQUIRED");
+      }
+
       await failOrderCheckout({
         orderId: prepared.order.id,
         callbackRef: prepared.callbackRef,
@@ -291,10 +325,9 @@ export async function handleOrderCheckoutRequest(
       });
       claimedOrder = null;
       providerRequestStarted = false;
-      statusCode = code === "PAYMENT_PROVIDER_TIMEOUT" ? 504
-        : code === "PAYMENT_PROVIDER_NOT_CONFIGURED" ? 503
-          : code.startsWith("PAYMENT_PROVIDER_") ? 502
-            : 500;
+      statusCode = code === "PAYMENT_PROVIDER_NOT_CONFIGURED" ? 503
+        : code.startsWith("PAYMENT_PROVIDER_") ? 502
+          : 500;
       logEvent("error", "order_checkout_provider_failed", {
         requestId,
         orderId: prepared.order.id,
