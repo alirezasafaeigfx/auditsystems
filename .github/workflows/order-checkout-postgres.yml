@@ -1,0 +1,80 @@
+name: order-checkout-postgres
+
+on:
+  pull_request:
+    paths:
+      - "prisma/migrations/**"
+      - "src/lib/order-checkout.ts"
+      - "src/lib/order-checkout.postgres.test.ts"
+      - "src/lib/order-checkout-handler.ts"
+      - "src/lib/order-checkout-handler.test.ts"
+      - "src/app/api/orders/**"
+      - "src/app/api/reports/[token]/unlock/**"
+      - "src/app/audit/r/[token]/unlock/**"
+      - "src/app/en/audit/r/[token]/unlock/**"
+      - ".github/workflows/order-checkout-postgres.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres@sha256:5660c2cbfea50c7a9127d17dc4e48543eedd3d7a41a595a2dfa572471e37e64c
+        env:
+          POSTGRES_USER: auditsystems
+          POSTGRES_PASSWORD: integration-password
+          POSTGRES_DB: auditsystems_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U auditsystems -d auditsystems_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      DATABASE_URL: postgresql://auditsystems:integration-password@127.0.0.1:5432/auditsystems_test
+      ORDER_CHECKOUT_INTEGRATION: "true"
+      NODE_ENV: test
+      DOWNLOAD_TOKEN_SECRET: integration-download-secret-minimum-32
+      IP_HASH_SALT: integration-ip-hash-salt-minimum-32
+      CSRF_SECRET: integration-csrf-secret-minimum-32
+      SESSION_SECRET: integration-session-secret-minimum-32
+      ADMIN_SESSION_SECRET: integration-admin-secret-minimum-32
+      PAYMENT_PROVIDER_DEFAULT: MOCK
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Apply migrations to ephemeral PostgreSQL
+        run: pnpm exec prisma migrate deploy
+
+      - name: Run checkout policy and PostgreSQL suites
+        run: >-
+          pnpm exec vitest run
+          src/lib/order-checkout-handler.test.ts
+          src/app/api/orders/route.test.ts
+          src/lib/order-checkout.postgres.test.ts
+          --no-file-parallelism
