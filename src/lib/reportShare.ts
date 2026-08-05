@@ -5,8 +5,12 @@ const EXPIRY_DURATIONS: Record<string, number> = {
   "24h": 24 * 60 * 60 * 1000,
   "7d": 7 * 24 * 60 * 60 * 1000,
   "30d": 30 * 24 * 60 * 60 * 1000,
-  "never": 365 * 24 * 60 * 60 * 1000
+  "never": 365 * 24 * 60 * 60 * 1000,
 };
+
+export const REPORT_SHARE_PASSWORD_MAX_LENGTH = 256;
+const PASSWORD_SALT_HEX = /^[a-f0-9]{32}$/i;
+const PASSWORD_HASH_HEX = /^[a-f0-9]{128}$/i;
 
 export type ExpiryOption = keyof typeof EXPIRY_DURATIONS;
 
@@ -27,11 +31,39 @@ export function hashPassword(password: string): string {
   return `${salt}:${hash}`;
 }
 
-export function verifyPassword(password: string, passwordHash: string): boolean {
-  const [salt, hash] = passwordHash.split(":");
-  if (!salt || !hash) return false;
-  const hashToVerify = crypto.scryptSync(password, salt, 64).toString("hex");
-  return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(hashToVerify));
+function derivePasswordKey(password: string, salt: string): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    crypto.scrypt(password, salt, 64, (error, key) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve(key);
+    });
+  });
+}
+
+export async function verifyPassword(password: string, passwordHash: string): Promise<boolean> {
+  if (!password || password.length > REPORT_SHARE_PASSWORD_MAX_LENGTH) return false;
+
+  const [salt, hash, ...extra] = passwordHash.split(":");
+  if (
+    !salt
+    || !hash
+    || extra.length > 0
+    || !PASSWORD_SALT_HEX.test(salt)
+    || !PASSWORD_HASH_HEX.test(hash)
+  ) {
+    return false;
+  }
+
+  const expected = Buffer.from(hash, "hex");
+  try {
+    const actual = await derivePasswordKey(password, salt);
+    return actual.length === expected.length && crypto.timingSafeEqual(expected, actual);
+  } catch {
+    return false;
+  }
 }
 
 export function hasPassword(share: Pick<ReportShare, "passwordHash">): boolean {
