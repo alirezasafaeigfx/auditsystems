@@ -1,11 +1,11 @@
 # Auto Generated Project Status
 
-Generated at: 2026-08-05T19:36:45.351Z
+Generated at: 2026-08-05T22:05:24.758Z
 
 ## Overview
 - API routes: 50
 - Page routes: 73
-- Test files: 94
+- Test files: 98
 - NPM scripts: 66
 
 ## Roadmap Phases
@@ -152,6 +152,7 @@ Generated at: 2026-08-05T19:36:45.351Z
 - `WORKER_POLL_MS`
 - `WORKER_JOB_TIMEOUT_MS`
 - `WORKER_CONCURRENCY`
+- `PAGESPEED_API_KEY`
 - `UPSTASH_REDIS_REST_URL`
 - `UPSTASH_REDIS_REST_TOKEN`
 - `REDIS_URL`
