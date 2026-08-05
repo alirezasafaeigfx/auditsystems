@@ -1,23 +1,20 @@
-name: order-checkout-postgres
+name: team-invites-postgres
 
 on:
   pull_request:
     paths:
       - "prisma/migrations/**"
-      - "src/lib/order-checkout.ts"
-      - "src/lib/order-checkout.postgres.test.ts"
-      - "src/lib/order-checkout-recovery.postgres.test.ts"
-      - "src/lib/order-checkout-handler.ts"
-      - "src/lib/order-checkout-handler.test.ts"
-      - "src/lib/payment-callback-state.ts"
-      - "src/lib/payment-callback-state.postgres.test.ts"
-      - "src/lib/payments.ts"
-      - "src/app/api/orders/**"
-      - "src/app/api/payments/callback/**"
-      - "src/app/api/reports/[token]/unlock/**"
-      - "src/app/audit/r/[token]/unlock/**"
-      - "src/app/en/audit/r/[token]/unlock/**"
-      - ".github/workflows/order-checkout-postgres.yml"
+      - "prisma/schema.prisma"
+      - "src/lib/team-invites.ts"
+      - "src/lib/team-invites.postgres.test.ts"
+      - "src/lib/team-invite-delivery.ts"
+      - "src/lib/team-invite-delivery.test.ts"
+      - "src/lib/safe-next-path.ts"
+      - "src/lib/safe-next-path.test.ts"
+      - "src/app/api/team/**"
+      - "src/app/app/team/**"
+      - "src/app/login/page.tsx"
+      - ".github/workflows/team-invites-postgres.yml"
   workflow_dispatch:
 
 permissions:
@@ -45,7 +42,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://auditsystems:integration-password@127.0.0.1:5432/auditsystems_test
-      ORDER_CHECKOUT_INTEGRATION: "true"
+      TEAM_INVITE_INTEGRATION: "true"
       NODE_ENV: test
       DOWNLOAD_TOKEN_SECRET: integration-download-secret-minimum-32
       IP_HASH_SALT: integration-ip-hash-salt-minimum-32
@@ -53,7 +50,6 @@ jobs:
       SESSION_SECRET: integration-session-secret-minimum-32
       ADMIN_SESSION_SECRET: integration-admin-secret-minimum-32
       PAYMENT_PROVIDER_DEFAULT: MOCK
-      NEXT_PUBLIC_SITE_URL: http://localhost:3000
 
     steps:
       - name: Checkout
@@ -76,13 +72,11 @@ jobs:
       - name: Apply migrations to ephemeral PostgreSQL
         run: pnpm exec prisma migrate deploy
 
-      - name: Run checkout and callback suites
+      - name: Run team invite policy and PostgreSQL suites
         run: >-
           pnpm exec vitest run
-          src/lib/order-checkout-handler.test.ts
-          src/app/api/orders/route.test.ts
-          src/lib/order-checkout.postgres.test.ts
-          src/lib/order-checkout-recovery.postgres.test.ts
-          src/lib/payment-callback-state.postgres.test.ts
-          src/app/api/payments/callback/route.test.ts
+          src/lib/team-invite-delivery.test.ts
+          src/lib/safe-next-path.test.ts
+          src/app/api/team/route.test.ts
+          src/lib/team-invites.postgres.test.ts
           --no-file-parallelism

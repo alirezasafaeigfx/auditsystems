@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchCSRFHeaders } from "../../../lib/csrf-client";
 
@@ -17,6 +17,7 @@ type Invite = {
   email: string;
   role: string;
   createdAt: string;
+  expiresAt: string;
 };
 
 type TeamData = {
@@ -24,7 +25,22 @@ type TeamData = {
   invites: Invite[];
 };
 
-const ROLE_OPTIONS = ["OWNER", "ADMIN", "VIEWER"] as const;
+const MUTABLE_ROLE_OPTIONS = ["ADMIN", "VIEWER"] as const;
+
+const TEAM_ERROR_MESSAGES: Record<string, string> = {
+  ALREADY_MEMBER: "این کاربر قبلاً عضو تیم است.",
+  INVITE_PENDING: "دعوت‌نامه فعال برای این ایمیل وجود دارد.",
+  CANNOT_INVITE_SELF: "نمی‌توانید خودتان را دعوت کنید.",
+  INVALID_EMAIL: "ایمیل نامعتبر است.",
+  INVALID_ROLE: "نقش دعوت معتبر نیست.",
+  INVITE_NOT_FOUND: "دعوت‌نامه پیدا نشد.",
+  INVITE_NOT_ACTIVE: "دعوت‌نامه دیگر فعال نیست.",
+  INVITE_ALREADY_ACCEPTED: "دعوت‌نامه قبلاً پذیرفته شده است.",
+  DELIVERY_NOT_CONFIGURED: "سرویس ارسال دعوت‌نامه پیکربندی نشده است.",
+  DELIVERY_FAILED: "ارسال دعوت‌نامه ناموفق بود و لینک ایجادشده غیرفعال شد.",
+  RATE_LIMITED: "تعداد عملیات بیش از حد مجاز است. کمی بعد دوباره تلاش کنید.",
+  FORBIDDEN: "شما اجازه این عملیات را ندارید.",
+};
 
 function RoleBadge({ role }: { role: string }) {
   const colors: Record<string, { bg: string; fg: string }> = {
@@ -45,66 +61,78 @@ export default function TeamPage() {
   const [data, setData] = useState<TeamData>({ members: [], invites: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<string>("VIEWER");
   const [inviting, setInviting] = useState(false);
-
   const [changingRole, setChangingRole] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [inviteAction, setInviteAction] = useState<string | null>(null);
+
+  async function loadTeam() {
+    const response = await fetch("/api/team", { cache: "no-store" });
+    if (response.status === 401) {
+      router.push("/login");
+      return;
+    }
+    const body = await response.json() as Partial<TeamData> & { error?: string };
+    if (!response.ok || body.error) throw new Error(body.error ?? "TEAM_LOAD_FAILED");
+    setData({ members: body.members ?? [], invites: body.invites ?? [] });
+  }
 
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch("/api/team", { cache: "no-store" });
-        if (res.status === 401) {
-          router.push("/login");
-          return;
-        }
-        const json = await res.json();
-        setData({ members: json.members ?? [], invites: json.invites ?? [] });
-      } catch {
-        setError("خطا در بارگذاری اعضا");
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [router]);
+    loadTeam()
+      .catch(() => setError("خطا در بارگذاری اعضا"))
+      .finally(() => setLoading(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function handleInvite(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleInvite(event: React.FormEvent) {
+    event.preventDefault();
     if (!inviteEmail.trim()) return;
     setInviting(true);
     setError(null);
     try {
       const csrf = await fetchCSRFHeaders();
-      const res = await fetch("/api/team", {
+      const response = await fetch("/api/team", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...csrf },
         body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole }),
       });
-      const json = await res.json();
-      if (json.error) {
-        const errors: Record<string, string> = {
-          ALREADY_MEMBER: "این کاربر قبلاً عضو تیم است",
-          INVITE_PENDING: "دعوت‌نامه برای این ایمیل در انتظار تأیید است",
-          CANNOT_INVITE_SELF: "نمی‌توانید خودتان را دعوت کنید",
-          INVALID_EMAIL: "ایمیل نامعتبر است",
-          FORBIDDEN: "شما اجازه این کار را ندارید",
-        };
-        setError(errors[json.error] ?? "خطا در ارسال دعوت‌نامه");
+      const body = await response.json() as { error?: string };
+      if (!response.ok || body.error) {
+        setError(TEAM_ERROR_MESSAGES[body.error ?? ""] ?? "خطا در ارسال دعوت‌نامه");
         return;
       }
       setInviteEmail("");
       setInviteRole("VIEWER");
-      const listRes = await fetch("/api/team", { cache: "no-store" });
-      const listJson = await listRes.json();
-      setData({ members: listJson.members ?? [], invites: listJson.invites ?? [] });
+      await loadTeam();
     } catch {
       setError("خطا در ارسال دعوت‌نامه");
     } finally {
       setInviting(false);
+    }
+  }
+
+  async function handleInviteAction(inviteId: string, action: "RESEND" | "REVOKE") {
+    if (action === "REVOKE" && !confirm("دعوت‌نامه غیرفعال شود؟")) return;
+    setInviteAction(`${inviteId}:${action}`);
+    setError(null);
+    try {
+      const csrf = await fetchCSRFHeaders();
+      const response = await fetch("/api/team", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...csrf },
+        body: JSON.stringify({ inviteId, action }),
+      });
+      const body = await response.json() as { error?: string };
+      if (!response.ok || body.error) {
+        setError(TEAM_ERROR_MESSAGES[body.error ?? ""] ?? "عملیات دعوت‌نامه ناموفق بود.");
+        return;
+      }
+      await loadTeam();
+    } catch {
+      setError("عملیات دعوت‌نامه ناموفق بود.");
+    } finally {
+      setInviteAction(null);
     }
   }
 
@@ -113,19 +141,19 @@ export default function TeamPage() {
     setError(null);
     try {
       const csrf = await fetchCSRFHeaders();
-      const res = await fetch("/api/team", {
+      const response = await fetch("/api/team", {
         method: "PUT",
         headers: { "Content-Type": "application/json", ...csrf },
         body: JSON.stringify({ userId, role: newRole }),
       });
-      const json = await res.json();
-      if (json.error) {
-        setError("خطا در تغییر نقش");
+      const body = await response.json() as { error?: string };
+      if (!response.ok || body.error) {
+        setError(TEAM_ERROR_MESSAGES[body.error ?? ""] ?? "خطا در تغییر نقش");
         return;
       }
-      setData((prev) => ({
-        ...prev,
-        members: prev.members.map((m) => (m.userId === userId ? { ...m, role: newRole } : m)),
+      setData((previous) => ({
+        ...previous,
+        members: previous.members.map((member) => member.userId === userId ? { ...member, role: newRole } : member),
       }));
     } catch {
       setError("خطا در تغییر نقش");
@@ -140,18 +168,18 @@ export default function TeamPage() {
     setError(null);
     try {
       const csrf = await fetchCSRFHeaders();
-      const res = await fetch(`/api/team?userId=${userId}`, {
+      const response = await fetch(`/api/team?userId=${encodeURIComponent(userId)}`, {
         method: "DELETE",
         headers: csrf,
       });
-      const json = await res.json();
-      if (json.error) {
-        setError("خطا در حذف عضو");
+      const body = await response.json() as { error?: string };
+      if (!response.ok || body.error) {
+        setError(TEAM_ERROR_MESSAGES[body.error ?? ""] ?? "خطا در حذف عضو");
         return;
       }
-      setData((prev) => ({
-        ...prev,
-        members: prev.members.filter((m) => m.userId !== userId),
+      setData((previous) => ({
+        ...previous,
+        members: previous.members.filter((member) => member.userId !== userId),
       }));
     } catch {
       setError("خطا در حذف عضو");
@@ -165,7 +193,7 @@ export default function TeamPage() {
       <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "1.5rem" }}>مدیریت تیم</h1>
 
       {error && (
-        <div style={{ padding: "0.75rem 1rem", background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: "0.5rem", marginBottom: "1rem", color: "var(--danger)", fontSize: "0.875rem" }}>
+        <div role="alert" style={{ padding: "0.75rem 1rem", background: "#fee2e2", border: "1px solid #fca5a5", borderRadius: "0.5rem", marginBottom: "1rem", color: "var(--danger)", fontSize: "0.875rem" }}>
           {error}
         </div>
       )}
@@ -175,15 +203,16 @@ export default function TeamPage() {
         <form onSubmit={handleInvite} style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
           <input
             type="email"
+            maxLength={254}
             placeholder="ایمیل عضو جدید"
             value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
+            onChange={(event) => setInviteEmail(event.target.value)}
             required
             style={{ padding: "0.5rem 0.75rem", border: "1px solid var(--border, #e5e7eb)", borderRadius: "0.375rem", fontSize: "0.875rem", flex: "1 1 200px" }}
           />
           <select
             value={inviteRole}
-            onChange={(e) => setInviteRole(e.target.value)}
+            onChange={(event) => setInviteRole(event.target.value)}
             style={{ padding: "0.5rem 0.75rem", border: "1px solid var(--border, #e5e7eb)", borderRadius: "0.375rem", fontSize: "0.875rem" }}
           >
             <option value="VIEWER">مشاهده‌گر (VIEWER)</option>
@@ -204,15 +233,33 @@ export default function TeamPage() {
                 <tr style={{ borderBottom: "1px solid var(--border, #e5e7eb)", background: "var(--surface, #f9fafb)" }}>
                   <th style={{ textAlign: "right", padding: "0.75rem", fontWeight: 600 }}>ایمیل</th>
                   <th style={{ textAlign: "right", padding: "0.75rem", fontWeight: 600 }}>نقش</th>
-                  <th style={{ textAlign: "right", padding: "0.75rem", fontWeight: 600 }}>تاریخ ارسال</th>
+                  <th style={{ textAlign: "right", padding: "0.75rem", fontWeight: 600 }}>انقضا</th>
+                  <th style={{ textAlign: "right", padding: "0.75rem", fontWeight: 600 }}>عملیات</th>
                 </tr>
               </thead>
               <tbody>
-                {data.invites.map((inv) => (
-                  <tr key={inv.id} style={{ borderBottom: "1px solid var(--border, #f3f4f6)" }}>
-                    <td style={{ padding: "0.75rem" }}>{inv.email}</td>
-                    <td style={{ padding: "0.75rem" }}><RoleBadge role={inv.role} /></td>
-                    <td style={{ padding: "0.75rem", color: "var(--muted, #6b7280)" }}>{new Date(inv.createdAt).toLocaleDateString("fa-IR")}</td>
+                {data.invites.map((invite) => (
+                  <tr key={invite.id} style={{ borderBottom: "1px solid var(--border, #f3f4f6)" }}>
+                    <td style={{ padding: "0.75rem" }}>{invite.email}</td>
+                    <td style={{ padding: "0.75rem" }}><RoleBadge role={invite.role} /></td>
+                    <td style={{ padding: "0.75rem", color: "var(--muted, #6b7280)" }}>{new Date(invite.expiresAt).toLocaleDateString("fa-IR")}</td>
+                    <td style={{ padding: "0.75rem", display: "flex", gap: "0.5rem" }}>
+                      <button
+                        className="button secondary"
+                        disabled={inviteAction !== null}
+                        onClick={() => handleInviteAction(invite.id, "RESEND")}
+                      >
+                        {inviteAction === `${invite.id}:RESEND` ? "در حال ارسال..." : "ارسال مجدد"}
+                      </button>
+                      <button
+                        className="button secondary"
+                        disabled={inviteAction !== null}
+                        onClick={() => handleInviteAction(invite.id, "REVOKE")}
+                        style={{ color: "var(--danger, #dc2626)", borderColor: "var(--danger, #dc2626)" }}
+                      >
+                        {inviteAction === `${invite.id}:REVOKE` ? "در حال لغو..." : "لغو"}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -252,13 +299,11 @@ export default function TeamPage() {
                       ) : (
                         <select
                           value={member.role}
-                          onChange={(e) => handleChangeRole(member.id, member.userId, e.target.value)}
+                          onChange={(event) => handleChangeRole(member.id, member.userId, event.target.value)}
                           disabled={changingRole === member.id}
                           style={{ padding: "0.25rem 0.5rem", border: "1px solid var(--border, #e5e7eb)", borderRadius: "0.375rem", fontSize: "0.8125rem", cursor: changingRole === member.id ? "not-allowed" : "pointer" }}
                         >
-                          {ROLE_OPTIONS.map((r) => (
-                            <option key={r} value={r}>{r}</option>
-                          ))}
+                          {MUTABLE_ROLE_OPTIONS.map((role) => <option key={role} value={role}>{role}</option>)}
                         </select>
                       )}
                     </td>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { fetchCSRFHeaders } from "../../lib/csrf-client";
+import { safeNextPath } from "../../lib/safe-next-path";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -38,7 +39,10 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/app");
+      const requestedNext = typeof window === "undefined"
+        ? null
+        : new URLSearchParams(window.location.search).get("next");
+      router.push(safeNextPath(requestedNext));
     } catch {
       setError("خطای شبکه. لطفاً دوباره تلاش کنید.");
     } finally {

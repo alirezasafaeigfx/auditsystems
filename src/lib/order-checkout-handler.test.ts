@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   csrfProtection: vi.fn(),
   reportShareFindUnique: vi.fn(),
   prepareOrderCheckout: vi.fn(),
+  markOrderCheckoutProviderRequestStarted: vi.fn(),
   completeOrderCheckout: vi.fn(),
   failOrderCheckout: vi.fn(),
   createCheckout: vi.fn(),
@@ -29,6 +30,7 @@ vi.mock("./order-checkout", () => ({
     }
   },
   prepareOrderCheckout: mocks.prepareOrderCheckout,
+  markOrderCheckoutProviderRequestStarted: mocks.markOrderCheckoutProviderRequestStarted,
   completeOrderCheckout: mocks.completeOrderCheckout,
   failOrderCheckout: mocks.failOrderCheckout,
 }));
@@ -56,6 +58,24 @@ function request(body: unknown, headers: Record<string, string> = {}) {
     headers: { "content-type": "application/json", ...headers },
     body: JSON.stringify(body),
   });
+}
+
+function validPayload() {
+  return {
+    token: "sensitive-report-token",
+    email: "buyer@example.com",
+    provider: "MOCK",
+    consentPrivacy: true,
+  };
+}
+
+function claimedOrder() {
+  return {
+    kind: "CLAIMED" as const,
+    order: { id: "order-1", amountToman: 290000, status: "PENDING" },
+    callbackRef: "callback-1",
+    reused: false as const,
+  };
 }
 
 function share() {
@@ -88,6 +108,7 @@ describe("order checkout request handler", () => {
       backend: "local-redis",
     });
     mocks.reportShareFindUnique.mockResolvedValue(share());
+    mocks.markOrderCheckoutProviderRequestStarted.mockResolvedValue(undefined);
     mocks.failOrderCheckout.mockResolvedValue(undefined);
   });
 
@@ -114,12 +135,7 @@ describe("order checkout request handler", () => {
     });
     const { handleOrderCheckoutRequest } = await import("./order-checkout-handler");
 
-    const response = await handleOrderCheckoutRequest(request({
-      token: "sensitive-report-token",
-      email: "buyer@example.com",
-      provider: "MOCK",
-      consentPrivacy: true,
-    }), { metricPath: "/api/orders" });
+    const response = await handleOrderCheckoutRequest(request(validPayload()), { metricPath: "/api/orders" });
 
     expect(response.status).toBe(429);
     expect(response.headers.get("retry-after")).toBe("180");
@@ -135,12 +151,7 @@ describe("order checkout request handler", () => {
     mocks.reportShareFindUnique.mockResolvedValue(null);
     const { handleOrderCheckoutRequest } = await import("./order-checkout-handler");
 
-    const response = await handleOrderCheckoutRequest(request({
-      token: "sensitive-report-token",
-      email: "buyer@example.com",
-      provider: "MOCK",
-      consentPrivacy: true,
-    }), { metricPath: "/api/orders" });
+    const response = await handleOrderCheckoutRequest(request(validPayload()), { metricPath: "/api/orders" });
 
     expect(response.status).toBe(404);
     const serialized = JSON.stringify(mocks.logEvent.mock.calls);
@@ -160,26 +171,16 @@ describe("order checkout request handler", () => {
     });
     const { handleOrderCheckoutRequest } = await import("./order-checkout-handler");
 
-    const response = await handleOrderCheckoutRequest(request({
-      token: "sensitive-report-token",
-      email: "buyer@example.com",
-      provider: "MOCK",
-      consentPrivacy: true,
-    }), { metricPath: "/api/orders" });
+    const response = await handleOrderCheckoutRequest(request(validPayload()), { metricPath: "/api/orders" });
 
     expect(response.status).toBe(202);
     expect(response.headers.get("retry-after")).toBe("3");
     expect(mocks.createCheckout).not.toHaveBeenCalled();
   });
 
-  it("finalizes a claimed checkout once and returns its redirect", async () => {
-    const order = { id: "order-1", amountToman: 290000, status: "PENDING" };
-    mocks.prepareOrderCheckout.mockResolvedValue({
-      kind: "CLAIMED",
-      order,
-      callbackRef: "callback-1",
-      reused: false,
-    });
+  it("persists the provider-request marker before contacting the provider", async () => {
+    const order = claimedOrder().order;
+    mocks.prepareOrderCheckout.mockResolvedValue(claimedOrder());
     mocks.createCheckout.mockResolvedValue({
       providerRef: "provider-ref-1",
       callbackRef: "callback-1",
@@ -192,12 +193,34 @@ describe("order checkout request handler", () => {
     });
     const { handleOrderCheckoutRequest } = await import("./order-checkout-handler");
 
-    const response = await handleOrderCheckoutRequest(request({
-      token: "sensitive-report-token",
-      email: "buyer@example.com",
+    const response = await handleOrderCheckoutRequest(request(validPayload()), { metricPath: "/api/orders" });
+
+    expect(response.status).toBe(200);
+    expect(mocks.markOrderCheckoutProviderRequestStarted).toHaveBeenCalledWith({
+      orderId: "order-1",
+      callbackRef: "callback-1",
       provider: "MOCK",
-      consentPrivacy: true,
-    }), { metricPath: "/api/orders" });
+    });
+    expect(mocks.markOrderCheckoutProviderRequestStarted.mock.invocationCallOrder[0])
+      .toBeLessThan(mocks.createCheckout.mock.invocationCallOrder[0]);
+  });
+
+  it("finalizes a claimed checkout once and returns its redirect", async () => {
+    const order = claimedOrder().order;
+    mocks.prepareOrderCheckout.mockResolvedValue(claimedOrder());
+    mocks.createCheckout.mockResolvedValue({
+      providerRef: "provider-ref-1",
+      callbackRef: "callback-1",
+      redirectUrl: "https://payment.example.com/start/1",
+    });
+    mocks.completeOrderCheckout.mockResolvedValue({
+      order,
+      redirectUrl: "https://payment.example.com/start/1",
+      reused: false,
+    });
+    const { handleOrderCheckoutRequest } = await import("./order-checkout-handler");
+
+    const response = await handleOrderCheckoutRequest(request(validPayload()), { metricPath: "/api/orders" });
 
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
@@ -214,30 +237,55 @@ describe("order checkout request handler", () => {
     });
   });
 
-  it("marks the claimed order failed when provider initialization fails", async () => {
-    mocks.prepareOrderCheckout.mockResolvedValue({
-      kind: "CLAIMED",
-      order: { id: "order-1", amountToman: 290000, status: "PENDING" },
-      callbackRef: "callback-1",
-      reused: false,
-    });
+  it("quarantines a provider timeout after the external request marker", async () => {
+    mocks.prepareOrderCheckout.mockResolvedValue(claimedOrder());
     mocks.createCheckout.mockRejectedValue(new Error("PAYMENT_PROVIDER_TIMEOUT"));
     const { handleOrderCheckoutRequest } = await import("./order-checkout-handler");
 
-    const response = await handleOrderCheckoutRequest(request({
-      token: "sensitive-report-token",
-      email: "buyer@example.com",
-      provider: "MOCK",
-      consentPrivacy: true,
-    }), { metricPath: "/api/orders" });
+    const response = await handleOrderCheckoutRequest(request(validPayload()), { metricPath: "/api/orders" });
 
-    expect(response.status).toBe(504);
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: "CHECKOUT_RECONCILIATION_REQUIRED",
+      requestId: "request-order-1",
+    });
+    expect(mocks.failOrderCheckout).not.toHaveBeenCalled();
+    expect(JSON.stringify(mocks.logEvent.mock.calls)).not.toContain("sensitive-report-token");
+  });
+
+  it("fails a checkout for a definitive provider rejection", async () => {
+    mocks.prepareOrderCheckout.mockResolvedValue(claimedOrder());
+    mocks.createCheckout.mockRejectedValue(new Error("PAYMENT_PROVIDER_HTTP_400"));
+    const { handleOrderCheckoutRequest } = await import("./order-checkout-handler");
+
+    const response = await handleOrderCheckoutRequest(request(validPayload()), { metricPath: "/api/orders" });
+
+    expect(response.status).toBe(502);
     expect(mocks.failOrderCheckout).toHaveBeenCalledWith({
       orderId: "order-1",
       callbackRef: "callback-1",
-      code: "PAYMENT_PROVIDER_TIMEOUT",
+      code: "PAYMENT_PROVIDER_HTTP_400",
     });
-    expect(JSON.stringify(mocks.logEvent.mock.calls)).not.toContain("sensitive-report-token");
+  });
+
+  it("quarantines a post-provider persistence failure", async () => {
+    mocks.prepareOrderCheckout.mockResolvedValue(claimedOrder());
+    mocks.createCheckout.mockResolvedValue({
+      providerRef: "provider-ref-1",
+      callbackRef: "callback-1",
+      redirectUrl: "https://payment.example.com/start/1",
+    });
+    mocks.completeOrderCheckout.mockRejectedValue(new Error("CHECKOUT_PERSISTENCE_FAILED"));
+    const { handleOrderCheckoutRequest } = await import("./order-checkout-handler");
+
+    const response = await handleOrderCheckoutRequest(request(validPayload()), { metricPath: "/api/orders" });
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: "CHECKOUT_RECONCILIATION_REQUIRED",
+      requestId: "request-order-1",
+    });
+    expect(mocks.failOrderCheckout).not.toHaveBeenCalled();
   });
 
   it("uses the path token override for the legacy endpoint", async () => {

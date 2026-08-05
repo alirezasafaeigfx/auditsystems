@@ -1,6 +1,6 @@
 # Agent Governance - AuditSystems
 
-**Last Updated**: 2026-07-24
+**Last Updated**: 2026-08-05
 **Status**: Active
 **Latest Release**: `20260724T160226Z-a68b06d`
 **Production**: https://audit.alirezasafaeisystems.ir/
@@ -11,8 +11,9 @@
 
 ### Agent Working Directory
 - **Base Path**: `/home/dev13/alirezasafaeisystems/sites/auditsystems-ri`
-- **Allowed Directories**: `src/`, `scripts/`, `docs/`, `prisma/`
+- **Allowed Directories**: `src/`, `scripts/`, `docs/`, `prisma/`, `.agents/`, `.codex/`, `.github/`, `.vendor/`, and reviewed root configuration files
 - **Restricted Directories**: `.git/`, `node_modules/`, `.next/`, `worktrees/`
+- **Vendor Policy**: `.vendor/` and `.agents/marketingskills/` are read-only pinned submodules; update gitlinks and `skills-lock.json` together in a dedicated pull request
 
 ### Key Constraints
 - No global installs — project-local dependencies only
@@ -33,6 +34,8 @@
 
 ### Quality Gates Before PR
 ```
+bash scripts/agent-skills.sh verify
+bash scripts/tests/test-agent-skills-integrity.sh
 pnpm check:no-database-dumps
 pnpm lint
 pnpm typecheck
@@ -42,6 +45,29 @@ pnpm scan:secrets
 pnpm check:actions-pinned
 pnpm smoke:routes
 ```
+
+---
+
+## Project-local Skills
+
+### Bootstrap and Integrity
+- Run `bash scripts/agent-skills.sh verify` before relying on project-local skill sources.
+- Run `bash scripts/agent-skills.sh sync` only when the pinned submodules are not initialized.
+- Never use a floating branch, tag, global installer, or automatic upstream update.
+- CI verifies gitlinks without initializing or executing third-party submodules.
+- Exact sources and licenses are defined in `skills-lock.json` and `docs/agent-skills/THIRD_PARTY_NOTICES.md`.
+
+### Skill Precedence
+1. System and direct user instructions
+2. This root `AGENTS.md`
+3. Project adapters under `.agents/skills/` and `.codex/skills/`
+4. Pinned upstream skill content
+
+### Activation
+- For creative or behavior-changing implementation, apply the pinned Superpowers workflow before implementation.
+- For UI/UX work, use `.codex/skills/ui-ux-pro-max/SKILL.md` after the applicable Superpowers process skill.
+- For marketing work, read `.agents/product-marketing.md`, then `.agents/skills/auditsystems-marketing/SKILL.md`, then the relevant pinned upstream marketing skill.
+- Never let an upstream skill authorize production deployment, migrations, restarts, secret changes, firewall or DNS changes, payments, publishing, outreach, or analytics mutation without the approval required by project governance.
 
 ---
 
@@ -181,6 +207,8 @@ pm2 save
 - `prisma/schema.prisma` — Database schema
 - `ecosystem.config.cjs` — PM2 config
 - `.env.example` — Environment variables template
+- `skills-lock.json` — pinned project-local skill sources
+- `.gitmodules` — immutable upstream skill repositories
 
 ### Important Scripts
 - `pnpm check` — Full quality gate
@@ -191,6 +219,8 @@ pm2 save
 - `pnpm smoke:routes` — Public route smoke test
 - `pnpm scan:secrets` — Secret scan
 - `pnpm deploy:readiness` — Deployment readiness suite
+- `bash scripts/agent-skills.sh verify` — verify skill provenance and gitlinks
+- `bash scripts/agent-skills.sh sync` — initialize exact pinned skill commits
 
 ### Source Structure
 ```
