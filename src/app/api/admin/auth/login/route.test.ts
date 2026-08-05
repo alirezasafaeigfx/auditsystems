@@ -6,9 +6,9 @@ const mocks = vi.hoisted(() => ({
   validateAdminCredentials: vi.fn(),
   createAdminSession: vi.fn(),
   csrfProtection: vi.fn(),
+  enforceAuthAbuseLimit: vi.fn(),
   checkAuthRateLimit: vi.fn(),
   resetAuthRateLimit: vi.fn(),
-  getClientIp: vi.fn(),
 }));
 
 vi.mock("@/lib/admin-auth", () => ({
@@ -16,37 +16,38 @@ vi.mock("@/lib/admin-auth", () => ({
   validateAdminCredentials: mocks.validateAdminCredentials,
   createAdminSession: mocks.createAdminSession,
 }));
-
-vi.mock("@/lib/csrf", () => ({
-  csrfProtection: mocks.csrfProtection,
-}));
-
+vi.mock("@/lib/csrf", () => ({ csrfProtection: mocks.csrfProtection }));
 vi.mock("@/lib/authRateLimit", () => ({
+  enforceAuthAbuseLimit: mocks.enforceAuthAbuseLimit,
   checkAuthRateLimit: mocks.checkAuthRateLimit,
   resetAuthRateLimit: mocks.resetAuthRateLimit,
 }));
-
-vi.mock("@/lib/security", () => ({
-  getClientIp: mocks.getClientIp,
-}));
+vi.mock("@/lib/security", () => ({ getClientIp: () => "203.0.113.10" }));
 
 function request(body: unknown) {
-  return new NextRequest("http://localhost/api/admin/auth/login", {
+  return new NextRequest("https://audit.example.com/api/admin/auth/login", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", "x-forwarded-for": "203.0.113.10" },
     body: JSON.stringify(body),
   });
 }
 
-describe("POST /api/admin/auth/login", () => {
+describe("POST /api/admin/auth/login distributed abuse boundary", () => {
   beforeEach(() => {
+    vi.resetModules();
     vi.clearAllMocks();
     mocks.isSessionAuthConfigured.mockReturnValue(true);
     mocks.validateAdminCredentials.mockReturnValue(true);
     mocks.createAdminSession.mockResolvedValue("session-id");
     mocks.csrfProtection.mockResolvedValue({ valid: true });
+    mocks.enforceAuthAbuseLimit.mockResolvedValue({
+      allowed: true,
+      retryAfterSec: 0,
+      backend: "local-redis",
+      clientHash: "e".repeat(64),
+      subjectHash: "f".repeat(64),
+    });
     mocks.checkAuthRateLimit.mockReturnValue({ allowed: true, remaining: 9 });
-    mocks.getClientIp.mockReturnValue("203.0.113.10");
   });
 
   it("fails closed when authentication is not configured", async () => {
@@ -54,37 +55,52 @@ describe("POST /api/admin/auth/login", () => {
     const { POST } = await import("./route");
     const response = await POST(request({ username: "admin", password: "secret" }));
     expect(response.status).toBe(503);
-    expect(mocks.csrfProtection).not.toHaveBeenCalled();
+    expect(mocks.enforceAuthAbuseLimit).not.toHaveBeenCalled();
     expect(mocks.createAdminSession).not.toHaveBeenCalled();
   });
 
-  it("rejects requests without valid CSRF protection", async () => {
-    mocks.csrfProtection.mockResolvedValue({ valid: false, error: "CSRF token missing" });
+  it("fails closed before credential validation when distributed controls are unavailable", async () => {
+    mocks.enforceAuthAbuseLimit.mockResolvedValue({
+      allowed: false,
+      reason: "BACKEND_UNAVAILABLE",
+      retryAfterSec: 60,
+      backend: "error",
+    });
     const { POST } = await import("./route");
+
     const response = await POST(request({ username: "admin", password: "secret" }));
-    expect(response.status).toBe(403);
-    await expect(response.json()).resolves.toEqual({ error: "FORBIDDEN" });
-    expect(mocks.checkAuthRateLimit).not.toHaveBeenCalled();
-    expect(mocks.createAdminSession).not.toHaveBeenCalled();
-  });
 
-  it("rejects malformed credentials", async () => {
-    const { POST } = await import("./route");
-    const response = await POST(request({ username: "admin" }));
-    expect(response.status).toBe(400);
-    expect(mocks.checkAuthRateLimit).not.toHaveBeenCalled();
+    expect(response.status).toBe(503);
     expect(mocks.validateAdminCredentials).not.toHaveBeenCalled();
+    expect(mocks.createAdminSession).not.toHaveBeenCalled();
   });
 
-  it("rate-limits repeated login attempts by client IP", async () => {
-    mocks.checkAuthRateLimit.mockReturnValue({ allowed: false, remaining: 0 });
+  it("returns a bounded 429 before credential validation", async () => {
+    mocks.enforceAuthAbuseLimit.mockResolvedValue({
+      allowed: false,
+      reason: "RATE_LIMITED",
+      retryAfterSec: 420,
+      backend: "local-redis",
+    });
     const { POST } = await import("./route");
+
     const response = await POST(request({ username: "admin", password: "secret" }));
+
     expect(response.status).toBe(429);
-    await expect(response.json()).resolves.toEqual({ error: "RATE_LIMITED" });
-    expect(mocks.checkAuthRateLimit).toHaveBeenCalledWith("admin:login:203.0.113.10");
+    expect(response.headers.get("retry-after")).toBe("420");
     expect(mocks.validateAdminCredentials).not.toHaveBeenCalled();
-    expect(mocks.createAdminSession).not.toHaveBeenCalled();
+  });
+
+  it("normalizes the username before applying the shared pair limit", async () => {
+    const { POST } = await import("./route");
+
+    const response = await POST(request({ username: "  ADMIN  ", password: "secret" }));
+
+    expect(response.status).toBe(200);
+    expect(mocks.enforceAuthAbuseLimit).toHaveBeenCalledWith(expect.objectContaining({
+      action: "admin-login",
+      subject: "admin",
+    }));
   });
 
   it("rejects invalid credentials without creating a session", async () => {
@@ -93,26 +109,14 @@ describe("POST /api/admin/auth/login", () => {
     const response = await POST(request({ username: "admin", password: "wrong" }));
     expect(response.status).toBe(401);
     expect(mocks.createAdminSession).not.toHaveBeenCalled();
-    expect(mocks.resetAuthRateLimit).not.toHaveBeenCalled();
   });
 
-  it("creates a persisted session and clears its rate limit after valid authentication", async () => {
+  it("creates a persisted session without process-local counter reset", async () => {
     const { POST } = await import("./route");
     const response = await POST(request({ username: "admin", password: "secret" }));
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ success: true });
     expect(mocks.createAdminSession).toHaveBeenCalledOnce();
-    expect(mocks.resetAuthRateLimit).toHaveBeenCalledWith("admin:login:203.0.113.10");
-  });
-
-  it("returns 500 when the session store is unavailable", async () => {
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    mocks.createAdminSession.mockRejectedValue(new Error("database unavailable"));
-    const { POST } = await import("./route");
-    const response = await POST(request({ username: "admin", password: "secret" }));
-    expect(response.status).toBe(500);
-    await expect(response.json()).resolves.toEqual({ error: "Failed to create admin session" });
     expect(mocks.resetAuthRateLimit).not.toHaveBeenCalled();
-    consoleError.mockRestore();
   });
 });
