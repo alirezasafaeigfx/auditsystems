@@ -6,9 +6,13 @@ Updated: 2026-08-31. Repository: `alirezasafaeigfx/auditsystems`.
 
 Deliver a trustworthy website-checking product that an ordinary Iranian visitor can use and understand. Coordinate its appearance, language and visitor journey with `alirezasafaeigfx/alirezasafaeisystems`, while keeping data, authentication and releases independent.
 
-Instruction order: platform/current explicit owner instructions; this file; [Audit public-experience roadmap](docs/roadmaps/AUDIT_PUBLIC_EXPERIENCE.md); [engineering guide](docs/engineering/PAIRED_PRODUCT_ENGINEERING.md); relevant existing release/security runbooks. The new roadmap selects this mission's public-experience tasks. Earlier strategy reports and automation-generated checklists are historical/supporting evidence, not additional queues or proof of completion.
+Aim for leading international product quality and first-choice usefulness in its Iranian category: UI/UX, plain Persian, accuracy, speed, accessibility, reliability, technical SEO and substantive content. Apply the [shared quality/growth contract](docs/strategy/PAIRED_QUALITY_GROWTH_CONTRACT.md) and [project rules](docs/governance/REPOSITORY_RULES.md). Rank #1 is an ambition to measure for named relevant intents, never a promise or an invented result.
+
+Instruction order: platform/current explicit owner instructions; this file and project rules; [Audit public-experience roadmap](docs/roadmaps/AUDIT_PUBLIC_EXPERIENCE.md); [engineering guide](docs/engineering/PAIRED_PRODUCT_ENGINEERING.md) and shared quality contract; relevant existing release/security runbooks. The canonical roadmap selects this mission's tasks. [AU-08…13 cards](docs/execution/QUALITY_GROWTH_SPRINTS.md) support it, and the [ledger](docs/execution/QUALITY_WORK_LEDGER.md) records actual state. Earlier strategy reports and automation-generated checklists are historical/supporting evidence, not additional queues or proof of completion.
 
 Read once at startup: current main/PR/dirty state; the roadmap's next dependency-ready task; relevant engineering/source files and tests. Re-read actual deployment policy before remote operations. Label this review environment REVIEW_WORKSPACE, not an owner PC or production machine.
+
+Execute [PAIRED_SITES_YOLO_LOOP.md](prompts/codex/PAIRED_SITES_YOLO_LOOP.md). Reconcile once and start the first real ready gap in the same run; preserve existing AU-01…07/scanner/SEO/content code. Claim one task/path set, checkpoint the exact next action and evidence, and continue without routine questions. After two identical failed attempts without new evidence, diagnose/block that lane and continue another. No endless retries, duplicate tasks, log-only progress or new scheduler from “loop mode.”
 
 ## Isolation and autonomy
 
@@ -70,3 +74,5 @@ For every claimed task report:
 - precise gaps and next ready action.
 
 Use PASS, PARTIAL, FAIL, UNVERIFIED or justified NOT_APPLICABLE. DONE requires all applicable criteria. Green CI, HTTP 200, an old roadmap checkbox or a retained release directory cannot substitute for acceptance or tested rollback. Never hide errors, relax budgets, invent review/evidence/customer outcomes, or claim the other product is complete from this one's checks.
+
+Track implementation, release, technical SEO/content, usefulness and observed growth separately. Missing GSC/field/participant data remains UNVERIFIED/AWAITING_OBSERVATION; it does not stop unrelated safe technical work. A number from in-memory metrics or a local fixture is not real 28-day field history. Do not invent ranks, query volumes, users, conversions or causal uplift.

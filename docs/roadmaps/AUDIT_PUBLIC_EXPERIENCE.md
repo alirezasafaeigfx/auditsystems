@@ -1,8 +1,14 @@
 # Audit Systems — canonical paired-product experience roadmap
 
-Revision: 2026-08-31. Scope: this product and its agreed interface with ASDEV. This is the only task selector for this public-experience mission; it does not replace existing operational runbooks or authorize deployment.
+Revision: 2026-08-31.2. Scope: this product and its agreed interface with ASDEV. This is the only task selector for this public-experience/quality/SEO/growth mission; it does not replace existing operational runbooks or authorize deployment.
 
 Read [AGENTS.md](../../AGENTS.md) and [engineering/paired contract](../engineering/PAIRED_PRODUCT_ENGINEERING.md). Old roadmap/status documents are historical until their claims are reconciled against source and retrievable evidence. No percent-complete estimate is justified by the current record.
+
+## Shared goal
+
+Become a first-choice website-checking product for ordinary Iranian visitors, with UI/UX, plain Persian, actual usefulness, accuracy, reliability, speed and SEO at leading international quality. The [shared quality/growth contract](../strategy/PAIRED_QUALITY_GROWTH_CONTRACT.md) defines the complete acceptance matrix and search-intent ownership. Rank #1 is an ambition for evidenced relevant queries, never a guaranteed outcome or a CI certificate.
+
+Keep the existing AU-01…07 tasks and working implementation. [AU-08…13 cards](../execution/QUALITY_GROWTH_SPRINTS.md) extend them; [the ledger](../execution/QUALITY_WORK_LEDGER.md) tracks real progress. This revision prepares work and corrects task selection; it does not claim to fix application code or change Production.
 
 ## Baseline and real progress
 
@@ -27,8 +33,18 @@ These blockers prevent acceptance/release, not independent safe UI preparation. 
 | AU-05 | Understandable report/sample/comparison/PDF experience | AU-02/03; EC-04 |
 | AU-06 | Recoverable qualification and complete state/localization matrix | Can begin before AU-03; integrate after AU-03/04; EC-03/04 |
 | AU-07 | Paired acceptance, exact releases and honest closure | AU-01…06; ASDEV S5/EC-05 |
+| AU-08 | Real baseline, bounded references/intent map and evidence validation | Ready; ASDEV GR-01 |
+| AU-09 | Public technical SEO plus protected-report exclusion | AU-08 inventory; AU-01 access policy; ASDEV GR-02 |
+| AU-10 | Source-backed plain Persian core guide and useful supporting content | AU-08/02/03/05; publishing after AU-09 |
+| AU-11 | Complete reliable audit→result→action with consistent coverage and recovery | AU-01/02/05/06; reuse queue/report tests; ASDEV GR-04 |
+| AU-12 | Consent-safe real measurement and reproducible scorecard | AU-08, AU-04 semantics; actual result events from AU-11; ASDEV GR-05 |
+| AU-13 | One measured growth improvement or honest observation checkpoint | AU-09…12 implementation; release/data for outcome claims; ASDEV GR-06 |
 
 Initial implementation status of every AU task: OPEN. This planning change does not implement a fix or award acceptance.
+
+The updated AU-07 candidate acceptance also includes applicable AU-08…12 implementation criteria. AU-13 future observations follow release and do not create a circular release dependency. Missing traffic is AWAITING_OBSERVATION, not a reason to fake growth or stop safe coding. AU-08 admits bounded evidence/browser tooling with negative checks where missing, not an unrelated framework or security-gate rewrite.
+
+AU-07 uses the ASDEV peer's required compatible implementation/route inputs, not completion of EC-05 or ASDEV's release. Each product's accepted candidate can follow its own release gates; neither local release waits for the other's closure task. EC-05 aggregates final pair receipts/round-trip evidence after both releases. This distinction prevents a circular AU-07↔EC-05 dependency.
 
 ## Task cards
 
@@ -112,7 +128,7 @@ Exit: all failure/success states recover predictably and both locales are comple
 
 Exit: all applicable product dimensions accepted; no security/truth blocker or unknown release identity. If only one product is accepted, paired program remains incomplete.
 
-## Sprint sequencing
+## Original experience grouping
 
 1. Safety/truth: AU-01/AU-02, plus isolated AU-06 failing-state preparation.
 2. Visible product: AU-03; ASDEV reuses and repairs PR #26. No artificial wait for deployment to design.
@@ -120,3 +136,16 @@ Exit: all applicable product dimensions accepted; no security/truth blocker or u
 4. Acceptance/release: AU-07 + ASDEV EC-05/S5; independent releases, no deployment coupling.
 
 No dates or invented velocity. Each task has a complete acceptance unit, not a line-count target. Record real progress in its PR and reconcile this roadmap on integration; do not create daily competing queues.
+
+## Current paired execution batches
+
+| Batch | Audit task ownership | ASDEV counterpart | Exit evidence |
+|---|---|---|---|
+| 1 — real state, safety and truth | AU-01/02/08; AU-06 failure reproduction | EC-01/GR-01, #26/#27 | Correctness/access fixes and actual baseline/criteria |
+| 2 — clear identity and visitor paths | AU-03/04/06; AU-09 preparation | EC-02/03, GR-02 preparation | Real FA/EN route flow and coordinated usable layouts |
+| 3 — useful product and content | AU-05/10/11 | EC-04, remaining S2/S3/S4, GR-03/04 | Correct actionable reports/content and complete failure recovery |
+| 4 — measurement and acceptance | AU-09/12, AU-07 candidate checks | GR-02/05, S5-01…04 | Raw quality/SEO/measurement evidence, independent review and owner preview |
+| 5 — independent governed release | AU-07 release | S5-05…07/EC-05 | Both actual release identities, compatible journey and rollback truth |
+| 6 — observed improvement | AU-13 | GR-06 | One evidence-led correction or AWAITING_OBSERVATION |
+
+This current sequence extends the original grouping without replaying it. Dependencies and path ownership determine readiness; security fixes do not wait for marketing research. Use [the execution prompt](../../prompts/codex/PAIRED_SITES_YOLO_LOOP.md) and keep one authoritative task record per real change.
