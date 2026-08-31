@@ -1,234 +1,72 @@
-# Agent Governance - AuditSystems
+# Audit Systems — agent execution contract
 
-**Last Updated**: 2026-08-05
-**Status**: Active
-**Latest Release**: `20260724T160226Z-a68b06d`
-**Production**: https://audit.alirezasafaeisystems.ir/
+Updated: 2026-08-31. Repository: `alirezasafaeigfx/auditsystems`.
 
----
+## Mission and authority
 
-## Agent Guidelines
+Deliver a trustworthy website-checking product that an ordinary Iranian visitor can use and understand. Coordinate its appearance, language and visitor journey with `alirezasafaeigfx/alirezasafaeisystems`, while keeping data, authentication and releases independent.
 
-### Agent Working Directory
-- **Base Path**: `/home/dev13/alirezasafaeisystems/sites/auditsystems-ri`
-- **Allowed Directories**: `src/`, `scripts/`, `docs/`, `prisma/`, `.agents/`, `.codex/`, `.github/`, `.vendor/`, and reviewed root configuration files
-- **Restricted Directories**: `.git/`, `node_modules/`, `.next/`, `worktrees/`
-- **Vendor Policy**: `.vendor/` and `.agents/marketingskills/` are read-only pinned submodules; update gitlinks and `skills-lock.json` together in a dedicated pull request
+Instruction order: platform/current explicit owner instructions; this file; [Audit public-experience roadmap](docs/roadmaps/AUDIT_PUBLIC_EXPERIENCE.md); [engineering guide](docs/engineering/PAIRED_PRODUCT_ENGINEERING.md); relevant existing release/security runbooks. The new roadmap selects this mission's public-experience tasks. Earlier strategy reports and automation-generated checklists are historical/supporting evidence, not additional queues or proof of completion.
 
-### Key Constraints
-- No global installs — project-local dependencies only
-- All changes must pass `pnpm check` (lint + typecheck + test + build)
-- TypeScript strict — no explicit `any` except documented boundary
-- No hardcoded secrets — use environment variables
-- No direct commits to `main` — use feature branches
-- Conventional commit messages required
+Read once at startup: current main/PR/dirty state; the roadmap's next dependency-ready task; relevant engineering/source files and tests. Re-read actual deployment policy before remote operations. Label this review environment REVIEW_WORKSPACE, not an owner PC or production machine.
 
----
+## Isolation and autonomy
 
-## Decision Rules
+- Use an isolated branch/worktree and preserve unknown dirty work. Never commit directly to main or force-push.
+- The owner explicitly included these two repositories. Modify each only under its own bounded PR and local instructions; do not change PersianToolbox or another application.
+- Keep each PR a complete reviewable outcome. Validate ancestry and every changed path against current main.
+- Continue safe ready work without repeated permission questions. Missing runtime authorization blocks only its affected lane; keep preparing independent design, code and tests.
+- Actual repository settings must be read before integration. Unprotected main is a gap to report, not permission to skip PRs/checks. Do not change protection/runner/server settings merely to obtain green checks.
+- Only the coordinator integrates and reconciles status. Never label self-review independent.
+- Do not send messages, activate monitoring, publish content, change merchant settings, or perform live submissions without authorization for that action.
 
-### Autonomous Execution
-- Execute until blocked by external factors (credentials, DNS, payment sandbox)
-- Do not ask "should I continue?" or "is this OK?"
-- When blocked 3x with valid methods, log as BLOCKED and move on
+## Verified architecture
 
-### Quality Gates Before PR
-```
-bash scripts/agent-skills.sh verify
-bash scripts/tests/test-agent-skills-integrity.sh
-pnpm check:no-database-dumps
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm scan:secrets
-pnpm check:actions-pinned
-pnpm smoke:routes
-```
+Use versions from the actual lockfile and compatible project/CI runtime, not stale fixed versions in prose. Current source uses Next.js App Router, React, TypeScript strict, Prisma/PostgreSQL, custom CSS variables, pdf-lib, Cheerio and Vitest. Main brand site uses a different SQLite/Tailwind stack; do not transplant its database or CSS framework.
 
----
+No global installs, automatic upstream updates, new paid services, framework/auth/database migration or blanket dependency upgrades. A scoped security dependency repair needs its own compatibility review and tests. Project scripts referencing a parent workspace are not guaranteed to exist in a standalone checkout.
 
-## Project-local Skills
+Production identity, host, ports and deployed SHA must come from governed current release evidence. Historical release IDs and example shell commands are not authorization to deploy, migrate, restart or replace a symlink. Preserve existing app isolation and use approved release/rollback runbooks. Never use a global PM2 update/restart that affects other applications.
 
-### Bootstrap and Integrity
-- Run `bash scripts/agent-skills.sh verify` before relying on project-local skill sources.
-- Run `bash scripts/agent-skills.sh sync` only when the pinned submodules are not initialized.
-- Never use a floating branch, tag, global installer, or automatic upstream update.
-- CI verifies gitlinks without initializing or executing third-party submodules.
-- Exact sources and licenses are defined in `skills-lock.json` and `docs/agent-skills/THIRD_PARTY_NOTICES.md`.
+## Project-local skills
 
-### Skill Precedence
-1. System and direct user instructions
-2. This root `AGENTS.md`
-3. Project adapters under `.agents/skills/` and `.codex/skills/`
-4. Pinned upstream skill content
+Run `bash scripts/agent-skills.sh verify` before relying on local skill sources. If pinned submodules are missing, use the existing `sync` command; never use floating tags/global installers. Keep gitlinks and `skills-lock.json` synchronized in a dedicated PR. Pinned vendor sources remain read-only.
 
-### Activation
-- For creative or behavior-changing implementation, apply the pinned Superpowers workflow before implementation.
-- For UI/UX work, use `.codex/skills/ui-ux-pro-max/SKILL.md` after the applicable Superpowers process skill.
-- For marketing work, read `.agents/product-marketing.md`, then `.agents/skills/auditsystems-marketing/SKILL.md`, then the relevant pinned upstream marketing skill.
-- Never let an upstream skill authorize production deployment, migrations, restarts, secret changes, firewall or DNS changes, payments, publishing, outreach, or analytics mutation without the approval required by project governance.
+For creative/behavior changes, use the applicable Superpowers process; for UI/UX, then read `.codex/skills/ui-ux-pro-max/SKILL.md`. Marketing tasks additionally use `.agents/product-marketing.md` and `.agents/skills/auditsystems-marketing/SKILL.md`. Skill guidance cannot grant production, payment, outreach, secret or permission changes. Do not assume an unavailable plugin/agent/model exists.
 
----
+## Product and language rules
 
-## Architecture
+- Explain what is checked, what the visitor receives, what is not checked and the next action.
+- Distinguish automated checking, specialist assessment and implementation help. One form owner per intent; no duplicate forms presented as the same service.
+- Public Persian is natural, respectful and understandable without programming knowledge. Optional technical details may retain precise terms.
+- Translate validation, network errors, empty/loading/success states and report statuses as well as headings. EN must preserve language through form and return links.
+- Never use static uptime numbers, absolute security promises, guaranteed times or fictional findings as real proof.
+- Unknown/unmeasured does not mean passed or 100/100. Report, comparison and PDF must agree on coverage, findings and scoring policy.
+- Motion communicates real state. No fake progress, scroll hijacking, ambient rendering, or mandatory graphics before a result/action.
+- Use existing CSS variables for colors, spacing, focus and motion. Glass, gradients and card layouts are optional tools, not compulsory designs for every section.
 
-### Tech Stack
-- **Framework**: Next.js 16.2.10 (App Router, Turbopack)
-- **Language**: TypeScript 6.0.3 (strict)
-- **Database**: PostgreSQL 16 + Prisma 6.19.3
-- **Runtime**: Node.js 20.20.2
-- **Package Manager**: pnpm 9.15.0
-- **Testing**: Vitest 4.1.9
-- **Styling**: Custom CSS with CSS variables (no Tailwind in production)
-- **PDF**: pdf-lib
-- **HTML Parsing**: Cheerio
+## Security and data boundaries
 
-### Production Server
-- **Host**: `ubuntu@193.93.169.32` (Iran)
-- **Port**: 3012 (nginx proxies from 443)
-- **PM2 Processes**: `auditsystems-web`, `auditsystems-worker`
-- **Release Path**: `/var/www/asdev-audit-ir/releases/production/<release-id>/`
-- **Symlink**: `/var/www/asdev-audit-ir/current/production`
+Treat access control, safe fetching, consent and truthful reporting as product requirements. Apply one consistent authorization policy across HTML, JSON, comparison and export surfaces. Never expose report tokens, credentials, emails, target URLs or customer findings in cross-domain queries or evidence uploads.
 
-### Deployment
-```bash
-# Local: create tarball
-git archive --format=tar.gz --prefix=release/ HEAD > /tmp/release.tar.gz
+Preserve SSRF protections, public DNS validation and IP pinning across redirects; do not replace the safe fetcher for convenience. Do not weaken rate limits, CSRF, secure cookies, payment verification or signed downloads during UI work.
 
-# Upload and deploy
-scp /tmp/release.tar.gz ubuntu@193.93.169.32:/tmp/
-ssh ubuntu@193.93.169.32 "bash deploy.sh <release-id>"
+Tests use disposable/mock data. Never aim fixture-writing or audit-creation suites at Production. Public read-only health/route checks do not prove worker, payment, email, authorization or rollback behavior.
 
-# Or manual:
-ssh ubuntu@193.93.169.32
-mkdir -p /var/www/asdev-audit-ir/releases/production/<release-id>
-cd /var/www/asdev-audit-ir/releases/production/<release-id>
-tar xzf /tmp/release.tar.gz --strip-components=1
-cp /var/www/asdev-audit-ir/releases/production/<previous>/.env .
-pnpm install --frozen-lockfile
-pnpm run build
-npx prisma migrate deploy
-ln -sfn $(pwd) /var/www/asdev-audit-ir/current/production
-pm2 delete auditsystems-web; pm2 delete auditsystems-worker
-pm2 start node_modules/next/dist/bin/next --name auditsystems-web -- start -p 3012
-pm2 start node_modules/tsx/dist/cli.mjs --name auditsystems-worker -- src/worker/index.ts
-pm2 save
-```
+## Verification and honest reporting
 
-### CRITICAL: PM2 Commands
-- **NEVER** use `pm2 update` — it stops ALL processes across all apps
-- **ALWAYS** use targeted `pm2 delete <name>` + `pmpm2 start`
-- **NEVER** use `node node_modules/.bin/next` — it's a shell wrapper
-- **ALWAYS** use `node_modules/next/dist/bin/next` directly
+For behavior changes: reproduce with a focused failing test, implement the smallest complete outcome, run focused tests, then lint/typecheck/full relevant suite/build. Inspect actual routes and states; screenshot presence and source-string assertions are insufficient. Record real runtime/package-manager versions and deviations.
 
----
+Existing project checks remain required where applicable:
+`pnpm check:no-database-dumps`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm scan:secrets`, `pnpm check:actions-pinned`, pinned-skill integrity checks and governed route/readiness checks. Inspect scripts before running them; several automation commands may call live services. Run only safe portions in disposable environments and report the remainder honestly.
 
-## Design System
+Docs-only changes need complete diff/link/source-reference/consistency/secret checks and independent document review. Local app tests are not required merely for prose; actual required hosted checks are not waived.
 
-### CSS Variable Architecture
-```css
-:root {
-  /* Colors */
-  --bg: #f5f7fb;
-  --surface: #ffffff;
-  --surface-soft: #f8fafc;
-  --text: #0f172a;
-  --muted: #475569;
-  --brand: #2563eb;
-  --brand-strong: #1d4ed8;
-  --brand-rgb: 37 99 235;
-  --success: #046c4f;
-  --danger: #b91c1c;
-  --warn: #f59e0b;
-  --line: #e2e8f0;
-  --line-strong: #cbd5e1;
+For every claimed task report:
+- base, candidate, merge and actual deployed SHAs separately;
+- implementation, UI/motion, plain copy, accessibility, performance, security/truth and release verdicts separately;
+- commands/exits/pass/fail/skip counts, artifact URLs/hashes and test environment;
+- independent reviewer identity/scope/disposition and owner visual disposition when applicable;
+- precise gaps and next ready action.
 
-  /* Layout */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-
-  /* Shadows */
-  --shadow-subtle: 0 1px 2px 0 rgb(15 23 42 / 0.06);
-  --shadow-medium: 0 12px 24px -16px rgb(15 23 42 / 0.3);
-  --shadow-strong: 0 24px 48px -20px rgb(15 23 42 / 0.35);
-
-  /* Motion */
-  --motion-fast: 150ms;
-  --motion-medium: 220ms;
-  --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-```
-
-### Dark Mode
-- Uses `@media (prefers-color-scheme: dark)` with `:root:not(.light)` selector
-- Class-based `.dark` toggle via ThemeProvider
-- ThemeProvider sets both `.dark` and `.light` classes on `<html>`
-- Deep navy palette: `#0b1120` / `#111a2e` / `#18243a`
-- Softened blue accents: `#7aa2ff` / `#5f85eb`
-
-### Component Rules
-- ALL colors MUST use CSS variables — no hardcoded hex in components
-- Use `color-mix()` for adaptive backgrounds: `color-mix(in srgb, var(--brand) 15%, var(--surface))`
-- Cards use glass morphism: `backdrop-filter: blur(10px)` + semi-transparent gradient
-- Buttons use gradient: `linear-gradient(135deg, rgb(var(--brand-rgb)), var(--brand-strong))`
-- Navigation uses glass: `backdrop-filter: blur(20px)` + `background: color-mix(in srgb, var(--surface) 85%, transparent)`
-
----
-
-## Common Issues and Fixes
-
-### Lint Fails with 1896 Errors
-- Cause: `worktrees/` directories not in ESLint ignores
-- Fix: Add `worktrees/**` to `eslint.config.mjs` ignores
-
-### Build Warning: NFT List Tracing
-- Cause: `observability.ts` uses `fs.readFile` / `path.join`
-- Fix: Add `/* turbopackIgnore: true */` comment to `path.join()`
-
-### Payment Provider MOCK Bypass
-- Cause: `resolvePaymentProvider()` silently returns MOCK for unknown providers
-- Fix: Throw error in production when MOCK is selected from external input
-
-### Type Error: TS2540 on NODE_ENV
-- Cause: `process.env.NODE_ENV` is read-only in TypeScript
-- Fix: Use `vi.stubEnv("NODE_ENV", "production")` + `vi.unstubAllEnvs()`
-
----
-
-## Files Reference
-
-### Key Configuration
-- `package.json` — scripts, dependencies
-- `tsconfig.json` — TypeScript config
-- `eslint.config.mjs` — ESLint config (FlatCompat)
-- `next.config.ts` — Next.js config
-- `prisma/schema.prisma` — Database schema
-- `ecosystem.config.cjs` — PM2 config
-- `.env.example` — Environment variables template
-- `skills-lock.json` — pinned project-local skill sources
-- `.gitmodules` — immutable upstream skill repositories
-
-### Important Scripts
-- `pnpm check` — Full quality gate
-- `pnpm test` — Run tests
-- `pnpm lint` — Lint code
-- `pnpm typecheck` — Type check
-- `pnpm build` — Production build
-- `pnpm smoke:routes` — Public route smoke test
-- `pnpm scan:secrets` — Secret scan
-- `pnpm deploy:readiness` — Deployment readiness suite
-- `bash scripts/agent-skills.sh verify` — verify skill provenance and gitlinks
-- `bash scripts/agent-skills.sh sync` — initialize exact pinned skill commits
-
-### Source Structure
-```
-src/
-├── app/              # Next.js App Router pages
-├── components/       # React components
-├── lib/              # Utilities, business logic
-├── worker/           # Background worker
-├── scripts/          # Automation scripts
-└── __tests__/        # Test files
-```
+Use PASS, PARTIAL, FAIL, UNVERIFIED or justified NOT_APPLICABLE. DONE requires all applicable criteria. Green CI, HTTP 200, an old roadmap checkbox or a retained release directory cannot substitute for acceptance or tested rollback. Never hide errors, relax budgets, invent review/evidence/customer outcomes, or claim the other product is complete from this one's checks.
