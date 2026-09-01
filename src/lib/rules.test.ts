@@ -158,9 +158,12 @@ describe("evaluateAuditRules", () => {
     expect(altFinding?.category).toBe("ACCESSIBILITY");
   });
 
-  it("detects missing robots.txt", () => {
+  it("detects a verified missing robots.txt", () => {
     const ctx = createBaseContext({
-      resources: []
+      seoFiles: {
+        robots: { url: "https://example.com/robots.txt", status: "MISSING", httpStatus: 404 },
+        sitemap: { url: "https://example.com/sitemap.xml", status: "VERIFIED", httpStatus: 200 }
+      }
     });
 
     const findings = evaluateAuditRules(ctx);
@@ -169,15 +172,52 @@ describe("evaluateAuditRules", () => {
     expect(robotsFinding?.category).toBe("SEO");
   });
 
-  it("detects missing sitemap", () => {
+  it("detects a verified missing sitemap", () => {
     const ctx = createBaseContext({
-      resources: []
+      seoFiles: {
+        robots: { url: "https://example.com/robots.txt", status: "VERIFIED", httpStatus: 200 },
+        sitemap: { url: "https://example.com/sitemap.xml", status: "MISSING", httpStatus: 404 }
+      }
     });
 
     const findings = evaluateAuditRules(ctx);
     const sitemapFinding = findings.find((f) => f.code === "NO_SITEMAP");
     expect(sitemapFinding).toBeDefined();
     expect(sitemapFinding?.category).toBe("SEO");
+  });
+
+  it("does not infer SEO file absence when the probes are unavailable", () => {
+    const ctx = createBaseContext({
+      resources: [
+        { url: "https://example.com/robots.txt", host: "example.com", kind: "other", isThirdParty: false },
+        { url: "https://example.com/sitemap.xml", host: "example.com", kind: "other", isThirdParty: false }
+      ],
+      seoFiles: {
+        robots: { url: "https://example.com/robots.txt", status: "UNAVAILABLE", limitation: "timeout" },
+        sitemap: { url: "https://example.com/sitemap.xml", status: "UNAVAILABLE", limitation: "forbidden" }
+      }
+    });
+
+    const findings = evaluateAuditRules(ctx);
+    expect(findings.find((f) => f.code === "NO_ROBOTS_TXT")).toBeUndefined();
+    expect(findings.find((f) => f.code === "NO_SITEMAP")).toBeUndefined();
+  });
+
+  it("ignores misleading HTML links and trusts verified probe results", () => {
+    const ctx = createBaseContext({
+      resources: [
+        { url: "https://example.com/not-robots.txt", host: "example.com", kind: "other", isThirdParty: false },
+        { url: "https://example.com/sitemap-documentation", host: "example.com", kind: "other", isThirdParty: false }
+      ],
+      seoFiles: {
+        robots: { url: "https://example.com/robots.txt", status: "MISSING", httpStatus: 404 },
+        sitemap: { url: "https://example.com/sitemap.xml", status: "MISSING", httpStatus: 404 }
+      }
+    });
+
+    const findings = evaluateAuditRules(ctx);
+    expect(findings.find((f) => f.code === "NO_ROBOTS_TXT")).toBeDefined();
+    expect(findings.find((f) => f.code === "NO_SITEMAP")).toBeDefined();
   });
 
   it("detects missing Schema.org structured data", () => {

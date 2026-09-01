@@ -70,6 +70,10 @@ describe("performance evidence summary and report round trip", () => {
       resources: [],
       findings: [],
       seo: { title: true, metaDescription: true, canonical: true, openGraph: true },
+      seoFiles: {
+        robots: { url: "https://www.example.com/robots.txt", status: "VERIFIED", httpStatus: 200 },
+        sitemap: { url: "https://www.example.com/sitemap.xml", status: "UNAVAILABLE", httpStatus: 403, limitation: "HTTP_403" },
+      },
       performance,
     });
 
@@ -77,6 +81,8 @@ describe("performance evidence summary and report round trip", () => {
     expect(summary.performance?.providerResults[0].fieldMetrics[0].evidenceClass).toBe("MEASURED");
     expect(summary.performance?.providerResults[0].labMetrics[0].evidenceClass).toBe("OBSERVED");
     expect(summary.performance?.score).toBeNull();
+    expect(summary.seoFiles?.robots.status).toBe("VERIFIED");
+    expect(summary.seoFiles?.sitemap.status).toBe("UNAVAILABLE");
   });
 
   it("formats unavailable evidence as unavailable with a next action, never pass or fail", () => {

@@ -1,5 +1,5 @@
 import type { PerformanceEvidenceBundle } from "./performance-evidence";
-import { Finding } from "./types";
+import type { Finding, SeoFileEvidence } from "./types";
 
 export type AuditSummaryV1 = {
   schema: "asdev.audit.summary.v1";
@@ -40,6 +40,10 @@ export type AuditSummaryV1 = {
     metaDescription: "present" | "missing";
     canonical: "present" | "missing";
     openGraph: "present" | "missing";
+  };
+  seoFiles?: {
+    robots: SeoFileEvidence;
+    sitemap: SeoFileEvidence;
   };
   performance?: PerformanceEvidenceBundle;
   findings: Finding[];

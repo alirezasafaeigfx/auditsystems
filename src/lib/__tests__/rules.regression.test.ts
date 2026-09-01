@@ -689,15 +689,18 @@ describe("SEO_BASICS_MISSING", () => {
 describe("NO_ROBOTS_TXT", () => {
   const code = "NO_ROBOTS_TXT" as FindingCode;
 
-  it("fires when no robots.txt in resources", () => {
-    const result = evaluateAuditRules(ctx({ resources: [] }));
+  it("fires when the root probe verifies robots.txt is missing", () => {
+    const result = evaluateAuditRules(ctx({
+      seoFiles: {
+        robots: { url: "https://example.com/robots.txt", status: "MISSING", httpStatus: 404 },
+        sitemap: { url: "https://example.com/sitemap.xml", status: "VERIFIED", httpStatus: 200 },
+      },
+    }));
     expect(result.find((f) => f.code === code)).toBeDefined();
   });
 
-  it("does NOT fire when robots.txt is present", () => {
-    const result = evaluateAuditRules(
-      resources([{ url: "https://example.com/robots.txt", host: "example.com", kind: "other" as const, isThirdParty: false }])
-    );
+  it("does NOT fire without verified probe evidence", () => {
+    const result = evaluateAuditRules(resources([]));
     expect(result.find((f) => f.code === code)).toBeUndefined();
   });
 
@@ -712,15 +715,18 @@ describe("NO_ROBOTS_TXT", () => {
 describe("NO_SITEMAP", () => {
   const code = "NO_SITEMAP" as FindingCode;
 
-  it("fires when no sitemap in resources", () => {
-    const result = evaluateAuditRules(ctx({ resources: [] }));
+  it("fires when the root probe verifies sitemap.xml is missing", () => {
+    const result = evaluateAuditRules(ctx({
+      seoFiles: {
+        robots: { url: "https://example.com/robots.txt", status: "VERIFIED", httpStatus: 200 },
+        sitemap: { url: "https://example.com/sitemap.xml", status: "MISSING", httpStatus: 404 },
+      },
+    }));
     expect(result.find((f) => f.code === code)).toBeDefined();
   });
 
-  it("does NOT fire when sitemap is present", () => {
-    const result = evaluateAuditRules(
-      resources([{ url: "https://example.com/sitemap.xml", host: "example.com", kind: "other" as const, isThirdParty: false }])
-    );
+  it("does NOT fire without verified probe evidence", () => {
+    const result = evaluateAuditRules(resources([]));
     expect(result.find((f) => f.code === code)).toBeUndefined();
   });
 
@@ -1011,8 +1017,8 @@ describe("Edge cases", () => {
     const result = evaluateAuditRules(emptyCtx);
     const codes = result.map(findingCode);
     expect(codes).toContain("NO_CSP_HEADER");
-    expect(codes).toContain("NO_ROBOTS_TXT");
-    expect(codes).toContain("NO_SITEMAP");
+    expect(codes).not.toContain("NO_ROBOTS_TXT");
+    expect(codes).not.toContain("NO_SITEMAP");
     expect(codes).toContain("NO_SCHEMA_ORG");
     expect(codes).toContain("SEO_BASICS_MISSING");
     expect(codes).toContain("LAZY_LOADING_IMPLEMENTED");

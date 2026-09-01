@@ -2,7 +2,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { gzipSync } from "node:zlib";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { fetchAuditHtml } from "./safeAuditFetch";
+import { fetchAuditHtml, fetchAuditResource } from "./safeAuditFetch";
 
 describe("fetchAuditHtml", () => {
   let server: Server;
@@ -44,6 +44,18 @@ describe("fetchAuditHtml", () => {
       if (request.url === "/binary") {
         response.writeHead(200, { "Content-Type": "application/octet-stream" });
         response.end("not html");
+        return;
+      }
+
+      if (request.url === "/robots.txt") {
+        response.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
+        response.end("User-agent: *\nDisallow:");
+        return;
+      }
+
+      if (request.url === "/sitemap.xml") {
+        response.writeHead(200, { "Content-Type": "application/xml" });
+        response.end("<?xml version=\"1.0\"?><urlset></urlset>");
         return;
       }
 
@@ -121,6 +133,20 @@ describe("fetchAuditHtml", () => {
     await expect(fetchAuditHtml(`${baseUrl}/binary`, new AbortController().signal)).rejects.toThrow(
       "AUDIT_UNSUPPORTED_CONTENT_TYPE"
     );
+  });
+
+  it("fetches bounded text and XML resources through the pinned transport", async () => {
+    const robots = await fetchAuditResource(`${baseUrl}/robots.txt`, new AbortController().signal, {
+      acceptedContentTypes: ["text/plain"],
+      maxResponseBytes: 256 * 1024
+    });
+    const sitemap = await fetchAuditResource(`${baseUrl}/sitemap.xml`, new AbortController().signal, {
+      acceptedContentTypes: ["application/xml", "text/xml"],
+      maxResponseBytes: 256 * 1024
+    });
+
+    expect(robots.body).toContain("User-agent");
+    expect(sitemap.body).toContain("<urlset>");
   });
 
   it("rejects unsupported response encodings", async () => {
