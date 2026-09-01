@@ -2,7 +2,7 @@ node_modules
 .next
 coverage
 /playwright-report/
-/test-results/*/
+/test-results/
 .env
 .env.local
 *.log
