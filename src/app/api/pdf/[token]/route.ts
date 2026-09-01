@@ -7,6 +7,7 @@ import { appendPerformanceEvidencePage } from "../../../../lib/performance-repor
 import { buildAuditReportPdf } from "../../../../lib/pdf";
 import { isReportShareAccessible } from "../../../../lib/reportShare";
 import { calculateScore } from "../../../../lib/scoring";
+import { scoreFromPersistedSummary } from "../../../../lib/persisted-score";
 import { getCurrentPlan } from "../../../../lib/usage";
 import { NextRequest } from "next/server";
 
@@ -94,12 +95,13 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tok
       category: finding.category
     }));
 
-    const score = calculateScore(
+    const calculatedScore = calculateScore(
       share.run.findings.map((f) => ({
         category: f.category,
         severity: f.severity
       }))
     );
+    const score = scoreFromPersistedSummary(share.run.summary, calculatedScore);
 
     let agencyName: string | undefined;
     let agencyLogo: string | undefined;

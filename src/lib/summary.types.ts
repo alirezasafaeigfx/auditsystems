@@ -3,6 +3,7 @@ import { Finding } from "./types";
 
 export type AuditSummaryV1 = {
   schema: "asdev.audit.summary.v1";
+  scoringPolicyVersion: "worst-severity-v2";
   generatedAt: string;
   run: {
     id: string;

@@ -8,12 +8,12 @@ export type ScoreBreakdown = {
   totalFindings: number;
 };
 
-const SEVERITY_WEIGHTS: Record<FindingSeverity, number> = {
-  CRITICAL: 25,
-  HIGH: 15,
-  MEDIUM: 8,
-  LOW: 3,
-  INFO: 0,
+const SEVERITY_SCORES: Record<FindingSeverity, number> = {
+  CRITICAL: 0,
+  HIGH: 40,
+  MEDIUM: 68,
+  LOW: 88,
+  INFO: 100,
 };
 
 const CATEGORY_ORDER: FindingCategory[] = [
@@ -29,9 +29,7 @@ function calculateCategoryScore(findings: { category: FindingCategory; severity:
   const categoryFindings = findings;
   if (categoryFindings.length === 0) return 100;
 
-  const totalDeduction = categoryFindings.reduce((sum, f) => sum + (SEVERITY_WEIGHTS[f.severity] ?? 0), 0);
-  const maxDeduction = categoryFindings.length * 25;
-  const score = Math.max(0, Math.round(100 - (totalDeduction / Math.max(maxDeduction, 1)) * 100));
+  const score = Math.min(...categoryFindings.map((f) => SEVERITY_SCORES[f.severity] ?? 100));
   return score;
 }
 
@@ -61,9 +59,9 @@ export function calculateScore(findings: { category: FindingCategory; severity: 
     categories[cat] = calculateCategoryScore(catFindings);
   }
 
-  const totalDeduction = findings.reduce((sum, f) => sum + (SEVERITY_WEIGHTS[f.severity] ?? 0), 0);
-  const maxPossibleDeduction = Math.max(findings.length * 25, 1);
-  const overall = Math.max(0, Math.round(100 - (totalDeduction / maxPossibleDeduction) * 100));
+  const overall = findings.length === 0
+    ? 100
+    : Math.min(...findings.map((f) => SEVERITY_SCORES[f.severity] ?? 100));
 
   return {
     overall,

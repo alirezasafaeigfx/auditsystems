@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { calculateScore } from "./scoring";
+import { CURRENT_SCORING_POLICY_VERSION } from "./persisted-score";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 type MonthlyReportData = {
@@ -7,6 +8,7 @@ type MonthlyReportData = {
   organizationName: string;
   month: number;
   year: number;
+  scoringPolicyVersion: string;
   totalAudits: number;
   successfulAudits: number;
   averageScore: number;
@@ -21,6 +23,13 @@ type MonthlyReportData = {
   improvements: { category: string; before: number; after: number }[];
   projectBreakdown: { projectId: string; projectName: string; auditCount: number; avgScore: number }[];
 };
+
+function gradeFromScore(score: number): string {
+  if (score >= 81) return "EXCELLENT";
+  if (score >= 61) return "GOOD";
+  if (score >= 41) return "NEEDS_WORK";
+  return "CRITICAL";
+}
 
 export async function generateMonthlyReport(
   organizationId: string,
@@ -61,6 +70,7 @@ export async function generateMonthlyReport(
   const allFindings: { category: string; severity: string }[] = [];
   const issueMap = new Map<string, { code: string; title: string; severity: string; count: number }>();
   const projectMap = new Map<string, { projectId: string; projectName: string; auditCount: number; totalScore: number }>();
+  const auditScores: ReturnType<typeof calculateScore>[] = [];
 
   for (const audit of audits) {
     const findings = audit.findings.map((f) => ({
@@ -70,6 +80,7 @@ export async function generateMonthlyReport(
 
     const score = calculateScore(findings as { category: never; severity: never }[]);
     totalScore += score.overall;
+    auditScores.push(score);
     allFindings.push(...findings);
 
     for (const finding of audit.findings) {
@@ -105,7 +116,18 @@ export async function generateMonthlyReport(
   }
 
   const averageScore = successfulAudits > 0 ? Math.round(totalScore / successfulAudits) : 0;
-  const scoreBreakdown = calculateScore(allFindings as { category: never; severity: never }[]);
+  const calculatedBreakdown = calculateScore(allFindings as { category: never; severity: never }[]);
+  const scoreBreakdown = auditScores.length === 0
+    ? calculatedBreakdown
+    : {
+      ...calculatedBreakdown,
+      overall: Math.round(totalScore / auditScores.length),
+      grade: gradeFromScore(Math.round(totalScore / auditScores.length)),
+      categories: Object.fromEntries(Object.keys(calculatedBreakdown.categories).map((category) => [
+        category,
+        Math.round(auditScores.reduce((sum, score) => sum + score.categories[category as keyof typeof score.categories], 0) / auditScores.length),
+      ])) as typeof calculatedBreakdown.categories,
+    };
 
   const topIssues = Array.from(issueMap.values())
     .sort((a, b) => {
@@ -138,13 +160,14 @@ export async function generateMonthlyReport(
   const categoryScores: Record<string, { current: number; previous: number }> = {};
   for (const cat of Object.keys(scoreBreakdown.categories)) {
     const current = scoreBreakdown.categories[cat as keyof typeof scoreBreakdown.categories] ?? 0;
-    const prevFindings = previousAudits.flatMap((a) =>
-      a.findings.filter((f) => f.category === cat).map((f) => ({ category: f.category, severity: f.severity }))
-    );
-    const prevScore = prevFindings.length > 0 ? calculateScore(prevFindings as { category: never; severity: never }[]) : null;
+    const previousScores = previousAudits.map((audit) => calculateScore(
+      audit.findings.map((f) => ({ category: f.category, severity: f.severity })) as { category: never; severity: never }[],
+    ));
     categoryScores[cat] = {
       current,
-      previous: prevScore?.categories[cat as keyof typeof prevScore.categories] ?? current
+      previous: previousScores.length > 0
+        ? Math.round(previousScores.reduce((sum, score) => sum + score.categories[cat as keyof typeof score.categories], 0) / previousScores.length)
+        : current
     };
   }
 
@@ -161,6 +184,7 @@ export async function generateMonthlyReport(
     organizationName: organization.name,
     month,
     year,
+    scoringPolicyVersion: CURRENT_SCORING_POLICY_VERSION,
     totalAudits,
     successfulAudits,
     averageScore,
@@ -198,6 +222,7 @@ function generateMarkdown(data: MonthlyReportData): string {
     `- **Total Audits:** ${data.totalAudits}`,
     `- **Successful Audits:** ${data.successfulAudits}`,
     `- **Average Score:** ${data.averageScore}/100 (${data.scoreBreakdown.grade})`,
+    `- **Scoring Policy:** ${data.scoringPolicyVersion}`,
     "",
     "## Score Breakdown",
     "",

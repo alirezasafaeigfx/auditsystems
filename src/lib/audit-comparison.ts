@@ -1,4 +1,5 @@
 import { calculateScore, categoryLabel } from "./scoring";
+import { resolvePersistedScore } from "./persisted-score";
 import type { FindingCategory, FindingSeverity } from "./types";
 
 export type AuditRun = {
@@ -10,14 +11,15 @@ export type AuditRun = {
     grade?: string;
     categoryScores?: Record<FindingCategory, number>;
     severityCounts?: Record<FindingSeverity, number>;
+    scoringPolicyVersion?: "worst-severity-v2";
   };
 };
 
 export type ScoreDelta = {
   before: number;
   after: number;
-  delta: number;
-  direction: "improved" | "regressed" | "stable";
+  delta: number | null;
+  direction: "improved" | "regressed" | "stable" | "unavailable";
 };
 
 export type IssueDelta = {
@@ -32,8 +34,8 @@ export type CategoryDelta = {
   label: string;
   before: number;
   after: number;
-  delta: number;
-  direction: "improved" | "regressed" | "stable";
+  delta: number | null;
+  direction: "improved" | "regressed" | "stable" | "unavailable";
 };
 
 export type AuditComparison = {
@@ -52,10 +54,6 @@ function direction(delta: number): "improved" | "regressed" | "stable" {
   return "stable";
 }
 
-function scoreFromSummary(scoreBreakdown: { overall: number }, summary?: { score?: number }): number {
-  return summary?.score ?? scoreBreakdown.overall;
-}
-
 function gradeFromScore(score: number): string {
   if (score >= 81) return "EXCELLENT";
   if (score >= 61) return "GOOD";
@@ -64,13 +62,16 @@ function gradeFromScore(score: number): string {
 }
 
 export function compareAuditRuns(runA: AuditRun, runB: AuditRun): AuditComparison {
-  const scoreA = calculateScore(runA.findings);
-  const scoreB = calculateScore(runB.findings);
+  const resolvedA = resolvePersistedScore(runA.summary, calculateScore(runA.findings));
+  const resolvedB = resolvePersistedScore(runB.summary, calculateScore(runB.findings));
+  const scoreA = resolvedA.score;
+  const scoreB = resolvedB.score;
 
-  const scoreABefore = scoreFromSummary(scoreA, runA.summary);
-  const scoreBAfter = scoreFromSummary(scoreB, runB.summary);
+  const scoreABefore = scoreA.overall;
+  const scoreBAfter = scoreB.overall;
 
   const scoreDelta = scoreBAfter - scoreABefore;
+  const comparable = resolvedA.compatible && resolvedB.compatible && resolvedA.policyVersion === resolvedB.policyVersion;
 
   const codesA = new Set(runA.findings.map((f) => f.code));
   const codesB = new Set(runB.findings.map((f) => f.code));
@@ -99,14 +100,14 @@ export function compareAuditRuns(runA: AuditRun, runB: AuditRun): AuditCompariso
   for (const cat of allCategories) {
     const before = categoryMapA[cat] ?? 100;
     const after = categoryMapB[cat] ?? 100;
-    const delta = after - before;
+    const delta = comparable ? after - before : null;
     categories.push({
       category: cat,
       label: categoryLabel(cat),
       before,
       after,
       delta,
-      direction: direction(delta),
+      direction: delta === null ? "unavailable" : direction(delta),
     });
   }
 
@@ -114,11 +115,11 @@ export function compareAuditRuns(runA: AuditRun, runB: AuditRun): AuditCompariso
     overall: {
       before: scoreABefore,
       after: scoreBAfter,
-      delta: scoreDelta,
-      direction: direction(scoreDelta),
+      delta: comparable ? scoreDelta : null,
+      direction: comparable ? direction(scoreDelta) : "unavailable",
     },
-    gradeBefore: runA.summary?.grade ?? gradeFromScore(scoreABefore),
-    gradeAfter: runB.summary?.grade ?? gradeFromScore(scoreBAfter),
+    gradeBefore: scoreA.grade ?? gradeFromScore(scoreABefore),
+    gradeAfter: scoreB.grade ?? gradeFromScore(scoreBAfter),
     newIssues,
     resolvedIssues,
     unchangedIssues,
