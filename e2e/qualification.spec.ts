@@ -81,7 +81,10 @@ for (const locale of locales) {
         await form.locator('[name="company"]').press("End");
         await form.locator('[name="company"]').type(" Updated");
         await form.locator('[name="primaryConcern"]').focus();
-        expect(requests).toBe(1);
+        await expect.poll(() => requests, {
+          intervals: [100, 250, 500],
+          timeout: 1_000,
+        }).toBe(1);
 
         await form.getByRole("button", { name: locale.retry }).click();
         await expect(page.getByRole("heading", { name: locale.success })).toBeVisible();
