@@ -108,7 +108,10 @@ for (const locale of locales) {
       await page.keyboard.press("Tab");
       await page.keyboard.press("Enter");
       await expect(form.getByRole("button", { name: locale.submitting })).toBeDisabled();
-      expect(requests).toBe(1);
+      await expect.poll(() => requests, {
+        intervals: [100, 250, 500],
+        timeout: 1_000,
+      }).toBe(1);
       releaseResponse?.();
 
       const success = page.getByRole("heading", { name: locale.success }).locator("..");
