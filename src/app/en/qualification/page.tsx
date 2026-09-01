@@ -29,7 +29,7 @@ export default function QualificationPageEn() {
         </p>
       </section>
       <section className="audit-layout">
-        <QualificationForm />
+        <QualificationForm locale="en" />
         <aside className="card grid">
           <h2>Who is this for?</h2>
           <ul>
