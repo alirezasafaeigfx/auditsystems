@@ -4,6 +4,15 @@ Updated: 2026-08-31. Single writer: the current Audit coordinator. Authority: [c
 
 ## Reconciled initial state
 
+### Active claim — 2026-09-01T10:43:06Z
+
+- Task: `AU-02` monotonic scoring correctness; executor/session: Codex coordinator with bounded implementation worker.
+- Base/candidate: `feat/paired-au01-20260901` from `GITHUB_MAIN` `0fb6edcc483a701b0904c5d0aa38a8b3ab9dbf9a`; candidate pending.
+- Proven gap: `calculateScore` returns overall `0` for one SECURITY/CRITICAL finding but `44` after adding an SEO/LOW finding; the added failure is falsely reported as improvement by comparison consumers.
+- Owned paths: `src/lib/scoring.ts`, `src/lib/scoring.test.ts`, and only a directly required focused comparison test. Access, coverage/versioning, worker persistence, report/PDF presentation and UI paths remain outside this first unit.
+- Baseline evidence: existing scoring suite passed 9/9; the explicit invariant reproduction exited `42` with `invariant=false` under LOCAL_PC Node `24.19.0` / pnpm `9.15.0` (hosted Node 22 remains required).
+- Acceptance: observed RED regression, deterministic monotonic overall/category policy preserving public types and single-finding ordering, focused related tests, type check, independent review and normal PR checks. Unknown coverage remains an explicit AU-02 gap unless separately implemented; no historical report rewrite or schema/runtime mutation.
+
 | Item | Verified source state | Meaning / next action |
 |---|---|---|
 | Main source | `0fb6edcc483a701b0904c5d0aa38a8b3ab9dbf9a` | Baseline re-read from GitHub; not a deployment identity |
