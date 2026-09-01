@@ -8,6 +8,7 @@ describe("qualificationCopy", () => {
     expect(copy.formLabel).toBe("Request an Audit assessment");
     expect(copy.errors.RATE_LIMITED).toMatch(/requests/i);
     expect(copy.successTitle).toBe("Assessment request received");
+    expect(copy.retry).toBe("Try again");
     expect(copy.homeHref).toBe("/en");
     expect(copy.sampleHref).toBe("/en/sample-report");
   });
@@ -17,6 +18,7 @@ describe("qualificationCopy", () => {
 
     expect(copy.formLabel).toContain("درخواست ارزیابی");
     expect(copy.errors.NETWORK_ERROR).toContain("اطلاعات شما حفظ شده");
+    expect(copy.retry).toBe("تلاش دوباره");
     expect(copy.homeHref).toBe("/");
     expect(copy.sampleHref).toBe("/sample-report");
   });
