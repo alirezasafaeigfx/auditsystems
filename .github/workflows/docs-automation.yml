@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   docs:
-    runs-on: [self-hosted, linux, x64, asdev-ci]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
