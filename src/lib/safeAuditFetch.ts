@@ -23,6 +23,7 @@ type AuditFetchOptions = {
   maxRedirects?: number;
   requestTimeoutMs?: number;
   dnsLookup?: (host: string) => Promise<AuditDnsRecord[]>;
+  acceptedContentTypes?: string[];
 };
 
 export type AuditHtmlResponse = {
@@ -33,6 +34,8 @@ export type AuditHtmlResponse = {
   ttfbMs: number;
   responseMs: number;
 };
+
+export type AuditResourceResponse = Omit<AuditHtmlResponse, "html"> & { body: string };
 
 function positiveInteger(value: number | undefined, fallback: number): number {
   if (!Number.isFinite(value) || value === undefined || value <= 0) return fallback;
@@ -53,10 +56,10 @@ function responseHeaders(response: IncomingMessage): Record<string, string> {
   return headers;
 }
 
-function assertHtmlContentType(response: IncomingMessage): void {
+function assertAcceptedContentType(response: IncomingMessage, acceptedContentTypes: string[]): void {
   const raw = String(response.headers["content-type"] ?? "").toLowerCase();
   if (!raw) return;
-  if (!ALLOWED_CONTENT_TYPES.some((type) => raw.startsWith(type))) {
+  if (!acceptedContentTypes.some((type) => raw.startsWith(type))) {
     throw new Error("AUDIT_UNSUPPORTED_CONTENT_TYPE");
   }
 }
@@ -177,16 +180,17 @@ function performPinnedRequest(
   });
 }
 
-export async function fetchAuditHtml(
+export async function fetchAuditResource(
   inputUrl: string,
   signal: AbortSignal,
   options: AuditFetchOptions = {}
-): Promise<AuditHtmlResponse> {
+): Promise<AuditResourceResponse> {
   const startedAt = Date.now();
   const maxBytes = positiveInteger(options.maxResponseBytes, DEFAULT_MAX_RESPONSE_BYTES);
   const maxRedirects = nonNegativeInteger(options.maxRedirects, DEFAULT_MAX_REDIRECTS);
   const timeoutMs = positiveInteger(options.requestTimeoutMs, DEFAULT_REQUEST_TIMEOUT_MS);
   const lookup = options.dnsLookup ?? ((host: string) => dns.lookup(host, { all: true }));
+  const acceptedContentTypes = options.acceptedContentTypes ?? ALLOWED_CONTENT_TYPES;
 
   let currentUrl = inputUrl;
 
@@ -213,14 +217,14 @@ export async function fetchAuditHtml(
         continue;
       }
 
-      assertHtmlContentType(response);
-      const html = await readBoundedBody(response, maxBytes, signal);
+      if (status >= 200 && status < 300) assertAcceptedContentType(response, acceptedContentTypes);
+      const body = await readBoundedBody(response, maxBytes, signal);
 
       return {
         finalUrl: target.toString(),
         status,
         headers: responseHeaders(response),
-        html,
+        body,
         ttfbMs: headerArrivalMs,
         responseMs: Date.now() - startedAt
       };
@@ -233,4 +237,17 @@ export async function fetchAuditHtml(
   }
 
   throw new Error("AUDIT_TOO_MANY_REDIRECTS");
+}
+
+export async function fetchAuditHtml(
+  inputUrl: string,
+  signal: AbortSignal,
+  options: AuditFetchOptions = {}
+): Promise<AuditHtmlResponse> {
+  const response = await fetchAuditResource(inputUrl, signal, {
+    ...options,
+    acceptedContentTypes: ALLOWED_CONTENT_TYPES,
+  });
+  const { body, ...metadata } = response;
+  return { ...metadata, html: body };
 }

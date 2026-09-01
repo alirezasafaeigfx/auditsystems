@@ -1,6 +1,6 @@
 import { AuditSummaryV1 } from "./summary.types";
 import type { PerformanceEvidenceBundle } from "./performance-evidence";
-import { ExtractedResource, Finding, SeoBasics } from "./types";
+import type { ExtractedResource, Finding, SeoBasics, SeoFileEvidence } from "./types";
 
 function headerPresent(headers: Record<string, string>, headerName: string): boolean {
   return Object.keys(headers).some((key) => key.toLowerCase() === headerName.toLowerCase());
@@ -17,6 +17,7 @@ export function buildAuditSummaryV1(input: {
   resources: ExtractedResource[];
   findings: Finding[];
   seo: SeoBasics;
+  seoFiles?: { robots: SeoFileEvidence; sitemap: SeoFileEvidence };
   performance?: PerformanceEvidenceBundle;
 }): AuditSummaryV1 {
   const firstPartyHost = new URL(input.normalizedUrl).hostname;
@@ -82,6 +83,7 @@ export function buildAuditSummaryV1(input: {
       canonical: input.seo.canonical ? "present" : "missing",
       openGraph: input.seo.openGraph ? "present" : "missing"
     },
+    ...(input.seoFiles ? { seoFiles: input.seoFiles } : {}),
     ...(input.performance ? { performance: input.performance } : {}),
     findings: input.findings,
     highlights: {
