@@ -15,7 +15,7 @@ export default defineConfig({
     { name: "desktop-chromium", use: { ...devices["Desktop Chrome"] } },
   ],
   webServer: {
-    command: "pnpm start --hostname 127.0.0.1 --port 3111",
+    command: "node scripts/start-e2e-standalone.mjs",
     url: "http://127.0.0.1:3111/qualification",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

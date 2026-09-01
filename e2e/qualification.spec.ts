@@ -42,12 +42,12 @@ async function fillForm(page: Page, formName: string) {
   return form;
 }
 
-const failures: Array<{ name: string; handler: (route: Route) => Promise<void>; error: RegExp }> = [
-  { name: "rejected network request", handler: (route) => route.abort("failed"), error: /ارتباط با سرور|could not reach the server/i },
-  { name: "non-JSON response", handler: (route) => route.fulfill({ status: 502, contentType: "text/plain", body: "bad gateway" }), error: /پاسخ سرور قابل بررسی نبود|response could not be verified/i },
-  { name: "API validation response", handler: (route) => route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: "DOMAIN_REQUIRED" }) }), error: /آدرس سایت را وارد کنید|Enter your website address/i },
-  { name: "rate-limited response", handler: (route) => route.fulfill({ status: 429, contentType: "application/json", body: JSON.stringify({ error: "RATE_LIMITED" }) }), error: /تعداد درخواست‌ها زیاد است|Too many requests/i },
-  { name: "server error response", handler: (route) => route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "REQUEST_FAILED" }) }), error: /ثبت درخواست با خطا|could not be submitted/i },
+const failures: Array<{ name: string; handler: (route: Route) => Promise<void>; error: { fa: RegExp; en: RegExp } }> = [
+  { name: "rejected network request", handler: (route) => route.abort("failed"), error: { fa: /ارتباط با سرور برقرار نشد/, en: /We could not reach the server/ } },
+  { name: "non-JSON response", handler: (route) => route.fulfill({ status: 502, contentType: "text/plain", body: "bad gateway" }), error: { fa: /پاسخ سرور قابل بررسی نبود/, en: /The server response could not be verified/ } },
+  { name: "API validation response", handler: (route) => route.fulfill({ status: 400, contentType: "application/json", body: JSON.stringify({ error: "DOMAIN_REQUIRED" }) }), error: { fa: /آدرس سایت را وارد کنید/, en: /Enter your website address/ } },
+  { name: "rate-limited response", handler: (route) => route.fulfill({ status: 429, contentType: "application/json", body: JSON.stringify({ error: "RATE_LIMITED" }) }), error: { fa: /تعداد درخواست‌ها زیاد است/, en: /Too many requests/ } },
+  { name: "server error response", handler: (route) => route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "REQUEST_FAILED" }) }), error: { fa: /ثبت درخواست با خطا روبه‌رو شد/, en: /The request could not be submitted/ } },
 ];
 
 for (const locale of locales) {
@@ -67,12 +67,20 @@ for (const locale of locales) {
         await form.getByRole("button", { name: locale.submit, exact: true }).click();
 
         const alert = form.getByRole("alert");
-        await expect(alert).toHaveText(failure.error);
+        await expect(alert).toHaveText(failure.error[locale.name]);
         await expect(alert).toBeFocused();
         await expect(form.locator('[name="domain"]')).toHaveValue("https://example.com");
         await expect(form.locator('[name="contact"]')).toHaveValue("owner@example.com");
+        await expect(form.locator('[name="name"]')).toHaveValue("Test Owner");
+        await expect(form.locator('[name="phone"]')).toHaveValue("09120000000");
+        await expect(form.locator('[name="company"]')).toHaveValue("Example Co");
+        await expect(form.locator('[name="businessType"]')).toHaveValue("agency");
+        await expect(form.locator('[name="primaryConcern"]')).toHaveValue("Mobile pages are slow and search traffic declined.");
+        await expect(form.locator('[name="consentPrivacy"]')).toBeChecked();
         await expect(form.getByRole("button", { name: locale.retry })).toBeEnabled();
-        await page.waitForTimeout(150);
+        await form.locator('[name="company"]').press("End");
+        await form.locator('[name="company"]').type(" Updated");
+        await form.locator('[name="primaryConcern"]').focus();
         expect(requests).toBe(1);
 
         await form.getByRole("button", { name: locale.retry }).click();
