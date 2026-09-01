@@ -14,12 +14,14 @@ function severityClass(severity: string): string {
 function directionColor(direction: string): string {
   if (direction === "improved") return "#059669";
   if (direction === "regressed") return "#dc2626";
+  if (direction === "unavailable") return "#6b7280";
   return "#6b7280";
 }
 
 function directionIcon(direction: string): string {
   if (direction === "improved") return "↑";
   if (direction === "regressed") return "↓";
+  if (direction === "unavailable") return "—";
   return "→";
 }
 
@@ -88,7 +90,7 @@ export default async function ComparePage({ params }: { params: Promise<{ tokenA
                 color: directionColor(comparison.overall.direction),
               }}
             >
-              {directionIcon(comparison.overall.direction)} {Math.abs(comparison.overall.delta)}
+                  {comparison.overall.direction === "unavailable" ? "Not comparable across scoring policies" : `${directionIcon(comparison.overall.direction)} ${Math.abs(comparison.overall.delta ?? 0)}`}
             </div>
           </div>
 
@@ -114,13 +116,13 @@ export default async function ComparePage({ params }: { params: Promise<{ tokenA
             </tr>
           </thead>
           <tbody>
-            {comparison.categories.map((cat: { category: string; label: string; before: number; after: number; delta: number; direction: string }) => (
+            {comparison.categories.map((cat: { category: string; label: string; before: number; after: number; delta: number | null; direction: string }) => (
               <tr key={cat.category} style={{ borderBottom: "1px solid var(--line)" }}>
                 <td style={{ padding: "0.75rem", fontWeight: 600 }}>{cat.label}</td>
                 <td style={{ padding: "0.75rem", textAlign: "center" }}>{cat.before}</td>
                 <td style={{ padding: "0.75rem", textAlign: "center" }}>{cat.after}</td>
                 <td style={{ padding: "0.75rem", textAlign: "center", color: directionColor(cat.direction), fontWeight: 600 }}>
-                  {directionIcon(cat.direction)} {Math.abs(cat.delta)}
+                  {cat.direction === "unavailable" ? "Not comparable" : `${directionIcon(cat.direction)} ${Math.abs(cat.delta ?? 0)}`}
                 </td>
               </tr>
             ))}

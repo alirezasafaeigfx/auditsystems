@@ -89,4 +89,38 @@ describe("audit-comparison", () => {
     expect(result.resolvedIssues).toHaveLength(0);
     expect(result.unchangedIssues).toHaveLength(0);
   });
+
+  it("uses persisted legacy category scores when comparing historical runs", () => {
+    const runA = {
+      ...makeRun([makeFinding("F1", "SEO", "CRITICAL"), makeFinding("F2", "SEO", "LOW")]),
+      summary: { score: 44, grade: "NEEDS_WORK", categoryScores: { SEO: 44, PERFORMANCE: 100, SECURITY: 100, UX: 100, ACCESSIBILITY: 100, RESILIENCE: 100 }, severityCounts: { INFO: 0, LOW: 1, MEDIUM: 0, HIGH: 0, CRITICAL: 1 } },
+    };
+    const runB = {
+      ...makeRun([]),
+      summary: { score: 100, grade: "EXCELLENT", categoryScores: { SEO: 100, PERFORMANCE: 100, SECURITY: 100, UX: 100, ACCESSIBILITY: 100, RESILIENCE: 100 }, severityCounts: { INFO: 0, LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 } },
+    };
+    const result = compareAuditRuns(runA, runB);
+    const seoCat = result.categories.find((c) => c.category === "SEO");
+    expect(seoCat?.before).toBe(44);
+    expect(seoCat?.after).toBe(100);
+  });
+
+  it("marks cross-policy summaries unavailable instead of reporting a false regression", () => {
+    const legacy = {
+      ...makeRun([makeFinding("F1", "SECURITY", "CRITICAL"), makeFinding("F2", "SECURITY", "LOW")]),
+      summary: { score: 44, grade: "NEEDS_WORK", categoryScores: { SEO: 100, PERFORMANCE: 100, SECURITY: 44, UX: 100, ACCESSIBILITY: 100, RESILIENCE: 100 }, severityCounts: { INFO: 0, LOW: 1, MEDIUM: 0, HIGH: 0, CRITICAL: 1 } },
+    };
+    const current = { ...legacy, summary: { ...legacy.summary, score: 0, grade: "CRITICAL", categoryScores: { ...legacy.summary.categoryScores, SECURITY: 0 }, scoringPolicyVersion: "worst-severity-v2" as const } };
+    const result = compareAuditRuns(legacy, current);
+    expect(result.overall.direction).toBe("unavailable");
+    expect(result.overall.delta).toBeNull();
+  });
+
+  it("marks a valid legacy summary and an invalid fallback as unavailable", () => {
+    const findings = [makeFinding("F1", "SECURITY", "CRITICAL"), makeFinding("F2", "SECURITY", "LOW")];
+    const legacy = { ...makeRun(findings), summary: { score: 44, grade: "NEEDS_WORK", categoryScores: { SEO: 100, PERFORMANCE: 100, SECURITY: 44, UX: 100, ACCESSIBILITY: 100, RESILIENCE: 100 }, severityCounts: { INFO: 0, LOW: 1, MEDIUM: 0, HIGH: 0, CRITICAL: 1 } } };
+    const result = compareAuditRuns(legacy, makeRun(findings));
+    expect(result.overall.delta).toBeNull();
+    expect(result.overall.direction).toBe("unavailable");
+  });
 });

@@ -44,6 +44,7 @@ export function buildAuditSummaryV1(input: {
 
   return {
     schema: "asdev.audit.summary.v1",
+    scoringPolicyVersion: "worst-severity-v2",
     generatedAt: new Date().toISOString(),
     run: {
       id: input.runId,
