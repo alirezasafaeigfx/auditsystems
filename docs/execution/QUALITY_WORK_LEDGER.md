@@ -4,6 +4,14 @@ Updated: 2026-09-01. Single writer: the current Audit coordinator. Authority: [c
 
 ## Reconciled initial state
 
+### Integrated resilience unit — 2026-09-01T16:45:57Z
+
+- Task: `AU-06` qualification submission recovery; executor/session: Codex coordinator with independent read-only reviewer.
+- Base/candidate/merge: branch `fix/au06-qualification-resilience-20260901` from `GITHUB_MAIN` `4005f019887c8c0394a3b85857163420085a8062`; PR #4 head `db32fd589761dfe5205823bac03fba81bde446be`; squash merge `d4382fafa00b78b34cc5d3008e62bd5a46ff4ac0`.
+- Proven gap: a rejected `fetch` or non-JSON response escaped the submit handler and left the form permanently disabled in `submitting` state.
+- Changed paths: `src/app/qualification/QualificationForm.tsx`, `src/lib/qualification-submit.ts`, `src/lib/qualification-submit.test.ts`. The uncontrolled form remains mounted on error, preserving entries; retry creates a fresh request/event ID. Locale parity and browser-state matrix remain separate AU-06 work.
+- Acceptance: RED module-missing witness; focused 4/4 PASS; full Vitest 892 PASS / 36 SKIP; lint and typecheck PASS; independent review PASS. Hosted PR #4 runs `33532646062`, `33532646174`, `33532645987` all SUCCESS. LOCAL_PC build was UNVERIFIED because Next inferred `D:\My_Projects` from a parent lockfile and then could not resolve parent-root `@tailwindcss/postcss`; no dependency/config change was mixed into the unit. Integration PASS; deployment/live verification UNVERIFIED.
+
 ### Integrated implementation — 2026-09-01T15:37:25Z
 
 - Task: `AU-02` monotonic scoring correctness; executor/session: Codex coordinator with bounded implementation worker.
