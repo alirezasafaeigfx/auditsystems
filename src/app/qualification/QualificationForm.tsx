@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
+import { submitQualification } from "../../lib/qualification-submit";
 
 type SubmitState =
   | { kind: "idle" }
@@ -18,6 +19,8 @@ function errorMessage(code: string): string {
     CONSENT_REQUIRED: "برای ثبت درخواست باید با بررسی عمومی سایت و سیاست حریم خصوصی موافقت کنید.",
     DOMAIN_NOT_PUBLICLY_REACHABLE: "دامنه باید عمومی و قابل دسترس باشد.",
     RATE_LIMITED: "تعداد درخواست‌ها زیاد است. کمی بعد دوباره تلاش کنید.",
+    NETWORK_ERROR: "ارتباط با سرور برقرار نشد. اطلاعات شما حفظ شده است؛ دوباره تلاش کنید.",
+    INVALID_RESPONSE: "پاسخ سرور قابل بررسی نبود. اطلاعات شما حفظ شده است؛ دوباره تلاش کنید.",
   };
   return messages[code] ?? "ثبت درخواست با خطا روبه‌رو شد.";
 }
@@ -44,10 +47,7 @@ export default function QualificationForm() {
     setState({ kind: "submitting" });
     const form = new FormData(event.currentTarget);
 
-    const response = await fetch("/api/leads", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const result = await submitQualification({
         domain: form.get("domain"),
         contact: form.get("contact"),
         name: form.get("name"),
@@ -58,12 +58,10 @@ export default function QualificationForm() {
         consentPrivacy: form.get("consentPrivacy") === "on",
         ...source,
         submitEventId: `lead_submit_${Date.now()}`,
-      }),
     });
 
-    const body = await response.json();
-    if (!response.ok) {
-      setState({ kind: "error", message: errorMessage(String(body.error ?? "")) });
+    if (!result.ok) {
+      setState({ kind: "error", message: errorMessage(result.code) });
       return;
     }
 
