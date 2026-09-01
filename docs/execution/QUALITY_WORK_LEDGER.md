@@ -19,6 +19,12 @@ Updated: 2026-09-01. Single writer: the current Audit coordinator. Authority: [c
 - Changed paths: typed `qualification-copy` contract/tests, shared form copy selection, and the English wrapper locale prop. API field names, enum values, consent, source attribution and submit-event behavior are unchanged.
 - Acceptance: RED missing-copy module; focused 6/6 PASS; full Vitest 894 PASS / 36 SKIP; lint/typecheck/diff-check PASS; independent review PASS. Hosted PR #5 runs `33534169396`, `33534169398`, `33534169349` all SUCCESS. Integration PASS; actual deployed FA/EN route verification remains UNVERIFIED.
 
+### Integrated accessible-retry unit — 2026-09-01T16:58:20Z
+
+- Task: `AU-06` explicit accessible retry; base/candidate/merge: `GITHUB_MAIN` `22f873e15ca47b9e1c6e4899352760095e528545`, PR #6 head `0affabf49a5fe8437e47107ada0f178557e8eff0`, squash merge `e0658a760adc587a4767103522727b6d72acd010`.
+- Proven gap/fix: the recoverable alert was announced but not focused and the re-enabled action did not say retry. The mounted alert is now programmatically focused once per error transition and the user-triggered CTA is localized as `Try again` / `تلاش دوباره`; no automatic resubmission was added.
+- Acceptance: RED retry-copy assertions in both locales; focused 6/6 PASS; full Vitest 894 PASS / 36 SKIP; typecheck/ESLint/diff-check PASS; independent review PASS. Hosted PR #6 runs `33534746025`, `33534746015`, `33534746013` all SUCCESS. Integration PASS; browser interaction and deployment/live evidence remain UNVERIFIED.
+
 ### Integrated implementation — 2026-09-01T15:37:25Z
 
 - Task: `AU-02` monotonic scoring correctness; executor/session: Codex coordinator with bounded implementation worker.
