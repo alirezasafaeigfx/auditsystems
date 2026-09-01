@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { submitQualification } from "../../lib/qualification-submit";
 import { qualificationCopy, type QualificationLocale } from "../../lib/qualification-copy";
@@ -13,6 +13,7 @@ type SubmitState =
 
 export default function QualificationForm({ locale = "fa" }: { locale?: QualificationLocale }) {
   const copy = qualificationCopy(locale);
+  const errorRef = useRef<HTMLParagraphElement>(null);
   const [state, setState] = useState<SubmitState>({ kind: "idle" });
   const [source, setSource] = useState({
     leadSource: "direct",
@@ -28,6 +29,10 @@ export default function QualificationForm({ locale = "fa" }: { locale?: Qualific
       sourceOffer: params.get("offer") ?? "request_assessment",
     });
   }, []);
+
+  useEffect(() => {
+    if (state.kind === "error") errorRef.current?.focus();
+  }, [state.kind]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -116,9 +121,9 @@ export default function QualificationForm({ locale = "fa" }: { locale?: Qualific
         <input name="consentPrivacy" type="checkbox" required />
         <span>{copy.consent}</span>
       </label>
-      {state.kind === "error" ? <p role="alert" className="status-note is-danger">{state.message}</p> : null}
+      {state.kind === "error" ? <p ref={errorRef} role="alert" tabIndex={-1} className="status-note is-danger">{state.message}</p> : null}
       <button type="submit" disabled={state.kind === "submitting"}>
-        {state.kind === "submitting" ? copy.submitting : copy.submit}
+        {state.kind === "submitting" ? copy.submitting : state.kind === "error" ? copy.retry : copy.submit}
       </button>
     </form>
   );
