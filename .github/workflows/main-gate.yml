@@ -108,6 +108,16 @@ jobs:
           test "$HEAD_CODE" = "$GET_CODE"
           grep -q '"status":"ready"' "$READY_JSON" || grep -q '"status":"degraded"' "$READY_JSON"
 
+      - name: Install qualification browser
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/ms-playwright
+        run: pnpm exec playwright install chromium
+
+      - name: Run AU-06 qualification browser matrix
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/ms-playwright
+        run: pnpm run test:e2e:qualification
+
       - name: Upload automation artifacts
         if: failure() || github.event_name == 'workflow_dispatch'
         continue-on-error: true
@@ -119,6 +129,8 @@ jobs:
             logs/roadmap/
             logs/preflight/
             docs/AUTO_GENERATED_STATUS.md
+            playwright-report/
+            test-results/
 
       - name: Cleanup runner workspace
         if: always()
