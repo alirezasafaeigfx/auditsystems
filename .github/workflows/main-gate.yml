@@ -118,6 +118,17 @@ jobs:
           PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/ms-playwright
         run: pnpm run test:e2e:qualification
 
+      - name: Upload AU-06 qualification browser evidence
+        if: always()
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.4
+        with:
+          name: au-06-qualification-${{ github.event.pull_request.head.sha || github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            playwright-report/
+            test-results/
+
       - name: Upload automation artifacts
         if: failure() || github.event_name == 'workflow_dispatch'
         continue-on-error: true
