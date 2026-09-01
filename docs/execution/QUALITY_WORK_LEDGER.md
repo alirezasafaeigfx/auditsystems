@@ -12,6 +12,13 @@ Updated: 2026-09-01. Single writer: the current Audit coordinator. Authority: [c
 - Changed paths: `src/app/qualification/QualificationForm.tsx`, `src/lib/qualification-submit.ts`, `src/lib/qualification-submit.test.ts`. The uncontrolled form remains mounted on error, preserving entries; retry creates a fresh request/event ID. Locale parity and browser-state matrix remain separate AU-06 work.
 - Acceptance: RED module-missing witness; focused 4/4 PASS; full Vitest 892 PASS / 36 SKIP; lint and typecheck PASS; independent review PASS. Hosted PR #4 runs `33532646062`, `33532646174`, `33532645987` all SUCCESS. LOCAL_PC build was UNVERIFIED because Next inferred `D:\My_Projects` from a parent lockfile and then could not resolve parent-root `@tailwindcss/postcss`; no dependency/config change was mixed into the unit. Integration PASS; deployment/live verification UNVERIFIED.
 
+### Integrated language-parity unit — 2026-09-01T16:53:09Z
+
+- Task: `AU-06` FA/EN qualification continuity; base/candidate/merge: `GITHUB_MAIN` `045273a6b509aef7cdae3c62c85a6b2557b5a542`, PR #5 head `4c6390e74442a7c228141728f737836565a9be72`, squash merge `bf3a0c3bbeb1b2b7e9a3183b26e68b4f76cfc461`.
+- Proven gap: `/en/qualification` rendered Persian form labels, errors, success copy and root-locale follow-up links despite an English wrapper.
+- Changed paths: typed `qualification-copy` contract/tests, shared form copy selection, and the English wrapper locale prop. API field names, enum values, consent, source attribution and submit-event behavior are unchanged.
+- Acceptance: RED missing-copy module; focused 6/6 PASS; full Vitest 894 PASS / 36 SKIP; lint/typecheck/diff-check PASS; independent review PASS. Hosted PR #5 runs `33534169396`, `33534169398`, `33534169349` all SUCCESS. Integration PASS; actual deployed FA/EN route verification remains UNVERIFIED.
+
 ### Integrated implementation — 2026-09-01T15:37:25Z
 
 - Task: `AU-02` monotonic scoring correctness; executor/session: Codex coordinator with bounded implementation worker.
