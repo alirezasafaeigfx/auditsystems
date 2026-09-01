@@ -17,7 +17,7 @@ export default defineConfig({
   webServer: {
     command: "node scripts/start-e2e-standalone.mjs",
     url: "http://127.0.0.1:3111/qualification",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });
