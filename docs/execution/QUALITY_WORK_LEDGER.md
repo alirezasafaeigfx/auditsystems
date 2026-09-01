@@ -4,22 +4,22 @@ Updated: 2026-09-01. Single writer: the current Audit coordinator. Authority: [c
 
 ## Reconciled initial state
 
-### Completed implementation / hosted checks blocked — 2026-09-01T11:22:03Z
+### Integrated implementation — 2026-09-01T15:37:25Z
 
 - Task: `AU-02` monotonic scoring correctness; executor/session: Codex coordinator with bounded implementation worker.
-- Base/candidate: `feat/paired-au01-20260901` from `GITHUB_MAIN` `0fb6edcc483a701b0904c5d0aa38a8b3ab9dbf9a`; candidate `978e7b4c4dbd5663dbaa16d33367973cf9d5b34e`, PR #2.
+- Base/candidate/merge: `feat/paired-au01-20260901` from `GITHUB_MAIN` `0fb6edcc483a701b0904c5d0aa38a8b3ab9dbf9a`; reviewed implementation `978e7b4c4dbd5663dbaa16d33367973cf9d5b34e`, final PR #2 head `fb11e427c636b807cd6eceec6be2e641e2b3e117`, squash merge `4babbfea3305153d153ff88038798771d46ad75e`.
 - Proven gap: `calculateScore` returns overall `0` for one SECURITY/CRITICAL finding but `44` after adding an SEO/LOW finding; the added failure is falsely reported as improvement by comparison consumers.
 - Changed paths: scoring/tests; versioned summary types/builder; strict persisted-score resolver/tests; comparison/UI tests; monthly normalization; PDF persisted-score selection. Access enforcement and scanner coverage remain outside this unit.
 - Baseline evidence: existing scoring suite passed 9/9; the explicit invariant reproduction exited `42` with `invariant=false` under LOCAL_PC Node `24.19.0` / pnpm `9.15.0` (hosted Node 22 remains required).
-- Acceptance: RED witnesses reproduced denominator dilution and cross-policy false deltas. LOCAL_PC: focused reviewer tests 29/29 PASS; full suite 888 PASS / 36 SKIP; lint, typecheck and clean detached-worktree build PASS. Independent correctness review PASS at candidate SHA. Hosted `docs`, `roadmap` and `Self-hosted quality gate` remain QUEUED, so integration is not accepted and no merge/deploy is claimed. Unknown scanner coverage remains an explicit AU-02 gap.
+- Acceptance: RED witnesses reproduced denominator dilution and cross-policy false deltas. LOCAL_PC: focused reviewer tests 29/29 PASS; full suite 888 PASS / 36 SKIP; lint, typecheck and clean detached-worktree build PASS. Independent correctness review PASS. Hosted `docs`, `roadmap` and preserved-context `Self-hosted quality gate` passed at final PR head after AU-01 runner repair. Integration PASS; deployment/live verification UNVERIFIED. Unknown scanner coverage remains an explicit AU-02 gap.
 
-### Active claim — 2026-09-01T11:25:00Z
+### Integrated runner repair — 2026-09-01T12:48:00Z
 
 - Task: `AU-01` required-check runner availability; executor/session: Codex coordinator with bounded workflow worker.
-- Base/candidate: new isolated branch from `GITHUB_MAIN` `0fb6edcc483a701b0904c5d0aa38a8b3ab9dbf9a`; candidate pending and separate from PR #2.
+- Base/candidate/merge: isolated PR #3 from `0fb6edcc483a701b0904c5d0aa38a8b3ab9dbf9a`; reviewed head `c83b3f59d820cfacc5a17cb705cc180d0bd0326d`; squash merge `e6cab21d5862d065dd4755df6d0085869696212e`.
 - Proven gap: PR #2 workflow runs `33502105811`, `33502105771` and `33502105876` are QUEUED with no steps; repository runner API reports `total_count=0`, while all three jobs require `[self-hosted, linux, x64, asdev-ci]`.
 - Owned paths: `.github/workflows/main-gate.yml`, `.github/workflows/docs-automation.yml`, `.github/workflows/roadmap-automation.yml`, and focused workflow-contract tests only. No repository settings, secrets, production, payment or schema changes.
-- Acceptance: smallest reviewable runner strategy that makes required checks genuinely executable, negative workflow contract tests, local lint/tests, separate PR, and an actual terminal hosted result. If owner infrastructure is required, record the exact runner-registration trigger instead of weakening/removing checks.
+- Acceptance: three required workflows use `ubuntu-latest` while preserving check names/gates/permissions; exact-job regression contract runs inside main-gate. PR #3 runs `33509241813`, `33509241731`, `33509241702` all SUCCESS, including build/smoke/cleanup; independent review PASS. No repository setting, secret, deployment or production mutation.
 
 | Item | Verified source state | Meaning / next action |
 |---|---|---|
