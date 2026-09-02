@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 
 const SHA = /^[0-9a-f]{40}$/i;
 const HASH = /^[0-9a-f]{64}$/i;
+const GITHUB_PR_REVIEW_URL = /^https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/pull\/\d+#pullrequestreview-\d+$/i;
 const REQUIRED_CRITERIA = {
   "AU-08": [
     "AU-08-current-state-reconciled",
@@ -87,13 +88,23 @@ function validateArtifact(artifact, index, rootDir, errors) {
   }
 }
 
-function validateRankingObservation(observation, errors) {
+function hasTrustedReviewAttestation(review, artifactIds) {
+  return nonEmpty(review?.attestationRef)
+    && artifactIds.has(review.attestationRef)
+    && review?.provider === "github-pull-request-review"
+    && GITHUB_PR_REVIEW_URL.test(review?.providerUrl ?? "");
+}
+
+function validateRankingObservation(observation, errors, artifactIds) {
   if (observation?.type !== "search-ranking") return;
   const hasRealSource = /^https:\/\/[^\s]+$/i.test(observation?.source ?? "")
     && !/synthetic|fixture|fabricated/i.test(observation.source);
   if (!hasRealSource) errors.push("search-ranking observations require a retrievable non-synthetic source");
   if (!nonEmpty(observation?.query) || !validTimestamp(observation?.observedAt) || !Number.isFinite(observation?.position) || observation.position <= 0) {
     errors.push("search-ranking observations require query, exact observation time, and positive position");
+  }
+  if (!nonEmpty(observation?.snapshotRef) || !artifactIds.has(observation.snapshotRef)) {
+    errors.push("search-ranking observations require a trusted snapshot artifact reference");
   }
 }
 
@@ -146,6 +157,12 @@ export function validateQualityEvidence(manifest, options = {}) {
       if (!artifactIds.has(evidenceRef)) errors.push(`criterion ${criterion?.id ?? "unknown"} references missing artifact ${evidenceRef}`);
     }
   }
+  for (const [index, command] of (manifest.commands ?? []).entries()) {
+    const id = nonEmpty(command?.id) ? command.id : String(index);
+    if (!nonEmpty(command?.transcriptRef) || !artifactIds.has(command.transcriptRef)) {
+      errors.push(`command ${id} must reference a trusted execution transcript artifact`);
+    }
+  }
 
   if (!Array.isArray(manifest.reviews) || manifest.reviews.length === 0) errors.push("reviews must be non-empty");
   for (const [index, review] of (manifest.reviews ?? []).entries()) {
@@ -153,14 +170,20 @@ export function validateQualityEvidence(manifest, options = {}) {
       errors.push(`review ${index} must identify reviewer, type, findings, and disposition`);
     }
     if (review?.scopeSha !== manifest.candidateSha) errors.push(`review ${index} scopeSha must match candidateSha`);
+    if (["human", "independent-agent"].includes(review?.type) && review?.disposition === "accepted" && !hasTrustedReviewAttestation(review, artifactIds)) {
+      errors.push(`review ${index} must reference an authenticated review-provider attestation`);
+    }
   }
-  if (!(manifest.reviews ?? []).some((review) => ["human", "independent-agent"].includes(review?.type) && review?.scopeSha === manifest.candidateSha && review?.disposition === "accepted")) {
+  if (!(manifest.reviews ?? []).some((review) => ["human", "independent-agent"].includes(review?.type)
+    && review?.scopeSha === manifest.candidateSha
+    && review?.disposition === "accepted"
+    && hasTrustedReviewAttestation(review, artifactIds))) {
     errors.push("manifest requires an accepted independent review for candidateSha");
   }
   if ((manifest.reviews ?? []).some((review) => review?.disposition === "changes_requested")) errors.push("manifest cannot pass with changes_requested review");
 
   if (!Array.isArray(manifest.observations)) errors.push("observations must be a list");
-  for (const observation of manifest.observations ?? []) validateRankingObservation(observation, errors);
+  for (const observation of manifest.observations ?? []) validateRankingObservation(observation, errors, artifactIds);
   if (!Array.isArray(manifest.limitations)) errors.push("limitations must be a list");
 
   if (options.verifyGitIdentity !== false && SHA.test(manifest.baseSha ?? "") && SHA.test(manifest.candidateSha ?? "")) {
@@ -169,6 +192,8 @@ export function validateQualityEvidence(manifest, options = {}) {
       if (head !== manifest.candidateSha) errors.push("candidateSha must equal the checked-out commit");
       execFileSync("git", ["cat-file", "-e", `${manifest.baseSha}^{commit}`], { cwd: rootDir, stdio: "ignore" });
       execFileSync("git", ["merge-base", "--is-ancestor", manifest.baseSha, manifest.candidateSha], { cwd: rootDir, stdio: "ignore" });
+      const status = execFileSync("git", ["status", "--porcelain", "--untracked-files=all"], { cwd: rootDir, encoding: "utf8" }).trim();
+      if (manifest.sourceDirty === false && status) errors.push("checked-out source must be clean when sourceDirty is false");
     } catch {
       errors.push("baseSha and candidateSha must resolve in rootDir with baseSha as an ancestor");
     }
