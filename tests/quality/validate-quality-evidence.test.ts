@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,6 +8,7 @@ import { validateQualityEvidence } from "../../scripts/validate-quality-evidence
 
 const roots: string[] = [];
 const sha = (char: string) => char.repeat(40);
+const digest = (body: string) => createHash("sha256").update(body).digest("hex");
 
 type RankingObservation = {
   type: string;
@@ -14,14 +16,18 @@ type RankingObservation = {
   observedAt: string;
   position: number;
   source: string;
+  snapshotRef?: string;
 };
 
 function fixture() {
   const rootDir = mkdtempSync(join(tmpdir(), "audit-quality-evidence-"));
   roots.push(rootDir);
   const body = "bounded AU-08 evidence\n";
+  const transcript = "exit=0 passed=8 failed=0 skipped=0\n";
+  const reviewAttestation = '{"provider":"github","review":"accepted"}\n';
   writeFileSync(join(rootDir, "evidence.txt"), body);
-  const artifactSha = createHash("sha256").update(body).digest("hex");
+  writeFileSync(join(rootDir, "command-transcript.txt"), transcript);
+  writeFileSync(join(rootDir, "review-attestation.json"), reviewAttestation);
   const candidateSha = sha("b");
   return {
     rootDir,
@@ -40,6 +46,7 @@ function fixture() {
           status: "pass",
           exitCode: 0,
           counts: { passed: 8, failed: 0, skipped: 0 },
+          transcriptRef: "command-transcript",
         },
       ],
       criteria: [
@@ -52,8 +59,20 @@ function fixture() {
         {
           id: "baseline",
           relativePath: "evidence.txt",
-          sha256: artifactSha,
+          sha256: digest(body),
           retrieval: { kind: "local", locator: "evidence.txt" },
+        },
+        {
+          id: "command-transcript",
+          relativePath: "command-transcript.txt",
+          sha256: digest(transcript),
+          retrieval: { kind: "local", locator: "command-transcript.txt" },
+        },
+        {
+          id: "review-attestation",
+          relativePath: "review-attestation.json",
+          sha256: digest(reviewAttestation),
+          retrieval: { kind: "local", locator: "review-attestation.json" },
         },
       ],
       reviews: [
@@ -63,6 +82,9 @@ function fixture() {
           scopeSha: candidateSha,
           disposition: "accepted",
           findings: [],
+          attestationRef: "review-attestation",
+          provider: "github-pull-request-review",
+          providerUrl: "https://github.com/alirezasafaeigfx/auditsystems/pull/9#pullrequestreview-1234567890",
         },
       ],
       observations: [] as RankingObservation[],
@@ -112,6 +134,14 @@ describe("AU quality evidence validator", () => {
     ]));
   });
 
+  it("binds passing command results to a hashed execution transcript artifact", () => {
+    const { rootDir, manifest } = fixture();
+    delete manifest.commands[0].transcriptRef;
+    expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
+      "command focused-tests must reference a trusted execution transcript artifact",
+    );
+  });
+
   it("rejects criteria and reviews scoped to a mismatched candidate SHA", () => {
     const { rootDir, manifest } = fixture();
     manifest.criteria[0].scopeSha = sha("c");
@@ -142,9 +172,21 @@ describe("AU quality evidence validator", () => {
       scopeSha: manifest.candidateSha,
       disposition: "accepted",
       findings: [],
+      attestationRef: "review-attestation",
+      provider: "github-pull-request-review",
+      providerUrl: "https://github.com/alirezasafaeigfx/auditsystems/pull/9#pullrequestreview-1234567890",
     };
     expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
       "manifest requires an accepted independent review for candidateSha",
+    );
+  });
+
+  it("requires an authenticated provider attestation for independent review acceptance", () => {
+    const { rootDir, manifest } = fixture();
+    delete manifest.reviews[0].attestationRef;
+    delete manifest.reviews[0].providerUrl;
+    expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
+      "review 0 must reference an authenticated review-provider attestation",
     );
   });
 
@@ -161,6 +203,40 @@ describe("AU quality evidence validator", () => {
     ];
     expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
       "search-ranking observations require a retrievable non-synthetic source",
+    );
+  });
+
+  it("binds ranking observations to a hashed retrieved snapshot artifact", () => {
+    const { rootDir, manifest } = fixture();
+    manifest.observations = [
+      {
+        type: "search-ranking",
+        query: "site audit",
+        observedAt: "2026-09-02T18:00:00Z",
+        position: 7,
+        source: "https://search.example/snapshot/123",
+      },
+    ];
+    expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
+      "search-ranking observations require a trusted snapshot artifact reference",
+    );
+  });
+
+  it("rejects a dirty checkout even when the manifest claims sourceDirty false", () => {
+    const { rootDir, manifest } = fixture();
+    execFileSync("git", ["init"], { cwd: rootDir });
+    execFileSync("git", ["config", "user.email", "quality@example.com"], { cwd: rootDir });
+    execFileSync("git", ["config", "user.name", "Quality Test"], { cwd: rootDir });
+    execFileSync("git", ["add", "."], { cwd: rootDir });
+    execFileSync("git", ["commit", "-m", "fixture"], { cwd: rootDir });
+    const head = execFileSync("git", ["rev-parse", "HEAD"], { cwd: rootDir, encoding: "utf8" }).trim();
+    manifest.baseSha = head;
+    manifest.candidateSha = head;
+    manifest.criteria = manifest.criteria.map((criterion) => ({ ...criterion, scopeSha: head }));
+    manifest.reviews = manifest.reviews.map((review) => ({ ...review, scopeSha: head }));
+    writeFileSync(join(rootDir, "dirty.txt"), "dirty\n");
+    expect(validateQualityEvidence(manifest, { rootDir })).toContain(
+      "checked-out source must be clean when sourceDirty is false",
     );
   });
 });
