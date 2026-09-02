@@ -47,6 +47,12 @@ describe("fetchAuditHtml", () => {
         return;
       }
 
+      if (request.url === "/near-miss-type") {
+        response.writeHead(200, { "Content-Type": "text/plainx; charset=utf-8" });
+        response.end("not actually text/plain");
+        return;
+      }
+
       if (request.url === "/robots.txt") {
         const accept = String(request.headers.accept ?? "");
         if (!accept.includes("text/plain")) {
@@ -145,6 +151,14 @@ describe("fetchAuditHtml", () => {
     await expect(fetchAuditHtml(`${baseUrl}/binary`, new AbortController().signal)).rejects.toThrow(
       "AUDIT_UNSUPPORTED_CONTENT_TYPE"
     );
+  });
+
+  it("rejects media-type prefix near misses", async () => {
+    await expect(
+      fetchAuditResource(`${baseUrl}/near-miss-type`, new AbortController().signal, {
+        acceptedContentTypes: ["text/plain"]
+      })
+    ).rejects.toThrow("AUDIT_UNSUPPORTED_CONTENT_TYPE");
   });
 
   it("negotiates and fetches bounded text and XML resources through the pinned transport", async () => {
