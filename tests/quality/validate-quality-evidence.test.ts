@@ -8,7 +8,7 @@ import { validateQualityEvidence } from "../../scripts/validate-quality-evidence
 const roots: string[] = [];
 const sha = (char: string) => char.repeat(40);
 
-function fixture() {
+function fixture(): { rootDir: string; manifest: any } {
   const rootDir = mkdtempSync(join(tmpdir(), "audit-quality-evidence-"));
   roots.push(rootDir);
   const body = "bounded AU-08 evidence\n";
@@ -35,10 +35,10 @@ function fixture() {
         },
       ],
       criteria: [
-        { id: "AU-08-current-state-reconciled", verdict: "PASS", evidenceRefs: ["baseline"] },
-        { id: "AU-08-bounded-baseline", verdict: "PASS", evidenceRefs: ["baseline"] },
-        { id: "AU-08-intent-owner-map", verdict: "PASS", evidenceRefs: ["baseline"] },
-        { id: "AU-08-evidence-validation", verdict: "PASS", evidenceRefs: ["baseline"] },
+        { id: "AU-08-current-state-reconciled", scopeSha: candidateSha, verdict: "PASS", evidenceRefs: ["baseline"] },
+        { id: "AU-08-bounded-baseline", scopeSha: candidateSha, verdict: "PASS", evidenceRefs: ["baseline"] },
+        { id: "AU-08-intent-owner-map", scopeSha: candidateSha, verdict: "PASS", evidenceRefs: ["baseline"] },
+        { id: "AU-08-evidence-validation", scopeSha: candidateSha, verdict: "PASS", evidenceRefs: ["baseline"] },
       ],
       artifacts: [
         {
@@ -84,7 +84,7 @@ describe("AU quality evidence validator", () => {
 
   it("rejects an incomplete task criterion set", () => {
     const { rootDir, manifest } = fixture();
-    manifest.criteria = manifest.criteria.filter((criterion) => criterion.id !== "AU-08-evidence-validation");
+    manifest.criteria = manifest.criteria.filter((criterion: any) => criterion.id !== "AU-08-evidence-validation");
     expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
       "task AU-08 is missing required criterion AU-08-evidence-validation",
     );
