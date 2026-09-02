@@ -122,7 +122,8 @@ function performPinnedRequest(
   target: URL,
   address: AuditDnsRecord,
   signal: AbortSignal,
-  timeoutMs: number
+  timeoutMs: number,
+  acceptedContentTypes: string[]
 ): Promise<IncomingMessage> {
   return new Promise((resolve, reject) => {
     const isHttps = target.protocol === "https:";
@@ -136,7 +137,7 @@ function performPinnedRequest(
       method: "GET",
       path: `${target.pathname}${target.search}`,
       headers: {
-        Accept: "text/html,application/xhtml+xml;q=0.9",
+        Accept: acceptedContentTypes.join(", "),
         "Accept-Encoding": "gzip, deflate, br",
         Connection: "close",
         Host: target.host,
@@ -201,7 +202,7 @@ export async function fetchAuditResource(
     const records = await resolvePublicAuditHost(normalized.host, lookup);
     const address = selectAddress(records);
     const target = new URL(normalized.normalizedUrl);
-    const response = await performPinnedRequest(target, address, signal, timeoutMs);
+    const response = await performPinnedRequest(target, address, signal, timeoutMs, acceptedContentTypes);
     const headerArrivalMs = Date.now() - startedAt;
     const abortResponse = () => response.destroy();
     signal.addEventListener("abort", abortResponse, { once: true });
