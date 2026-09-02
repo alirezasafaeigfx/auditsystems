@@ -8,7 +8,15 @@ import { validateQualityEvidence } from "../../scripts/validate-quality-evidence
 const roots: string[] = [];
 const sha = (char: string) => char.repeat(40);
 
-function fixture(): { rootDir: string; manifest: any } {
+type RankingObservation = {
+  type: string;
+  query: string;
+  observedAt: string;
+  position: number;
+  source: string;
+};
+
+function fixture() {
   const rootDir = mkdtempSync(join(tmpdir(), "audit-quality-evidence-"));
   roots.push(rootDir);
   const body = "bounded AU-08 evidence\n";
@@ -57,7 +65,7 @@ function fixture(): { rootDir: string; manifest: any } {
           findings: [],
         },
       ],
-      observations: [],
+      observations: [] as RankingObservation[],
       limitations: [],
     },
   };
@@ -84,7 +92,7 @@ describe("AU quality evidence validator", () => {
 
   it("rejects an incomplete task criterion set", () => {
     const { rootDir, manifest } = fixture();
-    manifest.criteria = manifest.criteria.filter((criterion: any) => criterion.id !== "AU-08-evidence-validation");
+    manifest.criteria = manifest.criteria.filter((criterion) => criterion.id !== "AU-08-evidence-validation");
     expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
       "task AU-08 is missing required criterion AU-08-evidence-validation",
     );
