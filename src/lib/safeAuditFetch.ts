@@ -59,9 +59,9 @@ function responseHeaders(response: IncomingMessage): Record<string, string> {
 function assertAcceptedContentType(response: IncomingMessage, acceptedContentTypes: string[]): void {
   const raw = String(response.headers["content-type"] ?? "").toLowerCase();
   if (!raw) return;
-  if (!acceptedContentTypes.some((type) => raw.startsWith(type))) {
-    throw new Error("AUDIT_UNSUPPORTED_CONTENT_TYPE");
-  }
+  const mediaType = raw.split(";", 1)[0]?.trim();
+  const accepted = acceptedContentTypes.some((type) => mediaType === type.toLowerCase().split(";", 1)[0]?.trim());
+  if (!accepted) throw new Error("AUDIT_UNSUPPORTED_CONTENT_TYPE");
 }
 
 function decodedStream(response: IncomingMessage): Readable {
