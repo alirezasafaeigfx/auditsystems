@@ -19,9 +19,18 @@ const KNOWN_CRITERIA = new Set(Object.values(REQUIRED_CRITERIA).flat());
 const nonEmpty = (value) => typeof value === "string" && value.trim().length > 0;
 
 function validTimestamp(value) {
-  if (!nonEmpty(value)) return false;
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) && new Date(parsed).toISOString() === value;
+  const match = typeof value === "string"
+    ? value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?Z$/)
+    : null;
+  if (!match) return false;
+  const [, year, month, day, hour, minute, second] = match.map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+  return date.getUTCFullYear() === year
+    && date.getUTCMonth() === month - 1
+    && date.getUTCDate() === day
+    && date.getUTCHours() === hour
+    && date.getUTCMinutes() === minute
+    && date.getUTCSeconds() === second;
 }
 
 function isInside(rootDir, target) {
