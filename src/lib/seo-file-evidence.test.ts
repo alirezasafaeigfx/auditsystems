@@ -11,6 +11,24 @@ describe("collectSeoFileEvidence", () => {
     expect(fetchResource).toHaveBeenCalledTimes(2);
   });
 
+  it("preserves the final response authority after bounded redirects", async () => {
+    const fetchResource = vi.fn()
+      .mockResolvedValueOnce({ status: 200, body: "robots", finalUrl: "https://www.example.com/robots.txt" })
+      .mockResolvedValueOnce({ status: 200, body: "sitemap", finalUrl: "https://cdn.example.net/sitemap.xml" });
+    const result = await collectSeoFileEvidence("https://example.com", new AbortController().signal, fetchResource);
+
+    expect(result.robots).toMatchObject({
+      url: "https://example.com/robots.txt",
+      finalUrl: "https://www.example.com/robots.txt",
+      status: "VERIFIED",
+    });
+    expect(result.sitemap).toMatchObject({
+      url: "https://example.com/sitemap.xml",
+      finalUrl: "https://cdn.example.net/sitemap.xml",
+      status: "VERIFIED",
+    });
+  });
+
   it("classifies 404 and 410 as verified missing", async () => {
     const fetchResource = vi.fn()
       .mockResolvedValueOnce({ status: 404, body: "missing" })
