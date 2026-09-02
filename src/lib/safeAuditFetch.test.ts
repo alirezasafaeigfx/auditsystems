@@ -48,12 +48,24 @@ describe("fetchAuditHtml", () => {
       }
 
       if (request.url === "/robots.txt") {
+        const accept = String(request.headers.accept ?? "");
+        if (!accept.includes("text/plain")) {
+          response.writeHead(406, { "Content-Type": "text/plain" });
+          response.end("robots negotiation failed");
+          return;
+        }
         response.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
         response.end("User-agent: *\nDisallow:");
         return;
       }
 
       if (request.url === "/sitemap.xml") {
+        const accept = String(request.headers.accept ?? "");
+        if (!accept.includes("application/xml")) {
+          response.writeHead(406, { "Content-Type": "text/plain" });
+          response.end("sitemap negotiation failed");
+          return;
+        }
         response.writeHead(200, { "Content-Type": "application/xml" });
         response.end("<?xml version=\"1.0\"?><urlset></urlset>");
         return;
@@ -135,7 +147,7 @@ describe("fetchAuditHtml", () => {
     );
   });
 
-  it("fetches bounded text and XML resources through the pinned transport", async () => {
+  it("negotiates and fetches bounded text and XML resources through the pinned transport", async () => {
     const robots = await fetchAuditResource(`${baseUrl}/robots.txt`, new AbortController().signal, {
       acceptedContentTypes: ["text/plain"],
       maxResponseBytes: 256 * 1024
@@ -145,7 +157,9 @@ describe("fetchAuditHtml", () => {
       maxResponseBytes: 256 * 1024
     });
 
+    expect(robots.status).toBe(200);
     expect(robots.body).toContain("User-agent");
+    expect(sitemap.status).toBe(200);
     expect(sitemap.body).toContain("<urlset>");
   });
 
