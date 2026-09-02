@@ -68,6 +68,7 @@ export type SeoBasics = {
 
 export type SeoFileEvidence = {
   url: string;
+  finalUrl?: string;
   status: "VERIFIED" | "MISSING" | "UNAVAILABLE";
   httpStatus?: number;
   limitation?: string;
