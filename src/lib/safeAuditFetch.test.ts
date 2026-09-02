@@ -47,6 +47,13 @@ describe("fetchAuditHtml", () => {
         return;
       }
 
+      if (request.url === "/headerless") {
+        response.statusCode = 200;
+        response.removeHeader("Content-Type");
+        response.end("content type intentionally omitted");
+        return;
+      }
+
       if (request.url === "/near-miss-type") {
         response.writeHead(200, { "Content-Type": "text/plainx; charset=utf-8" });
         response.end("not actually text/plain");
@@ -151,6 +158,14 @@ describe("fetchAuditHtml", () => {
     await expect(fetchAuditHtml(`${baseUrl}/binary`, new AbortController().signal)).rejects.toThrow(
       "AUDIT_UNSUPPORTED_CONTENT_TYPE"
     );
+  });
+
+  it("rejects successful responses without a Content-Type header", async () => {
+    await expect(
+      fetchAuditResource(`${baseUrl}/headerless`, new AbortController().signal, {
+        acceptedContentTypes: ["text/plain"]
+      })
+    ).rejects.toThrow("AUDIT_UNSUPPORTED_CONTENT_TYPE");
   });
 
   it("rejects media-type prefix near misses", async () => {
