@@ -136,7 +136,7 @@ describe("AU quality evidence validator", () => {
 
   it("binds passing command results to a hashed execution transcript artifact", () => {
     const { rootDir, manifest } = fixture();
-    delete manifest.commands[0].transcriptRef;
+    Reflect.deleteProperty(manifest.commands[0], "transcriptRef");
     expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
       "command focused-tests must reference a trusted execution transcript artifact",
     );
@@ -183,8 +183,8 @@ describe("AU quality evidence validator", () => {
 
   it("requires an authenticated provider attestation for independent review acceptance", () => {
     const { rootDir, manifest } = fixture();
-    delete manifest.reviews[0].attestationRef;
-    delete manifest.reviews[0].providerUrl;
+    Reflect.deleteProperty(manifest.reviews[0], "attestationRef");
+    Reflect.deleteProperty(manifest.reviews[0], "providerUrl");
     expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
       "review 0 must reference an authenticated review-provider attestation",
     );
