@@ -25,6 +25,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Record exact candidate provenance
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          mkdir -p browser-evidence
+          git rev-parse HEAD > browser-evidence/candidate-sha.txt
+          test "$(cat browser-evidence/candidate-sha.txt)" = "$EXPECTED_SHA"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
@@ -108,6 +118,28 @@ jobs:
           test "$HEAD_CODE" = "$GET_CODE"
           grep -q '"status":"ready"' "$READY_JSON" || grep -q '"status":"degraded"' "$READY_JSON"
 
+      - name: Install qualification browser
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/ms-playwright
+        run: pnpm exec playwright install chromium
+
+      - name: Run AU-06 qualification browser matrix
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/ms-playwright
+        run: pnpm run test:e2e:qualification
+
+      - name: Upload AU-06 qualification browser evidence
+        if: always()
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.4
+        with:
+          name: au-06-qualification-${{ github.event.pull_request.head.sha || github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            browser-evidence/
+            playwright-report/
+            test-results/
+
       - name: Upload automation artifacts
         if: failure() || github.event_name == 'workflow_dispatch'
         continue-on-error: true
@@ -119,6 +151,8 @@ jobs:
             logs/roadmap/
             logs/preflight/
             docs/AUTO_GENERATED_STATUS.md
+            playwright-report/
+            test-results/
 
       - name: Cleanup runner workspace
         if: always()
