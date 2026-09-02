@@ -5,7 +5,7 @@ type SeoResourceFetcher = (
   url: string,
   signal: AbortSignal,
   options: { acceptedContentTypes: string[]; maxResponseBytes: number }
-) => Promise<Pick<AuditResourceResponse, "status" | "body">>;
+) => Promise<Pick<AuditResourceResponse, "status" | "body"> & Partial<Pick<AuditResourceResponse, "finalUrl">>>;
 
 const MAX_SEO_FILE_BYTES = 256 * 1024;
 
@@ -17,13 +17,14 @@ async function probe(
 ): Promise<SeoFileEvidence> {
   try {
     const response = await fetchResource(url, signal, { acceptedContentTypes, maxResponseBytes: MAX_SEO_FILE_BYTES });
+    const finalResponse = response.finalUrl ? { finalUrl: response.finalUrl } : {};
     if (response.status >= 200 && response.status < 300) {
-      return { url, status: "VERIFIED", httpStatus: response.status };
+      return { url, ...finalResponse, status: "VERIFIED", httpStatus: response.status };
     }
     if (response.status === 404 || response.status === 410) {
-      return { url, status: "MISSING", httpStatus: response.status };
+      return { url, ...finalResponse, status: "MISSING", httpStatus: response.status };
     }
-    return { url, status: "UNAVAILABLE", httpStatus: response.status, limitation: `HTTP_${response.status}` };
+    return { url, ...finalResponse, status: "UNAVAILABLE", httpStatus: response.status, limitation: `HTTP_${response.status}` };
   } catch (error) {
     if (signal.aborted) throw signal.reason instanceof Error ? signal.reason : error;
     return {
