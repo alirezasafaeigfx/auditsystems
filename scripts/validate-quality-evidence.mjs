@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -77,14 +77,29 @@ function validateArtifact(artifact, index, rootDir, errors) {
     return;
   }
 
-  const realArtifact = realpathSync(artifactPath);
-  if (!isInside(rootDir, realArtifact)) {
-    errors.push(`artifact ${id} resolves outside rootDir`);
+  let realArtifact;
+  try {
+    realArtifact = realpathSync(artifactPath);
+    if (!isInside(rootDir, realArtifact)) {
+      errors.push(`artifact ${id} resolves outside rootDir`);
+      return;
+    }
+    if (!statSync(realArtifact).isFile()) {
+      errors.push(`artifact ${id} must resolve to a regular file`);
+      return;
+    }
+  } catch {
+    errors.push(`artifact ${id} is not retrievable from rootDir`);
     return;
   }
+
   if (HASH.test(artifact.sha256)) {
-    const actual = createHash("sha256").update(readFileSync(realArtifact)).digest("hex");
-    if (actual !== artifact.sha256.toLowerCase()) errors.push(`artifact ${id} SHA-256 does not match its file`);
+    try {
+      const actual = createHash("sha256").update(readFileSync(realArtifact)).digest("hex");
+      if (actual !== artifact.sha256.toLowerCase()) errors.push(`artifact ${id} SHA-256 does not match its file`);
+    } catch {
+      errors.push(`artifact ${id} could not be read as a regular file`);
+    }
   }
 }
 
