@@ -14,6 +14,18 @@ const TRUSTED_WORKFLOW_NAME = "main-gate";
 const TRUSTED_WORKFLOW_PATH = ".github/workflows/main-gate.yml";
 const TRUSTED_JOB_NAME = "Self-hosted quality gate";
 const TRUSTED_STEP_NAME = "Run automation hard gate";
+const TRUSTED_GATE_DEFINITION_PATHS = [
+  TRUSTED_WORKFLOW_PATH,
+  "package.json",
+  "pnpm-lock.yaml",
+  "src/scripts/automation-master.ts",
+  "scripts/check-no-database-dumps.sh",
+  "src/scripts/roadmap-automation.ts",
+  "src/scripts/seo-audit-automation.ts",
+  "src/scripts/docs-automation.ts",
+  "src/scripts/payment-preflight.ts",
+];
+const TRUSTED_GATE_CONFIG = /^(?:(?:eslint|vitest|vite|next)\.config\.[^/]+|tsconfig(?:\.[^/]+)?\.json)$/;
 const REQUIRED_CRITERIA = {
   "AU-08": [
     "AU-08-current-state-reconciled",
@@ -26,6 +38,8 @@ const KNOWN_CRITERIA = new Set(Object.values(REQUIRED_CRITERIA).flat());
 const providerVerifiedReviews = new WeakSet();
 const providerVerifiedCommands = new WeakSet();
 const providerVerifiedRankingObservations = new WeakSet();
+const providerUnavailableReviews = new WeakSet();
+const providerUnavailableCommands = new WeakSet();
 
 const nonEmpty = (value) => typeof value === "string" && value.trim().length > 0;
 
@@ -159,46 +173,73 @@ function hasTrustedReviewAttestation(review, artifactIds) {
 async function fetchGithubJson(url) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+  const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
   try {
     const response = await fetch(url, {
       headers: {
         Accept: "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       cache: "no-store",
       signal: controller.signal,
     });
-    if (!response.ok) return null;
-    return await response.json();
+    if (!response.ok) return { status: "unavailable" };
+    return { status: "ok", value: await response.json() };
   } catch {
-    return null;
+    return { status: "unavailable" };
   } finally {
     clearTimeout(timeout);
   }
 }
 
+function trustedGateDefinitionMap(tree) {
+  if (!tree || tree.truncated === true || !Array.isArray(tree.tree)) return null;
+  const entries = new Map();
+  for (const entry of tree.tree) {
+    if (entry?.type !== "blob" || !nonEmpty(entry?.path) || !nonEmpty(entry?.sha)) continue;
+    if (TRUSTED_GATE_DEFINITION_PATHS.includes(entry.path) || TRUSTED_GATE_CONFIG.test(entry.path)) {
+      entries.set(entry.path, entry.sha);
+    }
+  }
+  if (TRUSTED_GATE_DEFINITION_PATHS.some((path) => !entries.has(path))) return null;
+  return entries;
+}
+
+function sameTrustedGateDefinitions(baseTree, candidateTree) {
+  const base = trustedGateDefinitionMap(baseTree);
+  const candidate = trustedGateDefinitionMap(candidateTree);
+  if (!base || !candidate || base.size !== candidate.size) return false;
+  for (const [path, sha] of base) {
+    if (candidate.get(path) !== sha) return false;
+  }
+  return true;
+}
+
 async function verifyProviderReview(review, manifest) {
-  if (review?.provider !== "github-pull-request-review") return false;
+  if (review?.provider !== "github-pull-request-review") return "invalid";
   const match = typeof review?.providerUrl === "string" ? review.providerUrl.match(GITHUB_PR_REVIEW_URL) : null;
-  if (!match || !SHA.test(manifest?.candidateSha ?? "") || review?.scopeSha !== manifest.candidateSha) return false;
+  if (!match || !SHA.test(manifest?.candidateSha ?? "") || review?.scopeSha !== manifest.candidateSha) return "invalid";
 
   const [, owner, repo, pullNumberRaw, reviewIdRaw] = match;
-  if (`${owner}/${repo}`.toLowerCase() !== String(manifest.repository ?? "").toLowerCase()) return false;
+  if (`${owner}/${repo}`.toLowerCase() !== String(manifest.repository ?? "").toLowerCase()) return "invalid";
 
   const pullNumber = Number(pullNumberRaw);
   const reviewId = Number(reviewIdRaw);
-  if (!Number.isSafeInteger(pullNumber) || !Number.isSafeInteger(reviewId)) return false;
+  if (!Number.isSafeInteger(pullNumber) || !Number.isSafeInteger(reviewId)) return "invalid";
 
   const apiBase = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${pullNumber}`;
-  const [providerReview, pullRequest] = await Promise.all([
+  const [reviewResult, pullResult] = await Promise.all([
     fetchGithubJson(`${apiBase}/reviews/${reviewId}`),
     fetchGithubJson(apiBase),
   ]);
-  if (!providerReview || !pullRequest) return false;
+  if (reviewResult.status !== "ok" || pullResult.status !== "ok") return "unavailable";
+  const providerReview = reviewResult.value;
+  const pullRequest = pullResult.value;
 
   const providerReviewer = providerReview.user?.login?.trim() ?? "";
   const pullAuthor = pullRequest.user?.login?.trim() ?? "";
-  return providerReview.id === reviewId
+  const verified = providerReview.id === reviewId
     && providerReview.html_url === review.providerUrl
     && providerReviewer.toLowerCase() === String(review.reviewer ?? "").trim().toLowerCase()
     && providerReview.state === "APPROVED"
@@ -208,41 +249,42 @@ async function verifyProviderReview(review, manifest) {
     && nonEmpty(providerReviewer)
     && nonEmpty(pullAuthor)
     && providerReviewer.toLowerCase() !== pullAuthor.toLowerCase();
+  return verified ? "verified" : "invalid";
 }
 
 async function verifyProviderCommand(command, manifest) {
-  if (command?.provider !== "github-actions-run") return false;
+  if (command?.provider !== "github-actions-run") return "invalid";
   const match = typeof command?.providerUrl === "string" ? command.providerUrl.match(GITHUB_ACTIONS_RUN_URL) : null;
-  if (!match || !SHA.test(manifest?.baseSha ?? "") || !SHA.test(manifest?.candidateSha ?? "")) return false;
+  if (!match || !SHA.test(manifest?.baseSha ?? "") || !SHA.test(manifest?.candidateSha ?? "")) return "invalid";
   if (command.command !== TRUSTED_COMMAND
     || command.providerJob !== TRUSTED_JOB_NAME
-    || command.providerStep !== TRUSTED_STEP_NAME) return false;
+    || command.providerStep !== TRUSTED_STEP_NAME) return "invalid";
 
   const [, owner, repo, runIdRaw] = match;
-  if (`${owner}/${repo}`.toLowerCase() !== String(manifest.repository ?? "").toLowerCase()) return false;
+  if (`${owner}/${repo}`.toLowerCase() !== String(manifest.repository ?? "").toLowerCase()) return "invalid";
   const runId = Number(runIdRaw);
-  if (!Number.isSafeInteger(runId)) return false;
+  if (!Number.isSafeInteger(runId)) return "invalid";
 
   const apiRepo = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
-  const workflowPath = TRUSTED_WORKFLOW_PATH.split("/").map(encodeURIComponent).join("/");
-  const [run, jobs, baseWorkflow, candidateWorkflow] = await Promise.all([
+  const [runResult, jobsResult, baseTreeResult, candidateTreeResult] = await Promise.all([
     fetchGithubJson(`${apiRepo}/actions/runs/${runId}`),
     fetchGithubJson(`${apiRepo}/actions/runs/${runId}/jobs`),
-    fetchGithubJson(`${apiRepo}/contents/${workflowPath}?ref=${encodeURIComponent(manifest.baseSha)}`),
-    fetchGithubJson(`${apiRepo}/contents/${workflowPath}?ref=${encodeURIComponent(manifest.candidateSha)}`),
+    fetchGithubJson(`${apiRepo}/git/trees/${encodeURIComponent(manifest.baseSha)}?recursive=1`),
+    fetchGithubJson(`${apiRepo}/git/trees/${encodeURIComponent(manifest.candidateSha)}?recursive=1`),
   ]);
-  if (!run || !jobs || !baseWorkflow || !candidateWorkflow) return false;
+  if ([runResult, jobsResult, baseTreeResult, candidateTreeResult].some((result) => result.status !== "ok")) return "unavailable";
 
+  const run = runResult.value;
+  const jobs = jobsResult.value;
   const job = Array.isArray(jobs.jobs)
     ? jobs.jobs.find((candidate) => candidate?.name === TRUSTED_JOB_NAME)
     : null;
   const step = Array.isArray(job?.steps)
     ? job.steps.find((candidate) => candidate?.name === TRUSTED_STEP_NAME)
     : null;
-  const workflowUnchanged = nonEmpty(baseWorkflow.sha)
-    && baseWorkflow.sha === candidateWorkflow.sha;
+  const definitionsUnchanged = sameTrustedGateDefinitions(baseTreeResult.value, candidateTreeResult.value);
 
-  return run.id === runId
+  const verified = run.id === runId
     && run.name === TRUSTED_WORKFLOW_NAME
     && run.path === TRUSTED_WORKFLOW_PATH
     && run.event === "pull_request"
@@ -254,11 +296,15 @@ async function verifyProviderCommand(command, manifest) {
     && job?.conclusion === "success"
     && step?.status === "completed"
     && step?.conclusion === "success"
-    && workflowUnchanged;
+    && definitionsUnchanged;
+  return verified ? "verified" : "invalid";
 }
 
 function validateRankingObservation(observation, errors, artifactIds, artifactsById, rootDir) {
-  if (observation?.type !== "search-ranking") return;
+  if (observation?.type !== "search-ranking") {
+    errors.push(`unknown observation type ${nonEmpty(observation?.type) ? observation.type : "unknown"}`);
+    return;
+  }
   const hasRealSource = /^https:\/\/[^\s]+$/i.test(observation?.source ?? "")
     && !/synthetic|fixture|fabricated/i.test(observation.source);
   if (!hasRealSource) errors.push("search-ranking observations require a retrievable non-synthetic source");
@@ -357,7 +403,9 @@ export function validateQualityEvidence(manifest, options = {}) {
       continue;
     }
     validateCommandTranscript(command, index, artifactsById, rootDir, errors);
-    if (!providerVerifiedCommands.has(command)) {
+    if (providerUnavailableCommands.has(command)) {
+      errors.push(`command ${id} provider verification unavailable`);
+    } else if (!providerVerifiedCommands.has(command)) {
       errors.push(`command ${id} requires provider-verified execution`);
     }
   }
@@ -371,6 +419,8 @@ export function validateQualityEvidence(manifest, options = {}) {
     if (["human", "independent-agent"].includes(review?.type) && review?.disposition === "accepted") {
       if (!hasReviewAttestationShape(review, artifactIds)) {
         errors.push(`review ${index} must reference an authenticated review-provider attestation`);
+      } else if (providerUnavailableReviews.has(review)) {
+        errors.push(`review ${index} provider verification unavailable`);
       } else if (!hasTrustedReviewAttestation(review, artifactIds)) {
         errors.push(`review ${index} requires provider-verified acceptance`);
       }
@@ -407,25 +457,36 @@ export function validateQualityEvidence(manifest, options = {}) {
 export async function validateQualityEvidenceWithProviders(manifest, options = {}) {
   const verifiedReviews = [];
   const verifiedCommands = [];
+  const unavailableReviews = [];
+  const unavailableCommands = [];
   try {
     for (const review of manifest?.reviews ?? []) {
-      if (["human", "independent-agent"].includes(review?.type)
-        && review?.disposition === "accepted"
-        && await verifyProviderReview(review, manifest)) {
+      if (!["human", "independent-agent"].includes(review?.type) || review?.disposition !== "accepted") continue;
+      const result = await verifyProviderReview(review, manifest);
+      if (result === "verified") {
         providerVerifiedReviews.add(review);
         verifiedReviews.push(review);
+      } else if (result === "unavailable") {
+        providerUnavailableReviews.add(review);
+        unavailableReviews.push(review);
       }
     }
     for (const command of manifest?.commands ?? []) {
-      if (await verifyProviderCommand(command, manifest)) {
+      const result = await verifyProviderCommand(command, manifest);
+      if (result === "verified") {
         providerVerifiedCommands.add(command);
         verifiedCommands.push(command);
+      } else if (result === "unavailable") {
+        providerUnavailableCommands.add(command);
+        unavailableCommands.push(command);
       }
     }
     return validateQualityEvidence(manifest, options);
   } finally {
     for (const review of verifiedReviews) providerVerifiedReviews.delete(review);
     for (const command of verifiedCommands) providerVerifiedCommands.delete(command);
+    for (const review of unavailableReviews) providerUnavailableReviews.delete(review);
+    for (const command of unavailableCommands) providerUnavailableCommands.delete(command);
   }
 }
 
