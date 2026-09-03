@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { validateQualityEvidence } from "../../scripts/validate-quality-evidence.mjs";
 
 const roots: string[] = [];
@@ -93,7 +93,10 @@ function fixture() {
   };
 }
 
-afterEach(() => roots.splice(0).forEach((root) => rmSync(root, { recursive: true, force: true })));
+afterEach(() => {
+  vi.unstubAllGlobals();
+  roots.splice(0).forEach((root) => rmSync(root, { recursive: true, force: true }));
+});
 
 describe("AU quality evidence validator", () => {
   it("rejects a structurally complete but self-authored independent review", () => {
@@ -101,6 +104,44 @@ describe("AU quality evidence validator", () => {
     expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
       "review 0 requires provider-verified acceptance",
     );
+  });
+
+  it("accepts review provenance only after GitHub binds reviewer, approval, and exact candidate", async () => {
+    const { rootDir, manifest } = fixture();
+    const reviewUrl = manifest.reviews[0].providerUrl;
+    const reviewId = 1234567890;
+
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.endsWith(`/pulls/9/reviews/${reviewId}`)) {
+        return new Response(JSON.stringify({
+          id: reviewId,
+          html_url: reviewUrl,
+          user: { login: manifest.reviews[0].reviewer },
+          state: "APPROVED",
+          commit_id: manifest.candidateSha,
+        }), { status: 200 });
+      }
+      if (url.endsWith("/pulls/9")) {
+        return new Response(JSON.stringify({
+          number: 9,
+          user: { login: "implementation-author" },
+          head: { sha: manifest.candidateSha },
+        }), { status: 200 });
+      }
+      return new Response("not found", { status: 404 });
+    }));
+
+    const module = await import("../../scripts/validate-quality-evidence.mjs");
+    const validateWithProviders = (module as unknown as {
+      validateQualityEvidenceWithProviders?: (value: unknown, options?: { rootDir?: string; verifyGitIdentity?: boolean }) => Promise<string[]>;
+    }).validateQualityEvidenceWithProviders;
+
+    expect(validateWithProviders).toBeTypeOf("function");
+    if (!validateWithProviders) return;
+    const errors = await validateWithProviders(manifest, { rootDir, verifyGitIdentity: false });
+    expect(errors).not.toContain("review 0 requires provider-verified acceptance");
+    expect(errors).not.toContain("manifest requires an accepted independent review for candidateSha");
   });
 
   it("rejects unknown task and criterion IDs", () => {
