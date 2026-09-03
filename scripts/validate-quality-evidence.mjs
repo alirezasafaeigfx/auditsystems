@@ -16,6 +16,7 @@ const REQUIRED_CRITERIA = {
   ],
 };
 const KNOWN_CRITERIA = new Set(Object.values(REQUIRED_CRITERIA).flat());
+const providerVerifiedReviews = new WeakSet();
 
 const nonEmpty = (value) => typeof value === "string" && value.trim().length > 0;
 
@@ -135,11 +136,15 @@ function validateCommandTranscript(command, index, artifactsById, rootDir, error
   }
 }
 
-function hasTrustedReviewAttestation(review, artifactIds) {
+function hasReviewAttestationShape(review, artifactIds) {
   return nonEmpty(review?.attestationRef)
     && artifactIds.has(review.attestationRef)
     && review?.provider === "github-pull-request-review"
     && GITHUB_PR_REVIEW_URL.test(review?.providerUrl ?? "");
+}
+
+function hasTrustedReviewAttestation(review, artifactIds) {
+  return hasReviewAttestationShape(review, artifactIds) && providerVerifiedReviews.has(review);
 }
 
 function validateRankingObservation(observation, errors, artifactIds, artifactsById, rootDir) {
@@ -247,8 +252,12 @@ export function validateQualityEvidence(manifest, options = {}) {
       errors.push(`review ${index} must identify reviewer, type, findings, and disposition`);
     }
     if (review?.scopeSha !== manifest.candidateSha) errors.push(`review ${index} scopeSha must match candidateSha`);
-    if (["human", "independent-agent"].includes(review?.type) && review?.disposition === "accepted" && !hasTrustedReviewAttestation(review, artifactIds)) {
-      errors.push(`review ${index} must reference an authenticated review-provider attestation`);
+    if (["human", "independent-agent"].includes(review?.type) && review?.disposition === "accepted") {
+      if (!hasReviewAttestationShape(review, artifactIds)) {
+        errors.push(`review ${index} must reference an authenticated review-provider attestation`);
+      } else if (!hasTrustedReviewAttestation(review, artifactIds)) {
+        errors.push(`review ${index} requires provider-verified acceptance`);
+      }
     }
   }
   if (!(manifest.reviews ?? []).some((review) => ["human", "independent-agent"].includes(review?.type)
