@@ -132,8 +132,8 @@ describe("AU quality evidence validator", () => {
       return new Response("not found", { status: 404 });
     }));
 
-    const module = await import("../../scripts/validate-quality-evidence.mjs");
-    const validateWithProviders = (module as unknown as {
+    const evidenceModule = await import("../../scripts/validate-quality-evidence.mjs");
+    const validateWithProviders = (evidenceModule as unknown as {
       validateQualityEvidenceWithProviders?: (value: unknown, options?: { rootDir?: string; verifyGitIdentity?: boolean }) => Promise<string[]>;
     }).validateQualityEvidenceWithProviders;
 
