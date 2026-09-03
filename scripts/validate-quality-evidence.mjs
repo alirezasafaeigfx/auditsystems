@@ -142,7 +142,7 @@ function hasTrustedReviewAttestation(review, artifactIds) {
     && GITHUB_PR_REVIEW_URL.test(review?.providerUrl ?? "");
 }
 
-function validateRankingObservation(observation, errors, artifactIds) {
+function validateRankingObservation(observation, errors, artifactIds, artifactsById, rootDir) {
   if (observation?.type !== "search-ranking") return;
   const hasRealSource = /^https:\/\/[^\s]+$/i.test(observation?.source ?? "")
     && !/synthetic|fixture|fabricated/i.test(observation.source);
@@ -152,6 +152,30 @@ function validateRankingObservation(observation, errors, artifactIds) {
   }
   if (!nonEmpty(observation?.snapshotRef) || !artifactIds.has(observation.snapshotRef)) {
     errors.push("search-ranking observations require a trusted snapshot artifact reference");
+    return;
+  }
+
+  const artifact = artifactsById.get(observation.snapshotRef);
+  if (!artifact) return;
+  const snapshotText = readArtifactText(artifact, rootDir);
+  if (snapshotText === null) {
+    errors.push("search-ranking observation snapshot is not readable");
+    return;
+  }
+
+  let snapshot;
+  try {
+    snapshot = JSON.parse(snapshotText);
+  } catch {
+    errors.push("search-ranking observation snapshot must be valid JSON");
+    return;
+  }
+
+  if (snapshot?.query !== observation.query
+    || snapshot?.observedAt !== observation.observedAt
+    || snapshot?.position !== observation.position
+    || snapshot?.source !== observation.source) {
+    errors.push("search-ranking observation snapshot does not match declared result");
   }
 }
 
@@ -236,7 +260,7 @@ export function validateQualityEvidence(manifest, options = {}) {
   if ((manifest.reviews ?? []).some((review) => review?.disposition === "changes_requested")) errors.push("manifest cannot pass with changes_requested review");
 
   if (!Array.isArray(manifest.observations)) errors.push("observations must be a list");
-  for (const observation of manifest.observations ?? []) validateRankingObservation(observation, errors, artifactIds);
+  for (const observation of manifest.observations ?? []) validateRankingObservation(observation, errors, artifactIds, artifactsById, rootDir);
   if (!Array.isArray(manifest.limitations)) errors.push("limitations must be a list");
 
   if (options.verifyGitIdentity !== false && SHA.test(manifest.baseSha ?? "") && SHA.test(manifest.candidateSha ?? "")) {
