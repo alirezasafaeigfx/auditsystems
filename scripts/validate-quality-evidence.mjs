@@ -7,7 +7,13 @@ import { pathToFileURL } from "node:url";
 const SHA = /^[0-9a-f]{40}$/i;
 const HASH = /^[0-9a-f]{64}$/i;
 const GITHUB_PR_REVIEW_URL = /^https:\/\/github\.com\/([^/\s]+)\/([^/\s]+)\/pull\/(\d+)#pullrequestreview-(\d+)$/i;
+const GITHUB_ACTIONS_RUN_URL = /^https:\/\/github\.com\/([^/\s]+)\/([^/\s]+)\/actions\/runs\/(\d+)$/i;
 const PROVIDER_TIMEOUT_MS = 5_000;
+const TRUSTED_COMMAND = "pnpm run automation:run";
+const TRUSTED_WORKFLOW_NAME = "main-gate";
+const TRUSTED_WORKFLOW_PATH = ".github/workflows/main-gate.yml";
+const TRUSTED_JOB_NAME = "Self-hosted quality gate";
+const TRUSTED_STEP_NAME = "Run automation hard gate";
 const REQUIRED_CRITERIA = {
   "AU-08": [
     "AU-08-current-state-reconciled",
@@ -204,6 +210,53 @@ async function verifyProviderReview(review, manifest) {
     && providerReviewer.toLowerCase() !== pullAuthor.toLowerCase();
 }
 
+async function verifyProviderCommand(command, manifest) {
+  if (command?.provider !== "github-actions-run") return false;
+  const match = typeof command?.providerUrl === "string" ? command.providerUrl.match(GITHUB_ACTIONS_RUN_URL) : null;
+  if (!match || !SHA.test(manifest?.baseSha ?? "") || !SHA.test(manifest?.candidateSha ?? "")) return false;
+  if (command.command !== TRUSTED_COMMAND
+    || command.providerJob !== TRUSTED_JOB_NAME
+    || command.providerStep !== TRUSTED_STEP_NAME) return false;
+
+  const [, owner, repo, runIdRaw] = match;
+  if (`${owner}/${repo}`.toLowerCase() !== String(manifest.repository ?? "").toLowerCase()) return false;
+  const runId = Number(runIdRaw);
+  if (!Number.isSafeInteger(runId)) return false;
+
+  const apiRepo = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
+  const workflowPath = TRUSTED_WORKFLOW_PATH.split("/").map(encodeURIComponent).join("/");
+  const [run, jobs, baseWorkflow, candidateWorkflow] = await Promise.all([
+    fetchGithubJson(`${apiRepo}/actions/runs/${runId}`),
+    fetchGithubJson(`${apiRepo}/actions/runs/${runId}/jobs`),
+    fetchGithubJson(`${apiRepo}/contents/${workflowPath}?ref=${encodeURIComponent(manifest.baseSha)}`),
+    fetchGithubJson(`${apiRepo}/contents/${workflowPath}?ref=${encodeURIComponent(manifest.candidateSha)}`),
+  ]);
+  if (!run || !jobs || !baseWorkflow || !candidateWorkflow) return false;
+
+  const job = Array.isArray(jobs.jobs)
+    ? jobs.jobs.find((candidate) => candidate?.name === TRUSTED_JOB_NAME)
+    : null;
+  const step = Array.isArray(job?.steps)
+    ? job.steps.find((candidate) => candidate?.name === TRUSTED_STEP_NAME)
+    : null;
+  const workflowUnchanged = nonEmpty(baseWorkflow.sha)
+    && baseWorkflow.sha === candidateWorkflow.sha;
+
+  return run.id === runId
+    && run.name === TRUSTED_WORKFLOW_NAME
+    && run.path === TRUSTED_WORKFLOW_PATH
+    && run.event === "pull_request"
+    && run.status === "completed"
+    && run.conclusion === "success"
+    && run.head_sha === manifest.candidateSha
+    && String(run.repository?.full_name ?? "").toLowerCase() === String(manifest.repository ?? "").toLowerCase()
+    && job?.status === "completed"
+    && job?.conclusion === "success"
+    && step?.status === "completed"
+    && step?.conclusion === "success"
+    && workflowUnchanged;
+}
+
 function validateRankingObservation(observation, errors, artifactIds, artifactsById, rootDir) {
   if (observation?.type !== "search-ranking") return;
   const hasRealSource = /^https:\/\/[^\s]+$/i.test(observation?.source ?? "")
@@ -352,19 +405,27 @@ export function validateQualityEvidence(manifest, options = {}) {
 }
 
 export async function validateQualityEvidenceWithProviders(manifest, options = {}) {
-  const verified = [];
+  const verifiedReviews = [];
+  const verifiedCommands = [];
   try {
     for (const review of manifest?.reviews ?? []) {
       if (["human", "independent-agent"].includes(review?.type)
         && review?.disposition === "accepted"
         && await verifyProviderReview(review, manifest)) {
         providerVerifiedReviews.add(review);
-        verified.push(review);
+        verifiedReviews.push(review);
+      }
+    }
+    for (const command of manifest?.commands ?? []) {
+      if (await verifyProviderCommand(command, manifest)) {
+        providerVerifiedCommands.add(command);
+        verifiedCommands.push(command);
       }
     }
     return validateQualityEvidence(manifest, options);
   } finally {
-    for (const review of verified) providerVerifiedReviews.delete(review);
+    for (const review of verifiedReviews) providerVerifiedReviews.delete(review);
+    for (const command of verifiedCommands) providerVerifiedCommands.delete(command);
   }
 }
 
