@@ -4,7 +4,10 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { validateQualityEvidence } from "../../scripts/validate-quality-evidence.mjs";
+import {
+  validateQualityEvidence,
+  validateQualityEvidenceWithProviders,
+} from "../../scripts/validate-quality-evidence.mjs";
 
 const roots: string[] = [];
 const sha = (char: string) => char.repeat(40);
@@ -132,16 +135,63 @@ describe("AU quality evidence validator", () => {
       return new Response("not found", { status: 404 });
     }));
 
-    const evidenceModule = await import("../../scripts/validate-quality-evidence.mjs");
-    const validateWithProviders = (evidenceModule as unknown as {
-      validateQualityEvidenceWithProviders?: (value: unknown, options?: { rootDir?: string; verifyGitIdentity?: boolean }) => Promise<string[]>;
-    }).validateQualityEvidenceWithProviders;
-
-    expect(validateWithProviders).toBeTypeOf("function");
-    if (!validateWithProviders) return;
-    const errors = await validateWithProviders(manifest, { rootDir, verifyGitIdentity: false });
+    const errors = await validateQualityEvidenceWithProviders(manifest, { rootDir, verifyGitIdentity: false });
     expect(errors).not.toContain("review 0 requires provider-verified acceptance");
     expect(errors).not.toContain("manifest requires an accepted independent review for candidateSha");
+  });
+
+  it("accepts command execution only from a successful exact-head GitHub Actions gate with unchanged workflow", async () => {
+    const { rootDir, manifest } = fixture();
+    const runId = 123456789;
+    const providerUrl = `https://github.com/alirezasafaeigfx/auditsystems/actions/runs/${runId}`;
+    const transcript = "exit=0 passed=1 failed=0 skipped=0\n";
+    writeFileSync(join(rootDir, "command-transcript.txt"), transcript);
+    const transcriptArtifact = manifest.artifacts.find((artifact) => artifact.id === "command-transcript");
+    if (!transcriptArtifact) throw new Error("missing command transcript fixture");
+    transcriptArtifact.sha256 = digest(transcript);
+    Object.assign(manifest.commands[0], {
+      id: "hosted-quality-gate",
+      command: "pnpm run automation:run",
+      counts: { passed: 1, failed: 0, skipped: 0 },
+      provider: "github-actions-run",
+      providerUrl,
+      providerJob: "Self-hosted quality gate",
+      providerStep: "Run automation hard gate",
+    });
+
+    const workflowBlobSha = sha("c");
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.endsWith(`/actions/runs/${runId}`)) {
+        return new Response(JSON.stringify({
+          id: runId,
+          name: "main-gate",
+          path: ".github/workflows/main-gate.yml",
+          event: "pull_request",
+          status: "completed",
+          conclusion: "success",
+          head_sha: manifest.candidateSha,
+          repository: { full_name: manifest.repository },
+        }), { status: 200 });
+      }
+      if (url.endsWith(`/actions/runs/${runId}/jobs`)) {
+        return new Response(JSON.stringify({
+          jobs: [{
+            name: "Self-hosted quality gate",
+            status: "completed",
+            conclusion: "success",
+            steps: [{ name: "Run automation hard gate", status: "completed", conclusion: "success" }],
+          }],
+        }), { status: 200 });
+      }
+      if (url.includes("/contents/.github/workflows/main-gate.yml?ref=")) {
+        return new Response(JSON.stringify({ sha: workflowBlobSha }), { status: 200 });
+      }
+      return new Response("not found", { status: 404 });
+    }));
+
+    const errors = await validateQualityEvidenceWithProviders(manifest, { rootDir, verifyGitIdentity: false });
+    expect(errors).not.toContain("command hosted-quality-gate requires provider-verified execution");
   });
 
   it("rejects unknown task and criterion IDs", () => {
