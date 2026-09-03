@@ -82,4 +82,17 @@ describe("quality evidence trust regressions", () => {
       "artifact directory-artifact must resolve to a regular file",
     );
   });
+
+  it("rejects a correctly hashed transcript whose result conflicts with the command claim", () => {
+    const { rootDir, manifest } = fixture();
+    const failingTranscript = "exit=1 passed=0 failed=1 skipped=0\n";
+    writeFileSync(join(rootDir, "transcript.txt"), failingTranscript);
+    const transcriptArtifact = manifest.artifacts.find((artifact) => artifact.id === "transcript");
+    if (!transcriptArtifact) throw new Error("missing transcript fixture");
+    transcriptArtifact.sha256 = digest(failingTranscript);
+
+    expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
+      "command focused-tests transcript does not match declared result",
+    );
+  });
 });
