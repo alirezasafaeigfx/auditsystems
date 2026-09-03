@@ -2,8 +2,11 @@ import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
-import { validateQualityEvidence } from "../../scripts/validate-quality-evidence.mjs";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  validateQualityEvidence,
+  validateQualityEvidenceWithProviders,
+} from "../../scripts/validate-quality-evidence.mjs";
 
 const roots: string[] = [];
 const sha = (char: string) => char.repeat(40);
@@ -64,7 +67,68 @@ function fixture() {
   };
 }
 
-afterEach(() => roots.splice(0).forEach((root) => rmSync(root, { recursive: true, force: true })));
+function makeProviderCommand(manifest: ReturnType<typeof fixture>["manifest"], runId = 123456789) {
+  Object.assign(manifest.commands[0], {
+    id: "hosted-quality-gate",
+    command: "pnpm run automation:run",
+    provider: "github-actions-run",
+    providerUrl: `https://github.com/alirezasafaeigfx/auditsystems/actions/runs/${runId}`,
+    providerJob: "Self-hosted quality gate",
+    providerStep: "Run automation hard gate",
+  });
+  return runId;
+}
+
+function providerResponse(url: string, manifest: ReturnType<typeof fixture>["manifest"], runId: number) {
+  const review = manifest.reviews[0];
+  if (url.endsWith("/pulls/9/reviews/1234567890")) {
+    return new Response(JSON.stringify({
+      id: 1234567890,
+      html_url: review.providerUrl,
+      user: { login: review.reviewer },
+      state: "APPROVED",
+      commit_id: manifest.candidateSha,
+    }), { status: 200 });
+  }
+  if (url.endsWith("/pulls/9")) {
+    return new Response(JSON.stringify({
+      number: 9,
+      user: { login: "implementation-author" },
+      head: { sha: manifest.candidateSha },
+    }), { status: 200 });
+  }
+  if (url.endsWith(`/actions/runs/${runId}`)) {
+    return new Response(JSON.stringify({
+      id: runId,
+      name: "main-gate",
+      path: ".github/workflows/main-gate.yml",
+      event: "pull_request",
+      status: "completed",
+      conclusion: "success",
+      head_sha: manifest.candidateSha,
+      repository: { full_name: manifest.repository },
+    }), { status: 200 });
+  }
+  if (url.endsWith(`/actions/runs/${runId}/jobs`)) {
+    return new Response(JSON.stringify({
+      jobs: [{
+        name: "Self-hosted quality gate",
+        status: "completed",
+        conclusion: "success",
+        steps: [{ name: "Run automation hard gate", status: "completed", conclusion: "success" }],
+      }],
+    }), { status: 200 });
+  }
+  if (url.includes("/contents/.github/workflows/main-gate.yml?ref=")) {
+    return new Response(JSON.stringify({ sha: sha("c") }), { status: 200 });
+  }
+  return new Response("not found", { status: 404 });
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  roots.splice(0).forEach((root) => rmSync(root, { recursive: true, force: true }));
+});
 
 describe("quality evidence trust regressions", () => {
   it("rejects directory artifacts as non-regular files without throwing", () => {
@@ -80,6 +144,17 @@ describe("quality evidence trust regressions", () => {
     expect(() => validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).not.toThrow();
     expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
       "artifact directory-artifact must resolve to a regular file",
+    );
+  });
+
+  it("rejects a retrievable artifact whose SHA-256 does not match its file", () => {
+    const { rootDir, manifest } = fixture();
+    const artifact = manifest.artifacts.find((candidate) => candidate.id === "evidence");
+    if (!artifact) throw new Error("missing evidence fixture");
+    artifact.sha256 = "0".repeat(64);
+
+    expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
+      "artifact evidence SHA-256 does not match its file",
     );
   });
 
@@ -101,6 +176,62 @@ describe("quality evidence trust regressions", () => {
 
     expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
       "command focused-tests requires provider-verified execution",
+    );
+  });
+
+  it("rejects a successful provider run when a trusted gate definition changed", async () => {
+    const { rootDir, manifest } = fixture();
+    const runId = makeProviderCommand(manifest);
+
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/git/trees/") && url.includes(manifest.baseSha)) {
+        return new Response(JSON.stringify({
+          truncated: false,
+          tree: [
+            { path: ".github/workflows/main-gate.yml", type: "blob", sha: sha("c") },
+            { path: "package.json", type: "blob", sha: sha("d") },
+            { path: "src/scripts/automation-master.ts", type: "blob", sha: sha("e") },
+          ],
+        }), { status: 200 });
+      }
+      if (url.includes("/git/trees/") && url.includes(manifest.candidateSha)) {
+        return new Response(JSON.stringify({
+          truncated: false,
+          tree: [
+            { path: ".github/workflows/main-gate.yml", type: "blob", sha: sha("c") },
+            { path: "package.json", type: "blob", sha: sha("f") },
+            { path: "src/scripts/automation-master.ts", type: "blob", sha: sha("e") },
+          ],
+        }), { status: 200 });
+      }
+      return providerResponse(url, manifest, runId);
+    }));
+
+    const errors = await validateQualityEvidenceWithProviders(manifest, { rootDir, verifyGitIdentity: false });
+    expect(errors).toContain("command hosted-quality-gate requires provider-verified execution");
+  });
+
+  it("reports provider unavailability separately from invalid provider evidence", async () => {
+    const { rootDir, manifest } = fixture();
+    const runId = makeProviderCommand(manifest);
+
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.endsWith(`/actions/runs/${runId}`)) return new Response("rate limited", { status: 429 });
+      return providerResponse(url, manifest, runId);
+    }));
+
+    const errors = await validateQualityEvidenceWithProviders(manifest, { rootDir, verifyGitIdentity: false });
+    expect(errors).toContain("command hosted-quality-gate provider verification unavailable");
+  });
+
+  it("rejects unsupported observation types instead of silently skipping them", () => {
+    const { rootDir, manifest } = fixture();
+    manifest.observations = [{ type: "invented-observation", source: "https://example.com/evidence" }];
+
+    expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
+      "unknown observation type invented-observation",
     );
   });
 
