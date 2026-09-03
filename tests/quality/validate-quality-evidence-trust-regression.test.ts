@@ -58,7 +58,7 @@ function fixture() {
         provider: "github-pull-request-review",
         providerUrl: "https://github.com/alirezasafaeigfx/auditsystems/pull/9#pullrequestreview-1234567890",
       }],
-      observations: [],
+      observations: [] as Array<Record<string, unknown>>,
       limitations: [],
     },
   };
@@ -93,6 +93,35 @@ describe("quality evidence trust regressions", () => {
 
     expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
       "command focused-tests transcript does not match declared result",
+    );
+  });
+
+  it("rejects a correctly hashed ranking snapshot whose contents conflict with the observation", () => {
+    const { rootDir, manifest } = fixture();
+    const snapshot = `${JSON.stringify({
+      query: "site audit",
+      observedAt: "2026-09-03T07:00:00Z",
+      position: 9,
+      source: "https://search.example/results/site-audit",
+    })}\n`;
+    writeFileSync(join(rootDir, "ranking-snapshot.json"), snapshot);
+    manifest.artifacts.push({
+      id: "ranking-snapshot",
+      relativePath: "ranking-snapshot.json",
+      sha256: digest(snapshot),
+      retrieval: { kind: "local", locator: "ranking-snapshot.json" },
+    });
+    manifest.observations = [{
+      type: "search-ranking",
+      query: "site audit",
+      observedAt: "2026-09-03T07:00:00Z",
+      position: 1,
+      source: "https://search.example/results/site-audit",
+      snapshotRef: "ranking-snapshot",
+    }];
+
+    expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
+      "search-ranking observation snapshot does not match declared result",
     );
   });
 });
