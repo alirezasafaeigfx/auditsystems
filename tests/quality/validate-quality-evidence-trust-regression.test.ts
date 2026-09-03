@@ -96,6 +96,14 @@ describe("quality evidence trust regressions", () => {
     );
   });
 
+  it("rejects a matching self-authored transcript without provider-verified execution", () => {
+    const { rootDir, manifest } = fixture();
+
+    expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
+      "command focused-tests requires provider-verified execution",
+    );
+  });
+
   it("rejects a correctly hashed ranking snapshot whose contents conflict with the observation", () => {
     const { rootDir, manifest } = fixture();
     const snapshot = `${JSON.stringify({
@@ -122,6 +130,35 @@ describe("quality evidence trust regressions", () => {
 
     expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
       "search-ranking observation snapshot does not match declared result",
+    );
+  });
+
+  it("rejects a matching self-authored ranking snapshot without provider verification", () => {
+    const { rootDir, manifest } = fixture();
+    const snapshot = `${JSON.stringify({
+      query: "site audit",
+      observedAt: "2026-09-03T07:00:00Z",
+      position: 7,
+      source: "https://search.example/results/site-audit",
+    })}\n`;
+    writeFileSync(join(rootDir, "ranking-snapshot.json"), snapshot);
+    manifest.artifacts.push({
+      id: "ranking-snapshot",
+      relativePath: "ranking-snapshot.json",
+      sha256: digest(snapshot),
+      retrieval: { kind: "local", locator: "ranking-snapshot.json" },
+    });
+    manifest.observations = [{
+      type: "search-ranking",
+      query: "site audit",
+      observedAt: "2026-09-03T07:00:00Z",
+      position: 7,
+      source: "https://search.example/results/site-audit",
+      snapshotRef: "ranking-snapshot",
+    }];
+
+    expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
+      "search-ranking observation requires provider-verified snapshot",
     );
   });
 });
