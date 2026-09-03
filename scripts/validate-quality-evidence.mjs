@@ -6,7 +6,8 @@ import { pathToFileURL } from "node:url";
 
 const SHA = /^[0-9a-f]{40}$/i;
 const HASH = /^[0-9a-f]{64}$/i;
-const GITHUB_PR_REVIEW_URL = /^https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/pull\/\d+#pullrequestreview-\d+$/i;
+const GITHUB_PR_REVIEW_URL = /^https:\/\/github\.com\/([^/\s]+)\/([^/\s]+)\/pull\/(\d+)#pullrequestreview-(\d+)$/i;
+const PROVIDER_TIMEOUT_MS = 5_000;
 const REQUIRED_CRITERIA = {
   "AU-08": [
     "AU-08-current-state-reconciled",
@@ -145,6 +146,60 @@ function hasReviewAttestationShape(review, artifactIds) {
 
 function hasTrustedReviewAttestation(review, artifactIds) {
   return hasReviewAttestationShape(review, artifactIds) && providerVerifiedReviews.has(review);
+}
+
+async function fetchGithubJson(url) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function verifyProviderReview(review, manifest) {
+  if (review?.provider !== "github-pull-request-review") return false;
+  const match = typeof review?.providerUrl === "string" ? review.providerUrl.match(GITHUB_PR_REVIEW_URL) : null;
+  if (!match || !SHA.test(manifest?.candidateSha ?? "") || review?.scopeSha !== manifest.candidateSha) return false;
+
+  const [, owner, repo, pullNumberRaw, reviewIdRaw] = match;
+  if (`${owner}/${repo}`.toLowerCase() !== String(manifest.repository ?? "").toLowerCase()) return false;
+
+  const pullNumber = Number(pullNumberRaw);
+  const reviewId = Number(reviewIdRaw);
+  if (!Number.isSafeInteger(pullNumber) || !Number.isSafeInteger(reviewId)) return false;
+
+  const apiBase = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${pullNumber}`;
+  const [providerReview, pullRequest] = await Promise.all([
+    fetchGithubJson(`${apiBase}/reviews/${reviewId}`),
+    fetchGithubJson(apiBase),
+  ]);
+  if (!providerReview || !pullRequest) return false;
+
+  const providerReviewer = providerReview.user?.login?.trim() ?? "";
+  const pullAuthor = pullRequest.user?.login?.trim() ?? "";
+  return providerReview.id === reviewId
+    && providerReview.html_url === review.providerUrl
+    && providerReviewer.toLowerCase() === String(review.reviewer ?? "").trim().toLowerCase()
+    && providerReview.state === "APPROVED"
+    && providerReview.commit_id === manifest.candidateSha
+    && pullRequest.number === pullNumber
+    && pullRequest.head?.sha === manifest.candidateSha
+    && nonEmpty(providerReviewer)
+    && nonEmpty(pullAuthor)
+    && providerReviewer.toLowerCase() !== pullAuthor.toLowerCase();
 }
 
 function validateRankingObservation(observation, errors, artifactIds, artifactsById, rootDir) {
@@ -288,6 +343,23 @@ export function validateQualityEvidence(manifest, options = {}) {
   return errors;
 }
 
+export async function validateQualityEvidenceWithProviders(manifest, options = {}) {
+  const verified = [];
+  try {
+    for (const review of manifest?.reviews ?? []) {
+      if (["human", "independent-agent"].includes(review?.type)
+        && review?.disposition === "accepted"
+        && await verifyProviderReview(review, manifest)) {
+        providerVerifiedReviews.add(review);
+        verified.push(review);
+      }
+    }
+    return validateQualityEvidence(manifest, options);
+  } finally {
+    for (const review of verified) providerVerifiedReviews.delete(review);
+  }
+}
+
 function readOption(name) {
   const index = process.argv.indexOf(name);
   if (index === -1 || !process.argv[index + 1]) throw new Error(`missing ${name}`);
@@ -299,7 +371,7 @@ if (invokedPath && import.meta.url === invokedPath) {
   const rootDir = resolve(process.argv.includes("--root") ? readOption("--root") : process.cwd());
   const manifestPath = resolve(rootDir, readOption("--manifest"));
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-  const errors = validateQualityEvidence(manifest, { rootDir });
+  const errors = await validateQualityEvidenceWithProviders(manifest, { rootDir });
   if (errors.length) {
     for (const error of errors) console.error(error);
     process.exit(1);
