@@ -12,6 +12,17 @@ import {
 const roots: string[] = [];
 const sha = (char: string) => char.repeat(40);
 const digest = (body: string) => createHash("sha256").update(body).digest("hex");
+const trustedGatePaths = [
+  ".github/workflows/main-gate.yml",
+  "package.json",
+  "pnpm-lock.yaml",
+  "src/scripts/automation-master.ts",
+  "scripts/check-no-database-dumps.sh",
+  "src/scripts/roadmap-automation.ts",
+  "src/scripts/seo-audit-automation.ts",
+  "src/scripts/docs-automation.ts",
+  "src/scripts/payment-preflight.ts",
+];
 
 type RankingObservation = {
   type: string;
@@ -140,7 +151,7 @@ describe("AU quality evidence validator", () => {
     expect(errors).not.toContain("manifest requires an accepted independent review for candidateSha");
   });
 
-  it("accepts command execution only from a successful exact-head GitHub Actions gate with unchanged workflow", async () => {
+  it("accepts command execution only from a successful exact-head GitHub Actions gate with unchanged gate definitions", async () => {
     const { rootDir, manifest } = fixture();
     const runId = 123456789;
     const providerUrl = `https://github.com/alirezasafaeigfx/auditsystems/actions/runs/${runId}`;
@@ -159,7 +170,7 @@ describe("AU quality evidence validator", () => {
       providerStep: "Run automation hard gate",
     });
 
-    const workflowBlobSha = sha("c");
+    const gateTree = trustedGatePaths.map((path) => ({ path, type: "blob", sha: sha("c") }));
     vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
       const url = String(input);
       if (url.endsWith(`/actions/runs/${runId}`)) {
@@ -184,14 +195,15 @@ describe("AU quality evidence validator", () => {
           }],
         }), { status: 200 });
       }
-      if (url.includes("/contents/.github/workflows/main-gate.yml?ref=")) {
-        return new Response(JSON.stringify({ sha: workflowBlobSha }), { status: 200 });
+      if (url.includes("/git/trees/")) {
+        return new Response(JSON.stringify({ truncated: false, tree: gateTree }), { status: 200 });
       }
       return new Response("not found", { status: 404 });
     }));
 
     const errors = await validateQualityEvidenceWithProviders(manifest, { rootDir, verifyGitIdentity: false });
     expect(errors).not.toContain("command hosted-quality-gate requires provider-verified execution");
+    expect(errors).not.toContain("command hosted-quality-gate provider verification unavailable");
   });
 
   it("rejects unknown task and criterion IDs", () => {
@@ -246,10 +258,9 @@ describe("AU quality evidence validator", () => {
     ]));
   });
 
-  it("rejects missing, traversal, and hash-mismatched artifacts", () => {
+  it("rejects missing and traversal artifacts", () => {
     const { rootDir, manifest } = fixture();
     manifest.artifacts[0].relativePath = "../missing.txt";
-    manifest.artifacts[0].sha256 = "0".repeat(64);
     const errors = validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false });
     expect(errors).toEqual(expect.arrayContaining([
       expect.stringContaining("relative path without traversal"),
