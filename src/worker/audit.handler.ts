@@ -16,6 +16,7 @@ import { createRequestId } from "../lib/observability";
 import { sendAuditCompleteNotification } from "../lib/notifications";
 import { recordFunnelEvent } from "../lib/funnel-events";
 import { fetchAuditHtml } from "../lib/safeAuditFetch";
+import { collectSeoFileEvidence } from "../lib/seo-file-evidence";
 import type { AuditContext } from "../lib/types";
 
 export type JobHandler = (job: Job, signal: AbortSignal) => Promise<void>;
@@ -58,6 +59,7 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
     ]);
     const resources = extractResourcesFromHtml(main.html, { baseUrl: main.finalUrl, firstPartyHosts });
     const seo = parseSeoBasics(main.html);
+    const seoFiles = await collectSeoFileEvidence(finalTarget.origin, signal);
     const context: AuditContext = {
       target: {
         normalizedUrl: normalized.normalizedUrl,
@@ -77,7 +79,8 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
         }
       },
       resources,
-      seo
+      seo,
+      seoFiles
     };
 
     const findings = applyPerformanceEvidencePolicy(context, evaluateAuditRules(context));
@@ -118,6 +121,7 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
       resources,
       findings,
       seo,
+      seoFiles,
       performance,
     });
 

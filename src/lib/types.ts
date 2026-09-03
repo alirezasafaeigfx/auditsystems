@@ -66,6 +66,14 @@ export type SeoBasics = {
   openGraph: boolean;
 };
 
+export type SeoFileEvidence = {
+  url: string;
+  finalUrl?: string;
+  status: "VERIFIED" | "MISSING" | "UNAVAILABLE";
+  httpStatus?: number;
+  limitation?: string;
+};
+
 export type AuditContext = {
   target: {
     normalizedUrl: string;
@@ -86,4 +94,8 @@ export type AuditContext = {
   };
   resources: ExtractedResource[];
   seo: SeoBasics;
+  seoFiles?: {
+    robots: SeoFileEvidence;
+    sitemap: SeoFileEvidence;
+  };
 };

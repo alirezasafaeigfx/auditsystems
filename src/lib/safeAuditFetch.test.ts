@@ -2,7 +2,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { gzipSync } from "node:zlib";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { fetchAuditHtml } from "./safeAuditFetch";
+import { fetchAuditHtml, fetchAuditResource } from "./safeAuditFetch";
 
 describe("fetchAuditHtml", () => {
   let server: Server;
@@ -44,6 +44,43 @@ describe("fetchAuditHtml", () => {
       if (request.url === "/binary") {
         response.writeHead(200, { "Content-Type": "application/octet-stream" });
         response.end("not html");
+        return;
+      }
+
+      if (request.url === "/headerless") {
+        response.statusCode = 200;
+        response.removeHeader("Content-Type");
+        response.end("content type intentionally omitted");
+        return;
+      }
+
+      if (request.url === "/near-miss-type") {
+        response.writeHead(200, { "Content-Type": "text/plainx; charset=utf-8" });
+        response.end("not actually text/plain");
+        return;
+      }
+
+      if (request.url === "/robots.txt") {
+        const accept = String(request.headers.accept ?? "");
+        if (!accept.includes("text/plain")) {
+          response.writeHead(406, { "Content-Type": "text/plain" });
+          response.end("robots negotiation failed");
+          return;
+        }
+        response.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
+        response.end("User-agent: *\nDisallow:");
+        return;
+      }
+
+      if (request.url === "/sitemap.xml") {
+        const accept = String(request.headers.accept ?? "");
+        if (!accept.includes("application/xml")) {
+          response.writeHead(406, { "Content-Type": "text/plain" });
+          response.end("sitemap negotiation failed");
+          return;
+        }
+        response.writeHead(200, { "Content-Type": "application/xml" });
+        response.end("<?xml version=\"1.0\"?><urlset></urlset>");
         return;
       }
 
@@ -121,6 +158,38 @@ describe("fetchAuditHtml", () => {
     await expect(fetchAuditHtml(`${baseUrl}/binary`, new AbortController().signal)).rejects.toThrow(
       "AUDIT_UNSUPPORTED_CONTENT_TYPE"
     );
+  });
+
+  it("rejects successful responses without a Content-Type header", async () => {
+    await expect(
+      fetchAuditResource(`${baseUrl}/headerless`, new AbortController().signal, {
+        acceptedContentTypes: ["text/plain"]
+      })
+    ).rejects.toThrow("AUDIT_UNSUPPORTED_CONTENT_TYPE");
+  });
+
+  it("rejects media-type prefix near misses", async () => {
+    await expect(
+      fetchAuditResource(`${baseUrl}/near-miss-type`, new AbortController().signal, {
+        acceptedContentTypes: ["text/plain"]
+      })
+    ).rejects.toThrow("AUDIT_UNSUPPORTED_CONTENT_TYPE");
+  });
+
+  it("negotiates and fetches bounded text and XML resources through the pinned transport", async () => {
+    const robots = await fetchAuditResource(`${baseUrl}/robots.txt`, new AbortController().signal, {
+      acceptedContentTypes: ["text/plain"],
+      maxResponseBytes: 256 * 1024
+    });
+    const sitemap = await fetchAuditResource(`${baseUrl}/sitemap.xml`, new AbortController().signal, {
+      acceptedContentTypes: ["application/xml", "text/xml"],
+      maxResponseBytes: 256 * 1024
+    });
+
+    expect(robots.status).toBe(200);
+    expect(robots.body).toContain("User-agent");
+    expect(sitemap.status).toBe(200);
+    expect(sitemap.body).toContain("<urlset>");
   });
 
   it("rejects unsupported response encodings", async () => {

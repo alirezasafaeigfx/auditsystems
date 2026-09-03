@@ -369,31 +369,28 @@ export function evaluateAuditRules(ctx: AuditContext): Finding[] {
     });
   }
 
-  // Check for robots.txt
-  const robotsTxtUrl = `${ctx.target.origin}/robots.txt`;
-  const hasRobotsTxt = ctx.resources.some((r) => r.url.includes("robots.txt"));
-  if (!hasRobotsTxt) {
+  // Only verified root-file probes may support an absence finding. Links in
+  // page HTML are neither proof of presence nor proof of absence.
+  if (ctx.seoFiles?.robots.status === "MISSING") {
     findings.push({
       code: "NO_ROBOTS_TXT",
       category: "SEO",
       severity: "LOW",
       title: "robots.txt not found",
       recommendation: "Add a robots.txt file to control search engine crawling.",
-      evidence: { url: robotsTxtUrl, present: false }
+      evidence: { url: ctx.seoFiles.robots.url, present: false, httpStatus: ctx.seoFiles.robots.httpStatus, evidenceClass: "MEASURED" }
     });
   }
 
   // Check for sitemap.xml
-  const sitemapUrl = `${ctx.target.origin}/sitemap.xml`;
-  const hasSitemap = ctx.resources.some((r) => r.url.includes("sitemap"));
-  if (!hasSitemap) {
+  if (ctx.seoFiles?.sitemap.status === "MISSING") {
     findings.push({
       code: "NO_SITEMAP",
       category: "SEO",
       severity: "LOW",
       title: "Sitemap not found",
       recommendation: "Add a sitemap.xml to help search engines discover your content.",
-      evidence: { url: sitemapUrl, present: false }
+      evidence: { url: ctx.seoFiles.sitemap.url, present: false, httpStatus: ctx.seoFiles.sitemap.httpStatus, evidenceClass: "MEASURED" }
     });
   }
 
