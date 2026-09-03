@@ -103,6 +103,38 @@ function validateArtifact(artifact, index, rootDir, errors) {
   }
 }
 
+function readArtifactText(artifact, rootDir) {
+  if (!nonEmpty(artifact?.relativePath) || isAbsolute(artifact.relativePath) || artifact.relativePath.split(/[\\/]/).includes("..")) return null;
+  try {
+    const realArtifact = realpathSync(resolve(rootDir, artifact.relativePath));
+    if (!isInside(rootDir, realArtifact) || !statSync(realArtifact).isFile()) return null;
+    return readFileSync(realArtifact, "utf8");
+  } catch {
+    return null;
+  }
+}
+
+function validateCommandTranscript(command, index, artifactsById, rootDir, errors) {
+  const id = nonEmpty(command?.id) ? command.id : String(index);
+  if (!nonEmpty(command?.transcriptRef)) return;
+  const artifact = artifactsById.get(command.transcriptRef);
+  if (!artifact) return;
+  const transcript = readArtifactText(artifact, rootDir);
+  if (transcript === null) return;
+  const match = transcript.match(/\bexit=(\d+)\s+passed=(\d+)\s+failed=(\d+)\s+skipped=(\d+)\b/);
+  if (!match) {
+    errors.push(`command ${id} transcript must include exit, passed, failed, and skipped counts`);
+    return;
+  }
+  const [, exitCode, passed, failed, skipped] = match.map(Number);
+  if (exitCode !== command?.exitCode
+    || passed !== command?.counts?.passed
+    || failed !== command?.counts?.failed
+    || skipped !== command?.counts?.skipped) {
+    errors.push(`command ${id} transcript does not match declared result`);
+  }
+}
+
 function hasTrustedReviewAttestation(review, artifactIds) {
   return nonEmpty(review?.attestationRef)
     && artifactIds.has(review.attestationRef)
@@ -162,9 +194,13 @@ export function validateQualityEvidence(manifest, options = {}) {
   if (!Array.isArray(manifest.artifacts) || manifest.artifacts.length === 0) errors.push("artifacts must be non-empty");
   const rootDir = realpathSync(resolve(options.rootDir ?? process.cwd()));
   const artifactIds = new Set();
+  const artifactsById = new Map();
   for (const [index, artifact] of (manifest.artifacts ?? []).entries()) {
     if (!nonEmpty(artifact?.id) || artifactIds.has(artifact?.id)) errors.push(`artifact ${index} must have a unique id`);
-    if (nonEmpty(artifact?.id)) artifactIds.add(artifact.id);
+    if (nonEmpty(artifact?.id)) {
+      artifactIds.add(artifact.id);
+      if (!artifactsById.has(artifact.id)) artifactsById.set(artifact.id, artifact);
+    }
     validateArtifact(artifact, index, rootDir, errors);
   }
   for (const criterion of manifest.criteria ?? []) {
@@ -176,7 +212,9 @@ export function validateQualityEvidence(manifest, options = {}) {
     const id = nonEmpty(command?.id) ? command.id : String(index);
     if (!nonEmpty(command?.transcriptRef) || !artifactIds.has(command.transcriptRef)) {
       errors.push(`command ${id} must reference a trusted execution transcript artifact`);
+      continue;
     }
+    validateCommandTranscript(command, index, artifactsById, rootDir, errors);
   }
 
   if (!Array.isArray(manifest.reviews) || manifest.reviews.length === 0) errors.push("reviews must be non-empty");
