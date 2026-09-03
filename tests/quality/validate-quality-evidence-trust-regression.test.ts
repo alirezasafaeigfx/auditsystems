@@ -11,6 +11,28 @@ import {
 const roots: string[] = [];
 const sha = (char: string) => char.repeat(40);
 const digest = (body: string) => createHash("sha256").update(body).digest("hex");
+const TRUSTED_GATE_DEFINITION_PATHS = [
+  ".github/workflows/main-gate.yml",
+  "package.json",
+  "pnpm-lock.yaml",
+  "src/scripts/automation-master.ts",
+  "scripts/check-no-database-dumps.sh",
+  "src/scripts/roadmap-automation.ts",
+  "src/scripts/seo-audit-automation.ts",
+  "src/scripts/docs-automation.ts",
+  "src/scripts/payment-preflight.ts",
+];
+
+function trustedTree(packageSha = sha("d")) {
+  return {
+    truncated: false,
+    tree: TRUSTED_GATE_DEFINITION_PATHS.map((path) => ({
+      path,
+      type: "blob",
+      sha: path === "package.json" ? packageSha : sha("c"),
+    })),
+  };
+}
 
 function fixture() {
   const rootDir = mkdtempSync(join(tmpdir(), "audit-quality-trust-"));
@@ -119,8 +141,8 @@ function providerResponse(url: string, manifest: ReturnType<typeof fixture>["man
       }],
     }), { status: 200 });
   }
-  if (url.includes("/contents/.github/workflows/main-gate.yml?ref=")) {
-    return new Response(JSON.stringify({ sha: sha("c") }), { status: 200 });
+  if (url.includes(`/git/trees/${manifest.baseSha}`) || url.includes(`/git/trees/${manifest.candidateSha}`)) {
+    return new Response(JSON.stringify(trustedTree()), { status: 200 });
   }
   return new Response("not found", { status: 404 });
 }
@@ -185,31 +207,63 @@ describe("quality evidence trust regressions", () => {
 
     vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
       const url = String(input);
-      if (url.includes("/git/trees/") && url.includes(manifest.baseSha)) {
-        return new Response(JSON.stringify({
-          truncated: false,
-          tree: [
-            { path: ".github/workflows/main-gate.yml", type: "blob", sha: sha("c") },
-            { path: "package.json", type: "blob", sha: sha("d") },
-            { path: "src/scripts/automation-master.ts", type: "blob", sha: sha("e") },
-          ],
-        }), { status: 200 });
+      if (url.includes(`/git/trees/${manifest.baseSha}`)) {
+        return new Response(JSON.stringify(trustedTree(sha("d"))), { status: 200 });
       }
-      if (url.includes("/git/trees/") && url.includes(manifest.candidateSha)) {
-        return new Response(JSON.stringify({
-          truncated: false,
-          tree: [
-            { path: ".github/workflows/main-gate.yml", type: "blob", sha: sha("c") },
-            { path: "package.json", type: "blob", sha: sha("f") },
-            { path: "src/scripts/automation-master.ts", type: "blob", sha: sha("e") },
-          ],
-        }), { status: 200 });
+      if (url.includes(`/git/trees/${manifest.candidateSha}`)) {
+        return new Response(JSON.stringify(trustedTree(sha("f"))), { status: 200 });
       }
       return providerResponse(url, manifest, runId);
     }));
 
     const errors = await validateQualityEvidenceWithProviders(manifest, { rootDir, verifyGitIdentity: false });
     expect(errors).toContain("command hosted-quality-gate requires provider-verified execution");
+  });
+
+  it("isolates provider verification state across concurrent validations", async () => {
+    const { rootDir, manifest } = fixture();
+    const runId = makeProviderCommand(manifest);
+    let candidateTreeRequests = 0;
+    let firstTreeStartedResolve!: () => void;
+    let secondTreeStartedResolve!: () => void;
+    let releaseFirstTree!: () => void;
+    let releaseSecondTree!: () => void;
+    const firstTreeStarted = new Promise<void>((resolve) => { firstTreeStartedResolve = resolve; });
+    const secondTreeStarted = new Promise<void>((resolve) => { secondTreeStartedResolve = resolve; });
+    const firstTreeGate = new Promise<void>((resolve) => { releaseFirstTree = resolve; });
+    const secondTreeGate = new Promise<void>((resolve) => { releaseSecondTree = resolve; });
+
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes(`/git/trees/${manifest.candidateSha}`)) {
+        candidateTreeRequests += 1;
+        if (candidateTreeRequests === 1) {
+          firstTreeStartedResolve();
+          await firstTreeGate;
+        } else if (candidateTreeRequests === 2) {
+          secondTreeStartedResolve();
+          await secondTreeGate;
+        }
+        return new Response(JSON.stringify(trustedTree()), { status: 200 });
+      }
+      return providerResponse(url, manifest, runId);
+    }));
+
+    const first = validateQualityEvidenceWithProviders(manifest, { rootDir, verifyGitIdentity: false });
+    await firstTreeStarted;
+    const second = validateQualityEvidenceWithProviders(manifest, { rootDir, verifyGitIdentity: false });
+    await secondTreeStarted;
+
+    releaseFirstTree();
+    const firstErrors = await first;
+    releaseSecondTree();
+    const secondErrors = await second;
+
+    expect(firstErrors).not.toContain("command hosted-quality-gate requires provider-verified execution");
+    expect(firstErrors).not.toContain("review 0 requires provider-verified acceptance");
+    expect(secondErrors).not.toContain("command hosted-quality-gate requires provider-verified execution");
+    expect(secondErrors).not.toContain("review 0 requires provider-verified acceptance");
+    expect(secondErrors).not.toContain("manifest requires an accepted independent review for candidateSha");
   });
 
   it("reports provider unavailability separately from invalid provider evidence", async () => {
