@@ -35,13 +35,19 @@ const REQUIRED_CRITERIA = {
   ],
 };
 const KNOWN_CRITERIA = new Set(Object.values(REQUIRED_CRITERIA).flat());
-const providerVerifiedReviews = new WeakSet();
-const providerVerifiedCommands = new WeakSet();
-const providerVerifiedRankingObservations = new WeakSet();
-const providerUnavailableReviews = new WeakSet();
-const providerUnavailableCommands = new WeakSet();
 
 const nonEmpty = (value) => typeof value === "string" && value.trim().length > 0;
+const isProviderMarked = (providerState, key, value) => providerState?.[key]?.has(value) === true;
+
+function createProviderVerificationState() {
+  return {
+    verifiedReviews: new WeakSet(),
+    verifiedCommands: new WeakSet(),
+    verifiedRankingObservations: new WeakSet(),
+    unavailableReviews: new WeakSet(),
+    unavailableCommands: new WeakSet(),
+  };
+}
 
 function validTimestamp(value) {
   const match = typeof value === "string"
@@ -166,8 +172,9 @@ function hasReviewAttestationShape(review, artifactIds) {
     && GITHUB_PR_REVIEW_URL.test(review?.providerUrl ?? "");
 }
 
-function hasTrustedReviewAttestation(review, artifactIds) {
-  return hasReviewAttestationShape(review, artifactIds) && providerVerifiedReviews.has(review);
+function hasTrustedReviewAttestation(review, artifactIds, providerState) {
+  return hasReviewAttestationShape(review, artifactIds)
+    && isProviderMarked(providerState, "verifiedReviews", review);
 }
 
 async function fetchGithubJson(url) {
@@ -300,7 +307,7 @@ async function verifyProviderCommand(command, manifest) {
   return verified ? "verified" : "invalid";
 }
 
-function validateRankingObservation(observation, errors, artifactIds, artifactsById, rootDir) {
+function validateRankingObservation(observation, errors, artifactIds, artifactsById, rootDir, providerState) {
   if (observation?.type !== "search-ranking") {
     errors.push(`unknown observation type ${nonEmpty(observation?.type) ? observation.type : "unknown"}`);
     return;
@@ -338,12 +345,12 @@ function validateRankingObservation(observation, errors, artifactIds, artifactsB
     || snapshot?.source !== observation.source) {
     errors.push("search-ranking observation snapshot does not match declared result");
   }
-  if (!providerVerifiedRankingObservations.has(observation)) {
+  if (!isProviderMarked(providerState, "verifiedRankingObservations", observation)) {
     errors.push("search-ranking observation requires provider-verified snapshot");
   }
 }
 
-export function validateQualityEvidence(manifest, options = {}) {
+function validateQualityEvidenceInternal(manifest, options = {}, providerState) {
   const errors = [];
   if (!manifest || typeof manifest !== "object") return ["manifest must be an object"];
   if (manifest.schemaVersion !== 1) errors.push("schemaVersion must be 1");
@@ -403,9 +410,9 @@ export function validateQualityEvidence(manifest, options = {}) {
       continue;
     }
     validateCommandTranscript(command, index, artifactsById, rootDir, errors);
-    if (providerUnavailableCommands.has(command)) {
+    if (isProviderMarked(providerState, "unavailableCommands", command)) {
       errors.push(`command ${id} provider verification unavailable`);
-    } else if (!providerVerifiedCommands.has(command)) {
+    } else if (!isProviderMarked(providerState, "verifiedCommands", command)) {
       errors.push(`command ${id} requires provider-verified execution`);
     }
   }
@@ -419,9 +426,9 @@ export function validateQualityEvidence(manifest, options = {}) {
     if (["human", "independent-agent"].includes(review?.type) && review?.disposition === "accepted") {
       if (!hasReviewAttestationShape(review, artifactIds)) {
         errors.push(`review ${index} must reference an authenticated review-provider attestation`);
-      } else if (providerUnavailableReviews.has(review)) {
+      } else if (isProviderMarked(providerState, "unavailableReviews", review)) {
         errors.push(`review ${index} provider verification unavailable`);
-      } else if (!hasTrustedReviewAttestation(review, artifactIds)) {
+      } else if (!hasTrustedReviewAttestation(review, artifactIds, providerState)) {
         errors.push(`review ${index} requires provider-verified acceptance`);
       }
     }
@@ -429,13 +436,15 @@ export function validateQualityEvidence(manifest, options = {}) {
   if (!(manifest.reviews ?? []).some((review) => ["human", "independent-agent"].includes(review?.type)
     && review?.scopeSha === manifest.candidateSha
     && review?.disposition === "accepted"
-    && hasTrustedReviewAttestation(review, artifactIds))) {
+    && hasTrustedReviewAttestation(review, artifactIds, providerState))) {
     errors.push("manifest requires an accepted independent review for candidateSha");
   }
   if ((manifest.reviews ?? []).some((review) => review?.disposition === "changes_requested")) errors.push("manifest cannot pass with changes_requested review");
 
   if (!Array.isArray(manifest.observations)) errors.push("observations must be a list");
-  for (const observation of manifest.observations ?? []) validateRankingObservation(observation, errors, artifactIds, artifactsById, rootDir);
+  for (const observation of manifest.observations ?? []) {
+    validateRankingObservation(observation, errors, artifactIds, artifactsById, rootDir, providerState);
+  }
   if (!Array.isArray(manifest.limitations)) errors.push("limitations must be a list");
 
   if (options.verifyGitIdentity !== false && SHA.test(manifest.baseSha ?? "") && SHA.test(manifest.candidateSha ?? "")) {
@@ -454,40 +463,30 @@ export function validateQualityEvidence(manifest, options = {}) {
   return errors;
 }
 
+export function validateQualityEvidence(manifest, options = {}) {
+  return validateQualityEvidenceInternal(manifest, options, undefined);
+}
+
 export async function validateQualityEvidenceWithProviders(manifest, options = {}) {
-  const verifiedReviews = [];
-  const verifiedCommands = [];
-  const unavailableReviews = [];
-  const unavailableCommands = [];
-  try {
-    for (const review of manifest?.reviews ?? []) {
-      if (!["human", "independent-agent"].includes(review?.type) || review?.disposition !== "accepted") continue;
-      const result = await verifyProviderReview(review, manifest);
-      if (result === "verified") {
-        providerVerifiedReviews.add(review);
-        verifiedReviews.push(review);
-      } else if (result === "unavailable") {
-        providerUnavailableReviews.add(review);
-        unavailableReviews.push(review);
-      }
+  const providerState = createProviderVerificationState();
+  for (const review of manifest?.reviews ?? []) {
+    if (!["human", "independent-agent"].includes(review?.type) || review?.disposition !== "accepted") continue;
+    const result = await verifyProviderReview(review, manifest);
+    if (result === "verified") {
+      providerState.verifiedReviews.add(review);
+    } else if (result === "unavailable") {
+      providerState.unavailableReviews.add(review);
     }
-    for (const command of manifest?.commands ?? []) {
-      const result = await verifyProviderCommand(command, manifest);
-      if (result === "verified") {
-        providerVerifiedCommands.add(command);
-        verifiedCommands.push(command);
-      } else if (result === "unavailable") {
-        providerUnavailableCommands.add(command);
-        unavailableCommands.push(command);
-      }
-    }
-    return validateQualityEvidence(manifest, options);
-  } finally {
-    for (const review of verifiedReviews) providerVerifiedReviews.delete(review);
-    for (const command of verifiedCommands) providerVerifiedCommands.delete(command);
-    for (const review of unavailableReviews) providerUnavailableReviews.delete(review);
-    for (const command of unavailableCommands) providerUnavailableCommands.delete(command);
   }
+  for (const command of manifest?.commands ?? []) {
+    const result = await verifyProviderCommand(command, manifest);
+    if (result === "verified") {
+      providerState.verifiedCommands.add(command);
+    } else if (result === "unavailable") {
+      providerState.unavailableCommands.add(command);
+    }
+  }
+  return validateQualityEvidenceInternal(manifest, options, providerState);
 }
 
 function readOption(name) {
