@@ -96,9 +96,11 @@ function fixture() {
 afterEach(() => roots.splice(0).forEach((root) => rmSync(root, { recursive: true, force: true })));
 
 describe("AU quality evidence validator", () => {
-  it("accepts a complete scoped AU-08 evidence manifest", () => {
+  it("rejects a structurally complete but self-authored independent review", () => {
     const { rootDir, manifest } = fixture();
-    expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toEqual([]);
+    expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
+      "review 0 requires provider-verified acceptance",
+    );
   });
 
   it("rejects unknown task and criterion IDs", () => {
