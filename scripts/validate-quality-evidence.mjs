@@ -18,6 +18,8 @@ const REQUIRED_CRITERIA = {
 };
 const KNOWN_CRITERIA = new Set(Object.values(REQUIRED_CRITERIA).flat());
 const providerVerifiedReviews = new WeakSet();
+const providerVerifiedCommands = new WeakSet();
+const providerVerifiedRankingObservations = new WeakSet();
 
 const nonEmpty = (value) => typeof value === "string" && value.trim().length > 0;
 
@@ -237,6 +239,9 @@ function validateRankingObservation(observation, errors, artifactIds, artifactsB
     || snapshot?.source !== observation.source) {
     errors.push("search-ranking observation snapshot does not match declared result");
   }
+  if (!providerVerifiedRankingObservations.has(observation)) {
+    errors.push("search-ranking observation requires provider-verified snapshot");
+  }
 }
 
 export function validateQualityEvidence(manifest, options = {}) {
@@ -299,6 +304,9 @@ export function validateQualityEvidence(manifest, options = {}) {
       continue;
     }
     validateCommandTranscript(command, index, artifactsById, rootDir, errors);
+    if (!providerVerifiedCommands.has(command)) {
+      errors.push(`command ${id} requires provider-verified execution`);
+    }
   }
 
   if (!Array.isArray(manifest.reviews) || manifest.reviews.length === 0) errors.push("reviews must be non-empty");
