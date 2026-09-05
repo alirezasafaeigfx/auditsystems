@@ -381,7 +381,8 @@ function validateQualityEvidenceInternal(manifest, options = {}, providerState) 
     }
   }
   for (const taskId of manifest.taskIds ?? []) {
-    for (const criterionId of REQUIRED_CRITERIA[taskId] ?? []) {
+    if (!Object.hasOwn(REQUIRED_CRITERIA, taskId)) continue;
+    for (const criterionId of REQUIRED_CRITERIA[taskId]) {
       if (!criterionIds.has(criterionId)) errors.push(`task ${taskId} is missing required criterion ${criterionId}`);
     }
   }
