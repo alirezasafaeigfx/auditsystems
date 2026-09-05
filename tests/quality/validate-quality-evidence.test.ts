@@ -155,6 +155,8 @@ describe("AU quality evidence validator", () => {
     const { rootDir, manifest } = fixture();
     const runId = 123456789;
     const providerUrl = `https://github.com/alirezasafaeigfx/auditsystems/actions/runs/${runId}`;
+    const reviewUrl = manifest.reviews[0].providerUrl;
+    const reviewId = 1234567890;
     const transcript = "exit=0 passed=1 failed=0 skipped=0\n";
     writeFileSync(join(rootDir, "command-transcript.txt"), transcript);
     const transcriptArtifact = manifest.artifacts.find((artifact) => artifact.id === "command-transcript");
@@ -173,6 +175,22 @@ describe("AU quality evidence validator", () => {
     const gateTree = trustedGatePaths.map((path) => ({ path, type: "blob", sha: sha("c") }));
     vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
       const url = String(input);
+      if (url.endsWith(`/pulls/9/reviews/${reviewId}`)) {
+        return new Response(JSON.stringify({
+          id: reviewId,
+          html_url: reviewUrl,
+          user: { login: manifest.reviews[0].reviewer },
+          state: "APPROVED",
+          commit_id: manifest.candidateSha,
+        }), { status: 200 });
+      }
+      if (url.endsWith("/pulls/9")) {
+        return new Response(JSON.stringify({
+          number: 9,
+          user: { login: "implementation-author" },
+          head: { sha: manifest.candidateSha },
+        }), { status: 200 });
+      }
       if (url.endsWith(`/actions/runs/${runId}`)) {
         return new Response(JSON.stringify({
           id: runId,
