@@ -387,7 +387,13 @@ function validateQualityEvidenceInternal(manifest, options = {}, providerState) 
   }
 
   if (!Array.isArray(manifest.artifacts) || manifest.artifacts.length === 0) errors.push("artifacts must be non-empty");
-  const rootDir = realpathSync(resolve(options.rootDir ?? process.cwd()));
+  let rootDir;
+  try {
+    rootDir = realpathSync(resolve(options.rootDir ?? process.cwd()));
+  } catch {
+    errors.push("rootDir must resolve to an existing directory");
+    return errors;
+  }
   const artifactIds = new Set();
   const artifactsById = new Map();
   for (const [index, artifact] of (manifest.artifacts ?? []).entries()) {
