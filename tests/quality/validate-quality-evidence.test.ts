@@ -204,6 +204,7 @@ describe("AU quality evidence validator", () => {
     const errors = await validateQualityEvidenceWithProviders(manifest, { rootDir, verifyGitIdentity: false });
     expect(errors).not.toContain("command hosted-quality-gate requires provider-verified execution");
     expect(errors).not.toContain("command hosted-quality-gate provider verification unavailable");
+    expect(errors).toEqual([]);
   });
 
   it("rejects unknown task and criterion IDs", () => {
@@ -324,6 +325,23 @@ describe("AU quality evidence validator", () => {
     expect(validateQualityEvidence(manifest, { rootDir, verifyGitIdentity: false })).toContain(
       "search-ranking observations require a trusted snapshot artifact reference",
     );
+  });
+
+  it("returns a validation error when rootDir cannot be resolved", () => {
+    const { rootDir, manifest } = fixture();
+    expect(validateQualityEvidence(manifest, {
+      rootDir: join(rootDir, "missing-root"),
+      verifyGitIdentity: false,
+    })).toContain("rootDir must resolve to an existing directory");
+  });
+
+  it("returns the same validation error from provider-backed validation when rootDir cannot be resolved", async () => {
+    const { rootDir, manifest } = fixture();
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("not found", { status: 404 })));
+    await expect(validateQualityEvidenceWithProviders(manifest, {
+      rootDir: join(rootDir, "missing-root"),
+      verifyGitIdentity: false,
+    })).resolves.toContain("rootDir must resolve to an existing directory");
   });
 
   it("rejects a dirty checkout even when the manifest claims sourceDirty false", () => {
