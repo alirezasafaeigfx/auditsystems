@@ -1,5 +1,7 @@
 # Roadmap (Phased)
 
+> Historical record. For the owner's 2026-08-31 paired ASDEV/Audit experience mission, use [AUDIT_PUBLIC_EXPERIENCE.md](roadmaps/AUDIT_PUBLIC_EXPERIENCE.md) and [the engineering guide](engineering/PAIRED_PRODUCT_ENGINEERING.md). The old Done/planned labels below are not current acceptance: subscriptions, invitations, scheduling, comparisons and PDF paths already have substantial code, while source review found remaining correctness, access, copy and verification gaps. Preserve history; reconcile each claim with current SHA and evidence instead of restarting existing features or declaring the whole product ready.
+
 Automation runner:
 - `pnpm run roadmap:run`
 - `docs/ROADMAP_AUTOMATION.md`
