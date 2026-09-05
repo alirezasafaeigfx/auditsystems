@@ -504,9 +504,16 @@ function readOption(name) {
 
 const invokedPath = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : undefined;
 if (invokedPath && import.meta.url === invokedPath) {
-  const rootDir = resolve(process.argv.includes("--root") ? readOption("--root") : process.cwd());
-  const manifestPath = resolve(rootDir, readOption("--manifest"));
-  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  let rootDir;
+  let manifest;
+  try {
+    rootDir = resolve(process.argv.includes("--root") ? readOption("--root") : process.cwd());
+    const manifestPath = resolve(rootDir, readOption("--manifest"));
+    manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  } catch (error) {
+    console.error(`manifest could not be loaded: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  }
   const errors = await validateQualityEvidenceWithProviders(manifest, { rootDir });
   if (errors.length) {
     for (const error of errors) console.error(error);
