@@ -3,17 +3,21 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { fetchCSRFHeaders } from "../../../../lib/csrf-client";
+import { ProjectLimitNotice } from "../../../../components/ProjectLimitNotice";
+import { parseProjectLimitResponse, type ProjectLimitResponse } from "../../../../lib/project-limit-response";
 
 export default function NewProjectPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
-  const [error, setError] = useState("");
+  const [genericError, setGenericError] = useState("");
+  const [projectLimit, setProjectLimit] = useState<ProjectLimitResponse | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
+    setGenericError("");
+    setProjectLimit(null);
     setLoading(true);
 
     try {
@@ -27,19 +31,21 @@ export default function NewProjectPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        if (data.error === "FORBIDDEN") {
-          setError("خطای امنیتی. لطفاً صفحه را رفرش کنید و دوباره تلاش کنید.");
-        } else if (data.error === "PROJECT_LIMIT_REACHED") {
-          setError("سقف پروژه‌ها رسیده. لطفاً اشتراک خود را ارتقا دهید.");
+        const quotaResponse = parseProjectLimitResponse(data);
+
+        if (quotaResponse) {
+          setProjectLimit(quotaResponse);
+        } else if (data.error === "FORBIDDEN") {
+          setGenericError("خطای امنیتی. لطفاً صفحه را رفرش کنید و دوباره تلاش کنید.");
         } else {
-          setError(data.error || "خطا در ایجاد پروژه");
+          setGenericError("خطا در ایجاد پروژه");
         }
         return;
       }
 
       router.push(`/app/projects/${data.projectId}`);
     } catch {
-      setError("خطای شبکه. لطفاً دوباره تلاش کنید.");
+      setGenericError("خطای شبکه. لطفاً دوباره تلاش کنید.");
     } finally {
       setLoading(false);
     }
@@ -80,9 +86,17 @@ export default function NewProjectPage() {
           />
         </div>
 
-        {error && (
-          <div style={{ color: "var(--danger, #dc2626)", fontSize: "0.875rem", padding: "0.75rem", background: "var(--danger-bg, #fef2f2)", borderRadius: "0.375rem" }}>
-            {error}
+        {projectLimit && (
+          <ProjectLimitNotice
+            current={projectLimit.usage.current}
+            limit={projectLimit.usage.limit}
+            upgradeUrl={projectLimit.upgradeUrl}
+          />
+        )}
+
+        {genericError && (
+          <div role="alert" style={{ color: "var(--danger, #dc2626)", fontSize: "0.875rem", padding: "0.75rem", background: "var(--danger-bg, #fef2f2)", borderRadius: "0.375rem" }}>
+            {genericError}
           </div>
         )}
 
