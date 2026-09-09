@@ -2,7 +2,7 @@
 set -euo pipefail
 
 STRICT=false
-EXPECTED_IP="185.3.124.93"
+EXPECTED_IP="193.93.169.32"
 PROD_DOMAIN="audit.alirezasafaeisystems.ir"
 STAGING_DOMAIN="staging.audit.alirezasafaeisystems.ir"
 PROD_PORT="3010"
@@ -21,7 +21,7 @@ Usage: scripts/deploy/check-hosting-sync.sh [options]
 
 Options:
   --strict                      Exit non-zero on warnings too
-  --expected-ip <ip>            Expected A record target (default: 185.3.124.93)
+  --expected-ip <ip>            Expected A record target (default: 193.93.169.32)
   --prod-domain <domain>        Production domain (default: audit.alirezasafaeisystems.ir)
   --staging-domain <domain>     Staging domain (default: staging.audit.alirezasafaeisystems.ir)
   --prod-port <port>            Production upstream port (default: 3010)
@@ -66,7 +66,7 @@ check_contains() {
   local path="$1"
   local pattern="$2"
   local desc="$3"
-  if rg -n --fixed-strings "$pattern" "$path" >/dev/null 2>&1; then
+  if grep -F -- "$pattern" "$path" >/dev/null 2>&1; then
     log_ok "$desc"
   else
     log_fail "$desc (pattern not found: $pattern)"
@@ -76,10 +76,22 @@ check_contains() {
 check_dns_a_record() {
   local domain="$1"
   local expected_ip="$2"
-  local resolved
-  resolved="$(dig +short A "$domain" | tail -n1 || true)"
+  local dns_output rc resolved
+  set +e
+  dns_output="$(dig +short A "$domain" 2>&1)"
+  rc=$?
+  set -e
+  if [[ "$rc" -ne 0 ]]; then
+    log_fail "DNS evidence unavailable for $domain (dig exit $rc)"
+    return
+  fi
+  resolved="$(printf '%s\n' "$dns_output" | tail -n1)"
   if [[ -z "$resolved" ]]; then
     log_warn "DNS A not resolved for $domain"
+    return
+  fi
+  if [[ ! "$resolved" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+    log_fail "DNS evidence malformed for $domain"
     return
   fi
   if [[ "$resolved" == "$expected_ip" ]]; then
@@ -112,7 +124,9 @@ check_http_status() {
   rm -f "$tmp_err"
 
   if [[ "$rc" -ne 0 ]]; then
-    if [[ "$err" == *"SSL"* || "$err" == *"certificate"* ]]; then
+    if [[ "$rc" -eq 127 ]]; then
+      log_fail "HTTP evidence unavailable for $url (curl exit $rc)"
+    elif [[ "$err" == *"SSL"* || "$err" == *"certificate"* ]]; then
       if [[ "$soft" == "true" ]]; then
         log_note "HTTP $url TLS validation failed (non-blocking due to --ssh-target mode)"
       else
@@ -151,7 +165,14 @@ check_http_status() {
 
 check_local_port_free() {
   local port="$1"
-  if ss -ltn "( sport = :$port )" | rg -q ":$port"; then
+  local sockets rc
+  set +e
+  sockets="$(ss -ltn "( sport = :$port )" 2>&1)"
+  rc=$?
+  set -e
+  if [[ "$rc" -ne 0 ]]; then
+    log_fail "local port evidence unavailable for $port (ss exit $rc)"
+  elif printf '%s\n' "$sockets" | grep -Fq -- ":$port"; then
     log_warn "local port $port is in-use on this machine"
   else
     log_ok "local port $port is free on this machine"
