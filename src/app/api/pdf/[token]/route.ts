@@ -1,5 +1,5 @@
 import { prisma } from "../../../../lib/db";
-import { verifyDownloadToken } from "../../../../lib/downloadToken";
+import { readDownloadTokenCookie, verifyDownloadToken } from "../../../../lib/downloadToken";
 import { observeApiRequest } from "../../../../lib/metrics";
 import { createRequestId, respondJson } from "../../../../lib/observability";
 import { isPerformanceEvidenceBundle } from "../../../../lib/performance-evidence";
@@ -34,7 +34,9 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tok
 
   try {
     const { token } = await context.params;
-    const dl = request.nextUrl.searchParams.get("dl") ?? "";
+    const dl = request.nextUrl.searchParams.get("dl")
+      ?? readDownloadTokenCookie(request.headers.get("cookie"), token)
+      ?? "";
 
     const payload = verifyDownloadToken(dl);
     if (!payload) {

@@ -76,7 +76,7 @@ export default function UnlockPageEn() {
         if (body.downloadUrl && body.orderId) {
           setMessage(`Order already paid. Download ready for order ${body.orderId}.`);
           trackSeoEvent("seo_payment_success", { locale: "en", provider, reused_order: true });
-          router.push(`/en/audit/r/${token}/success?orderId=${body.orderId}&downloadUrl=${encodeURIComponent(body.downloadUrl)}`);
+          router.push(`/en/audit/r/${token}/success?orderId=${encodeURIComponent(body.orderId)}`);
           return;
         }
 

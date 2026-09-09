@@ -2,6 +2,12 @@ import Link from "next/link";
 import { prisma } from "../../../../lib/db";
 import { isReportShareAccessible } from "../../../../lib/reportShare";
 import { compareAuditRuns, type AuditRun } from "../../../../lib/audit-comparison";
+import { cookies } from "next/headers";
+import { getReportAccessCookieName, verifyReportAccessCredential } from "../../../../lib/report-access";
+import { hasPassword } from "../../../../lib/reportShare";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 function severityClass(severity: string): string {
   const s = severity.toUpperCase();
@@ -45,6 +51,25 @@ export default async function ComparePage({ params }: { params: Promise<{ tokenA
         <section className="card">
           <h1>گزارش پیدا نشد</h1>
           <p>یکی از token‌ها معتبر نیست یا گزارش در دسترس نیست.</p>
+        </section>
+      </main>
+    );
+  }
+
+  const cookieStore = await cookies();
+  const authorized = [shareA, shareB].every((share) => (
+    !hasPassword(share)
+    || verifyReportAccessCredential(
+      cookieStore.get(getReportAccessCookieName(share.token))?.value,
+      share.token,
+    )
+  ));
+  if (!authorized) {
+    return (
+      <main>
+        <section className="card">
+          <h1>مقایسه در دسترس نیست</h1>
+          <p>برای مقایسه، ابتدا دسترسی هر دو گزارش را تأیید کنید.</p>
         </section>
       </main>
     );

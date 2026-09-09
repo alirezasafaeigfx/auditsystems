@@ -76,7 +76,7 @@ export default function UnlockPage() {
         if (body.downloadUrl && body.orderId) {
           setMessage(`این سفارش قبلاً پرداخت شده. دانلود برای سفارش ${body.orderId} آماده است.`);
           trackSeoEvent("seo_payment_success", { locale: "fa", provider, reused_order: true });
-          router.push(`/audit/r/${token}/success?orderId=${body.orderId}&downloadUrl=${encodeURIComponent(body.downloadUrl)}`);
+          router.push(`/audit/r/${token}/success?orderId=${encodeURIComponent(body.orderId)}`);
           return;
         }
 

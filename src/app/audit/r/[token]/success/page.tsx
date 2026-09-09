@@ -6,9 +6,7 @@ export default async function SuccessPage({ params, searchParams }: { params: Pr
   const query = await searchParams;
 
   const orderId = query.orderId ?? null;
-  const dl = query.dl ?? null;
-  const directUrl = query.downloadUrl ?? null;
-  const downloadHref = directUrl ?? (dl ? `/api/pdf/${token}?dl=${encodeURIComponent(dl)}` : null);
+  const downloadHref = orderId ? `/api/pdf/${token}` : null;
 
   return (
     <main>

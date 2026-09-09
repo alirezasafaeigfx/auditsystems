@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { PaymentProvider } from "@prisma/client";
 import { prisma } from "./db";
-import { createDownloadToken } from "./downloadToken";
+import { createDownloadToken, serializeDownloadTokenCookie } from "./downloadToken";
 import { observeApiRequest } from "./metrics";
 import { createRequestId, logEvent, respondJson } from "./observability";
 import {
@@ -251,13 +251,15 @@ export async function handleOrderCheckoutRequest(
         orderId: prepared.order.id,
         email,
       });
-      return respondJson({
+      const response = respondJson({
         orderId: prepared.order.id,
         status: prepared.order.status,
         reused: true,
-        downloadUrl: `/api/pdf/${token}?dl=${encodeURIComponent(download)}`,
+        downloadUrl: `/api/pdf/${token}`,
         requestId,
       }, requestId, { headers: { "Cache-Control": "no-store" } });
+      response.headers.append("Set-Cookie", serializeDownloadTokenCookie(token, download));
+      return response;
     }
 
     if (prepared.kind === "READY") {

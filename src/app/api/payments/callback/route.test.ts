@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   verifyCheckout: vi.fn(),
   consumeDistributedRateLimit: vi.fn(),
   createDownloadToken: vi.fn(() => "download-token"),
+  serializeDownloadTokenCookie: vi.fn(() => "report_download_fixture=download-token; HttpOnly; SameSite=Strict; Path=/"),
   logEvent: vi.fn(),
   observeApiRequest: vi.fn(),
 }));
@@ -24,7 +25,10 @@ vi.mock("../../../../lib/payment-callback-state", () => ({
 }));
 vi.mock("../../../../lib/payments", () => ({ verifyCheckout: mocks.verifyCheckout }));
 vi.mock("../../../../lib/rateLimit", () => ({ consumeDistributedRateLimit: mocks.consumeDistributedRateLimit }));
-vi.mock("../../../../lib/downloadToken", () => ({ createDownloadToken: mocks.createDownloadToken }));
+vi.mock("../../../../lib/downloadToken", () => ({
+  createDownloadToken: mocks.createDownloadToken,
+  serializeDownloadTokenCookie: mocks.serializeDownloadTokenCookie,
+}));
 vi.mock("../../../../lib/metrics", () => ({ observeApiRequest: mocks.observeApiRequest }));
 vi.mock("../../../../lib/observability", () => ({
   createRequestId: () => "request-callback-1",
@@ -209,8 +213,11 @@ describe("payment callback policy", () => {
       ok: true,
       orderId: "order-1",
       status: "PAID",
-      downloadUrl: "/api/pdf/report-share-token?dl=download-token",
+      downloadUrl: "/api/pdf/report-share-token",
+      successUrl: "/audit/r/report-share-token/success?orderId=order-1",
     });
+    expect(response.headers.get("set-cookie")).toContain("report_download_fixture=download-token");
+    expect(JSON.stringify(body)).not.toContain("download-token");
     expect(mocks.finalizePaymentVerification).toHaveBeenCalledWith({
       orderId: "order-1",
       leaseEventId: "lease-1",
@@ -232,5 +239,22 @@ describe("payment callback policy", () => {
     expect(response.status).toBe(200);
     expect(mocks.verifyCheckout).not.toHaveBeenCalled();
     expect(mocks.finalizePaymentVerification).not.toHaveBeenCalled();
+  });
+
+  it("redirects a paid browser without placing the download credential in the URL", async () => {
+    mocks.claimPaymentVerification.mockResolvedValue({
+      kind: "TERMINAL",
+      order: order({ status: "PAID", paidAt: new Date() }),
+    });
+    const { GET } = await import("./route");
+    const response = await GET(new NextRequest(
+      "https://audit.example.com/api/payments/callback?provider=MOCK&callbackRef=callback-order-1&Status=OK&Authority=MOCK-order-1",
+      { headers: { accept: "text/html" } },
+    ));
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("https://audit.example.com/audit/r/report-share-token/success?orderId=order-1");
+    expect(response.headers.get("location")).not.toContain("download-token");
+    expect(response.headers.get("set-cookie")).toContain("report_download_fixture=download-token");
   });
 });

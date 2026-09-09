@@ -5,6 +5,13 @@ import { categoryLabel } from "../../../../lib/scoring";
 import type { FindingCategory } from "../../../../lib/types";
 import { EmailCapture } from "../../../../components/EmailCapture";
 import { buildActionPlan, QUADRANT_LABELS } from "../../../../lib/action-plan";
+import { cookies } from "next/headers";
+import { ReportAccessChallenge } from "../../../../components/ReportAccessChallenge";
+import { getReportAccessCookieName, verifyReportAccessCredential } from "../../../../lib/report-access";
+import { hasPassword } from "../../../../lib/reportShare";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 function severityClass(severity: string): string {
   const s = severity.toUpperCase();
@@ -55,6 +62,14 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
         </section>
       </main>
     );
+  }
+
+  if (hasPassword(share)) {
+    const cookieStore = await cookies();
+    const credential = cookieStore.get(getReportAccessCookieName(token))?.value;
+    if (!verifyReportAccessCredential(credential, token)) {
+      return <ReportAccessChallenge token={token} locale="fa" />;
+    }
   }
 
   await prisma.reportShare.update({
