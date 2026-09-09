@@ -38,6 +38,13 @@ describe("report access credentials", () => {
     expect(verifyReportAccessCredential("anything", "report-a")).toBe(false);
   });
 
+  it("fails closed when the signing secret is too short", () => {
+    vi.stubEnv("REPORT_ACCESS_SECRET", "short-secret");
+
+    expect(() => createReportAccessCredential("report-a")).toThrow(/32 bytes/);
+    expect(verifyReportAccessCredential("anything", "report-a")).toBe(false);
+  });
+
   it("serializes a report-bound cookie without exposing the raw report token", () => {
     const credential = createReportAccessCredential("raw-sensitive-report-token");
     const cookie = serializeReportAccessCookie("raw-sensitive-report-token", credential, false);

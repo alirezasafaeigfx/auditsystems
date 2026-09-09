@@ -5,7 +5,8 @@ const DIGEST_PATTERN = /^[a-f0-9]{64}$/;
 const SIGNATURE_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 
 function getSecret(): string | null {
-  return process.env.REPORT_ACCESS_SECRET?.trim() || null;
+  const secret = process.env.REPORT_ACCESS_SECRET?.trim() || "";
+  return Buffer.byteLength(secret, "utf8") >= 32 ? secret : null;
 }
 
 function reportDigest(reportToken: string): string {
@@ -22,7 +23,7 @@ export function getReportAccessCookieName(reportToken: string): string {
 
 export function createReportAccessCredential(reportToken: string, now: Date = new Date()): string {
   const secret = getSecret();
-  if (!secret) throw new Error("REPORT_ACCESS_SECRET is required to authorize protected reports");
+  if (!secret) throw new Error("REPORT_ACCESS_SECRET must contain at least 32 bytes");
   const expiresAt = Math.floor(now.getTime() / 1000) + ACCESS_TTL_SECONDS;
   const payload = `v1.${expiresAt}.${reportDigest(reportToken)}`;
   return `${payload}.${signature(payload, secret)}`;
@@ -88,4 +89,3 @@ export function serializeReportAccessCookie(
   if (secure) attributes.push("Secure");
   return attributes.join("; ");
 }
-
