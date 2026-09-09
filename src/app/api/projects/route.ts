@@ -1,13 +1,17 @@
 import { NextRequest } from "next/server";
-import { prisma } from "../../../lib/db";
 import { validateSession, getOrganizationForUser } from "../../../lib/auth";
 import { createRequestId, logEvent, respondJson } from "../../../lib/observability";
 import { csrfProtection } from "../../../lib/csrf";
 import { normalizeAuditTargetUrl } from "../../../lib/normalizeAuditTargetUrl";
-import { canCreateProject } from "../../../lib/usage";
+import {
+  createProjectAtomically,
+  ProjectCreateError,
+} from "../../../lib/project-create";
+import { getCurrentPlan } from "../../../lib/usage";
 
 export async function POST(request: NextRequest) {
   const requestId = createRequestId();
+  let orgId: string | undefined;
 
   try {
     const user = await validateSession();
@@ -25,12 +29,7 @@ export async function POST(request: NextRequest) {
       return respondJson({ error: "NO_ORGANIZATION", requestId }, requestId, { status: 400, headers: { "Cache-Control": "no-store" } });
     }
 
-    const orgId = membership.organizationId;
-
-    const projectCheck = await canCreateProject(orgId);
-    if (!projectCheck.allowed) {
-      return respondJson({ error: "PROJECT_LIMIT_REACHED", requestId }, requestId, { status: 403, headers: { "Cache-Control": "no-store" } });
-    }
+    orgId = membership.organizationId;
 
     let body: unknown;
     try {
@@ -61,18 +60,40 @@ export async function POST(request: NextRequest) {
       return respondJson({ error: "INVALID_URL_FORMAT", requestId }, requestId, { status: 400, headers: { "Cache-Control": "no-store" } });
     }
 
-    const project = await prisma.project.create({
-      data: {
-        organizationId: orgId,
-        name,
-        domain: normalized.host,
-        normalizedUrl: normalized.normalizedUrl
-      }
+    const plan = await getCurrentPlan(orgId);
+    const project = await createProjectAtomically({
+      organizationId: orgId,
+      name,
+      domain: normalized.host,
+      normalizedUrl: normalized.normalizedUrl,
+      projectLimit: plan.projectLimit,
     });
 
     logEvent("info", "project_created", { requestId, projectId: project.id, orgId });
     return respondJson({ ok: true, projectId: project.id, requestId }, requestId, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
+    if (
+      error instanceof ProjectCreateError
+      && error.code === "PROJECT_LIMIT_REACHED"
+      && error.current !== undefined
+      && error.limit !== undefined
+    ) {
+      return respondJson({
+        error: "PROJECT_LIMIT_REACHED",
+        usage: { current: error.current, limit: error.limit },
+        upgradeUrl: "/app/billing",
+        requestId,
+      }, requestId, { status: 403, headers: { "Cache-Control": "no-store" } });
+    }
+
+    if (error instanceof ProjectCreateError && error.code === "PROJECT_CREATE_RETRY_EXHAUSTED") {
+      logEvent("warn", "project_create_retry_exhausted", { requestId, orgId });
+      return respondJson({ error: "PROJECT_CREATE_RETRY_EXHAUSTED", requestId }, requestId, {
+        status: 503,
+        headers: { "Cache-Control": "no-store", "Retry-After": "1" },
+      });
+    }
+
     logEvent("error", "project_create_failed", { requestId, error: error instanceof Error ? error.message : String(error) });
     return respondJson({ error: "INTERNAL_ERROR", requestId }, requestId, { status: 500, headers: { "Cache-Control": "no-store" } });
   }
