@@ -103,3 +103,17 @@
 2. **DNS configuration** — requires DNS provider access
 3. **Payment API verification** — requires PayPing/IdPay sandbox access
 4. **Language switcher** — may need live browser testing (code logic appears correct)
+
+## Follow-up — Hosting Topology Diagnostics (2026-09-09)
+
+| Boundary | Verdict | Evidence |
+|---|---|---|
+| Repository implementation | CORRECTION_IN_REVIEW | PR [#13](https://github.com/alirezasafaeigfx/auditsystems/pull/13) replaces an unavailable `rg` dependency, fails closed on unavailable probe execution, and adds deterministic required-gate coverage. |
+| Topology correctness | PARTIAL_CONTRADICTORY | Portable repository defaults remain production/staging `3010`/`3011`; later runbooks record production `3012`. No default port was changed. |
+| Infrastructure | UNPROVEN | No authorized on-host registry, Nginx, PM2, symlink, or release attestation was available. Issue [#12](https://github.com/alirezasafaeigfx/auditsystems/issues/12) tracks authorization-gated reconciliation. |
+| Staging | EXTERNAL_DISCREPANCY_UNPROVEN_INTENT | System DNS, Google DoH, and Cloudflare DoH returned NXDOMAIN at `2026-09-09T18:49:34Z`; public HTTPS readiness exited 6. Repository documents do not establish whether staging was intentionally retired. |
+| Production | PUBLIC_ENDPOINT_REACHABLE_DEPLOYED_SHA_UNVERIFIED | Public `/api/ready` and `/api/health` returned HTTP 200 at `2026-09-09T18:49:53Z`; this does not attest the deployed SHA or active host topology. |
+| Deployment | NOT_PERFORMED | No deploy, migration, DNS, Nginx, firewall, VPS, service, runner, secret, database, or payment mutation occurred. |
+| Evidence durability | PARTIAL | GitHub issue/PR and committed ledger are durable; Actions run `34387931972` and its artifact are expiring evidence, while live DNS/HTTP observations are timestamped snapshots. |
+
+The four `pattern not found` failures in run `34387931972` were repository diagnostic false positives: the raw hosted log records `rg: command not found`, while every expected literal exists at the exact candidate SHA. The production A-record expectation dated to February 2026 and was stale against July governance plus three fresh public resolvers. The remaining staging and active-runtime questions require the authorization and evidence listed in issue #12.
