@@ -6,6 +6,9 @@ on:
       - "src/lib/audit-enqueue.ts"
       - "src/lib/audit-enqueue.test.ts"
       - "src/lib/audit-enqueue.postgres.test.ts"
+      - "src/lib/project-create.ts"
+      - "src/lib/project-create.test.ts"
+      - "src/lib/project-create.postgres.test.ts"
       - "src/app/api/audit/runs/route.ts"
       - "src/app/api/projects/**/audit/route.ts"
       - "src/app/api/admin/leads/**/start-audit/route.ts"
@@ -41,6 +44,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://auditsystems:integration-password@127.0.0.1:5432/auditsystems_test
       AUDIT_ENQUEUE_INTEGRATION: "true"
+      PROJECT_CREATE_INTEGRATION: "true"
       NODE_ENV: test
       DOWNLOAD_TOKEN_SECRET: integration-download-secret-minimum-32
       IP_HASH_SALT: integration-ip-hash-salt-minimum-32
@@ -77,4 +81,8 @@ jobs:
             | grep -Fx "Job_audit_enqueue_idempotency_key"
 
       - name: Run atomic enqueue PostgreSQL suite
-        run: pnpm exec vitest run src/lib/audit-enqueue.postgres.test.ts --no-file-parallelism
+        run: |
+          pnpm exec vitest run \
+            src/lib/audit-enqueue.postgres.test.ts \
+            src/lib/project-create.postgres.test.ts \
+            --no-file-parallelism
