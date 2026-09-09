@@ -37,7 +37,7 @@ export function parseProjectLimitResponse(value: unknown): ProjectLimitResponse 
 
   const { current, limit } = value.usage;
 
-  if (!isUsageCount(current) || !isUsageCount(limit) || current > limit || !isSafeUpgradeUrl(value.upgradeUrl)) {
+  if (!isUsageCount(current) || !isUsageCount(limit) || !isSafeUpgradeUrl(value.upgradeUrl)) {
     return null;
   }
 

@@ -143,4 +143,17 @@ describe("project-create", () => {
 
     expect(mocks.transaction).toHaveBeenCalledTimes(1);
   });
+
+  it("re-throws a non-P2034 Prisma known request error unchanged", async () => {
+    const error = new Prisma.PrismaClientKnownRequestError("unique constraint", {
+      code: "P2002",
+      clientVersion: "test",
+    });
+    mocks.transaction.mockRejectedValue(error);
+    const { createProjectAtomically } = await import("./project-create");
+
+    await expect(createProjectAtomically(input)).rejects.toBe(error);
+
+    expect(mocks.transaction).toHaveBeenCalledTimes(1);
+  });
 });

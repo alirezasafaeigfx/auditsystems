@@ -7,12 +7,12 @@ describe("ProjectLimitNotice", () => {
   it("renders an accessible Persian upgrade notice with usage and billing link", () => {
     const html = renderToStaticMarkup(createElement(ProjectLimitNotice, {
       current: 3,
-      limit: 3,
+      limit: 1,
       upgradeUrl: "/app/billing",
     }));
 
     expect(html).toContain('role="alert"');
-    expect(html).toContain("3 / 3");
+    expect(html).toContain("3 / 1");
     expect(html).toContain('href="/app/billing"');
     expect(html).toContain("اشتراک خود را ارتقا دهید");
   });

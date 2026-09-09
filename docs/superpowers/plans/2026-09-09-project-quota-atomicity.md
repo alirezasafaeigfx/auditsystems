@@ -309,7 +309,7 @@ export type ProjectLimitResponse = {
 export function parseProjectLimitResponse(value: unknown): ProjectLimitResponse | null;
 ```
 
-Parser tests must reject missing objects, non-finite/negative counts, `current > limit`, an empty upgrade URL, and any non-quota error. The component test must render with React's server renderer and assert:
+Parser tests must reject missing objects, non-finite/negative counts, an empty upgrade URL, and any non-quota error. They must accept and preserve exact over-limit counts such as `current: 3, limit: 1`, because subscription expiration or downgrade can leave existing projects above the current plan limit. The component test must render with React's server renderer and assert:
 
 - `role="alert"` is present;
 - the exact `current / limit` usage is visible;
@@ -330,7 +330,7 @@ Expected: FAIL because parser and component do not exist.
 
 - [ ] **Step 3: Implement the strict response parser**
 
-Accept only the stable API shape, integer non-negative counts with `current <= limit`, and a same-origin application path beginning with `/app/`. This prevents an API payload from becoming an open redirect/link injection source.
+Accept only the stable API shape, integer non-negative counts (including `current > limit`), and a same-origin application path beginning with `/app/`. Preserve both counts exactly. This prevents an API payload from becoming an open redirect/link injection source without discarding valid over-limit quota responses.
 
 - [ ] **Step 4: Implement the quota notice**
 

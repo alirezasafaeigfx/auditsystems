@@ -29,7 +29,7 @@ This follows the established atomic audit-enqueue pattern without introducing a 
 Create `src/lib/project-create.ts` with these responsibilities:
 
 - Accept `organizationId`, validated `name`, normalized domain and URL, and the request's plan-limit snapshot.
-- Validate that `projectLimit` is a non-negative integer.
+- Validate that `projectLimit` is a positive integer.
 - Within a serializable transaction, count projects for the organization.
 - Throw `ProjectCreateError` with code `PROJECT_LIMIT_REACHED`, `current`, and `limit` when capacity is exhausted.
 - Insert and return the project when capacity exists.
@@ -59,7 +59,7 @@ The plan is resolved before entering the transaction. A concurrent subscription 
 
 `upgradeUrl` is a server-owned same-origin constant and is never accepted from request input. The response exposes only the authenticated organization's aggregate quota numbers.
 
-`PROJECT_CREATE_RETRY_EXHAUSTED` and unexpected errors return the existing no-store `500 INTERNAL_ERROR` shape and are logged without credentials or request bodies.
+`PROJECT_CREATE_RETRY_EXHAUSTED` returns a no-store, retryable `503` response with `Retry-After: 1`. Unexpected errors return the existing no-store `500 INTERNAL_ERROR` shape. Both paths are logged without credentials or request bodies.
 
 ## User Interface
 
@@ -71,6 +71,8 @@ Add a small `ProjectLimitNotice` component that receives `current`, `limit`, and
 - existing CSS variables only, with no new dependency or design-system expansion.
 
 The new-project page stores the structured quota response when present, clears stale quota state before each submission, and falls back to its generic error handling for malformed or unrelated API failures. Entered project name and URL remain unchanged after rejection.
+
+The response parser accepts non-negative integer usage counts even when `current > limit`. This is a valid state after a subscription expires or is downgraded because existing projects are not deleted. It preserves the exact counts while continuing to require a same-origin `/app/` upgrade path.
 
 ## Concurrency and Failure Semantics
 

@@ -59,6 +59,13 @@ function request(body: BodyInit | undefined) {
   });
 }
 
+function expectResponseMetadata(response: Response, status: number, retryAfter: string | null = null) {
+  expect(response.status).toBe(status);
+  expect(response.headers.get("cache-control")).toBe("no-store");
+  expect(response.headers.get("x-request-id")).toBe("request-id");
+  expect(response.headers.get("retry-after")).toBe(retryAfter);
+}
+
 describe("POST /api/projects", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -82,9 +89,11 @@ describe("POST /api/projects", () => {
       url: " https://example.com ",
     })));
 
-    expect(response.status).toBe(201);
+    expectResponseMetadata(response, 201);
     expect(await response.json()).toEqual({ ok: true, projectId: "project-1", requestId: "request-id" });
     expect(mocks.getCurrentPlan).toHaveBeenCalledWith("org-1");
+    expect(mocks.getCurrentPlan).toHaveBeenCalledTimes(1);
+    expect(mocks.createProjectAtomically).toHaveBeenCalledTimes(1);
     expect(mocks.createProjectAtomically).toHaveBeenCalledWith({
       organizationId: "org-1",
       name: "Example project",
@@ -103,8 +112,7 @@ describe("POST /api/projects", () => {
 
     const response = await POST(request(JSON.stringify({ name: "Example", url: "https://example.com" })));
 
-    expect(response.status).toBe(403);
-    expect(response.headers.get("cache-control")).toBe("no-store");
+    expectResponseMetadata(response, 403);
     expect(await response.json()).toEqual({
       error: "PROJECT_LIMIT_REACHED",
       usage: { current: 1, limit: 1 },
@@ -119,9 +127,7 @@ describe("POST /api/projects", () => {
 
     const response = await POST(request(JSON.stringify({ name: "Example", url: "https://example.com" })));
 
-    expect(response.status).toBe(503);
-    expect(response.headers.get("retry-after")).toBe("1");
-    expect(response.headers.get("cache-control")).toBe("no-store");
+    expectResponseMetadata(response, 503, "1");
     expect(await response.json()).toEqual({ error: "PROJECT_CREATE_RETRY_EXHAUSTED", requestId: "request-id" });
     expect(mocks.logEvent).toHaveBeenCalledWith("warn", "project_create_retry_exhausted", { requestId: "request-id", orgId: "org-1" });
   });
@@ -133,7 +139,7 @@ describe("POST /api/projects", () => {
     const response = await POST(request(JSON.stringify({ name: "Example", url: "https://example.com" })));
     const body = await response.json();
 
-    expect(response.status).toBe(500);
+    expectResponseMetadata(response, 500);
     expect(body).toEqual({ error: "INTERNAL_ERROR", requestId: "request-id" });
     expect(JSON.stringify(body)).not.toContain("database connection details");
     expect(mocks.logEvent).toHaveBeenCalledWith("error", "project_create_failed", {
@@ -148,7 +154,7 @@ describe("POST /api/projects", () => {
 
     const response = await POST(request(JSON.stringify({ name: "Example", url: "https://example.com" })));
 
-    expect(response.status).toBe(401);
+    expectResponseMetadata(response, 401);
     expect(await response.json()).toEqual({ error: "UNAUTHORIZED", requestId: "request-id" });
   });
 
@@ -158,7 +164,7 @@ describe("POST /api/projects", () => {
 
     const response = await POST(request(JSON.stringify({ name: "Example", url: "https://example.com" })));
 
-    expect(response.status).toBe(403);
+    expectResponseMetadata(response, 403);
     expect(await response.json()).toEqual({ error: "FORBIDDEN", requestId: "request-id" });
   });
 
@@ -167,7 +173,7 @@ describe("POST /api/projects", () => {
 
     const response = await POST(request("{"));
 
-    expect(response.status).toBe(400);
+    expectResponseMetadata(response, 400);
     expect(await response.json()).toEqual({ error: "INVALID_JSON", requestId: "request-id" });
   });
 
@@ -176,7 +182,7 @@ describe("POST /api/projects", () => {
 
     const response = await POST(request(JSON.stringify(null)));
 
-    expect(response.status).toBe(400);
+    expectResponseMetadata(response, 400);
     expect(await response.json()).toEqual({ error: "INVALID_PAYLOAD", requestId: "request-id" });
   });
 
@@ -185,7 +191,7 @@ describe("POST /api/projects", () => {
 
     const response = await POST(request(JSON.stringify({ name: " ", url: "https://example.com" })));
 
-    expect(response.status).toBe(400);
+    expectResponseMetadata(response, 400);
     expect(await response.json()).toEqual({ error: "INVALID_NAME", requestId: "request-id" });
   });
 
@@ -194,7 +200,7 @@ describe("POST /api/projects", () => {
 
     const response = await POST(request(JSON.stringify({ name: "Example", url: " " })));
 
-    expect(response.status).toBe(400);
+    expectResponseMetadata(response, 400);
     expect(await response.json()).toEqual({ error: "INVALID_URL", requestId: "request-id" });
   });
 
@@ -204,7 +210,35 @@ describe("POST /api/projects", () => {
 
     const response = await POST(request(JSON.stringify({ name: "Example", url: "https://localhost" })));
 
-    expect(response.status).toBe(400);
+    expectResponseMetadata(response, 400);
     expect(await response.json()).toEqual({ error: "INVALID_URL_FORMAT", requestId: "request-id" });
+  });
+
+  it("rejects authenticated users without an organization membership", async () => {
+    mocks.getOrganizationForUser.mockResolvedValue(null);
+    const { POST } = await import("./route");
+
+    const response = await POST(request(JSON.stringify({ name: "Example", url: "https://example.com" })));
+
+    expectResponseMetadata(response, 400);
+    expect(await response.json()).toEqual({ error: "NO_ORGANIZATION", requestId: "request-id" });
+    expect(mocks.getCurrentPlan).not.toHaveBeenCalled();
+    expect(mocks.createProjectAtomically).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the sanitized internal error contract for malformed quota errors", async () => {
+    mocks.createProjectAtomically.mockRejectedValue(new mocks.ProjectCreateError("PROJECT_LIMIT_REACHED", {
+      current: 3,
+    }));
+    const { POST } = await import("./route");
+
+    const response = await POST(request(JSON.stringify({ name: "Example", url: "https://example.com" })));
+
+    expectResponseMetadata(response, 500);
+    expect(await response.json()).toEqual({ error: "INTERNAL_ERROR", requestId: "request-id" });
+    expect(mocks.logEvent).toHaveBeenCalledWith("error", "project_create_failed", {
+      requestId: "request-id",
+      error: "PROJECT_LIMIT_REACHED",
+    });
   });
 });
