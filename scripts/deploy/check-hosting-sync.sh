@@ -94,6 +94,14 @@ check_dns_a_record() {
     log_fail "DNS evidence malformed for $domain"
     return
   fi
+  local octet
+  IFS='.' read -r -a octets <<< "$resolved"
+  for octet in "${octets[@]}"; do
+    if (( 10#$octet > 255 )); then
+      log_fail "DNS evidence malformed for $domain"
+      return
+    fi
+  done
   if [[ "$resolved" == "$expected_ip" ]]; then
     log_ok "DNS A $domain -> $resolved"
   else
@@ -123,8 +131,13 @@ check_http_status() {
   err="$(tr '\n' ' ' < "$tmp_err" | sed 's/  */ /g')"
   rm -f "$tmp_err"
 
+  if [[ "$rc" -eq 0 && ! "$status" =~ ^[1-5][0-9]{2}$ ]]; then
+    log_fail "HTTP evidence malformed for $url"
+    return
+  fi
+
   if [[ "$rc" -ne 0 ]]; then
-    if [[ "$rc" -eq 127 ]]; then
+    if [[ "$rc" -eq 2 || "$rc" -eq 127 ]]; then
       log_fail "HTTP evidence unavailable for $url (curl exit $rc)"
     elif [[ "$err" == *"SSL"* || "$err" == *"certificate"* ]]; then
       if [[ "$soft" == "true" ]]; then
@@ -167,12 +180,14 @@ check_local_port_free() {
   local port="$1"
   local sockets rc
   set +e
-  sockets="$(ss -ltn "( sport = :$port )" 2>&1)"
+  sockets="$(ss -H -ltn "( sport = :$port )" 2>&1)"
   rc=$?
   set -e
   if [[ "$rc" -ne 0 ]]; then
     log_fail "local port evidence unavailable for $port (ss exit $rc)"
-  elif printf '%s\n' "$sockets" | grep -Fq -- ":$port"; then
+  elif [[ -n "$sockets" ]] && ! printf '%s\n' "$sockets" | grep -Eq "^LISTEN[[:space:]].*:${port}([[:space:]]|$)"; then
+    log_fail "local port evidence malformed for $port"
+  elif [[ -n "$sockets" ]]; then
     log_warn "local port $port is in-use on this machine"
   else
     log_ok "local port $port is free on this machine"
@@ -253,15 +268,29 @@ run_ssh_checks() {
     log_warn "remote pm2 app asdev-audit-ir-staging-worker missing"
   fi
 
-  local ready_line
-  ready_line="$("${ssh_cmd[@]}" "set -euo pipefail; for u in http://127.0.0.1:$PROD_PORT/api/ready http://127.0.0.1:$STAGING_PORT/api/ready; do code=\$(curl -sS -o /dev/null -w \"%{http_code}\" --max-time 20 \"\$u\" || true); echo READY:\$u:\$code; done" || true)"
+  local ready_line ready_rc
+  set +e
+  ready_line="$("${ssh_cmd[@]}" "set -euo pipefail; for u in http://127.0.0.1:$PROD_PORT/api/ready http://127.0.0.1:$STAGING_PORT/api/ready; do if code=\$(curl -sS -o /dev/null -w \"%{http_code}\" --max-time 20 \"\$u\"); then echo READY:\$u:\$code; else rc=\$?; echo READY:\$u:CURL_ERROR:\$rc; fi; done")"
+  ready_rc=$?
+  set -e
+
+  if [[ "$ready_rc" -ne 0 ]]; then
+    log_fail "remote readiness evidence unavailable (ssh exit $ready_rc)"
+    return
+  fi
+  if [[ -z "$ready_line" ]]; then
+    log_fail "remote readiness evidence unavailable (empty response)"
+    return
+  fi
 
   while IFS= read -r line; do
     [[ -z "$line" ]] && continue
     case "$line" in
       READY:*:200) log_ok "remote ${line#READY:}" ;;
+      READY:*:CURL_ERROR:*) log_fail "remote ${line#READY:}" ;;
       READY:*:5*) log_fail "remote ${line#READY:}" ;;
-      READY:*) log_warn "remote ${line#READY:}" ;;
+      READY:*:[1-4][0-9][0-9]) log_warn "remote ${line#READY:}" ;;
+      READY:*) log_fail "remote readiness evidence malformed" ;;
     esac
   done <<< "$ready_line"
 }
