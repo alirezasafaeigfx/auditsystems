@@ -65,6 +65,33 @@ describe("buildAuditSummaryV1", () => {
     expect(summary.seoBasics.openGraph).toBe("missing");
   });
 
+  it("withholds SEO coverage when robots or sitemap evidence is unavailable", () => {
+    const summary = buildAuditSummaryV1({
+      ...baseInput,
+      seoFiles: {
+        robots: { url: "https://example.com/robots.txt", status: "UNAVAILABLE", limitation: "timeout" },
+        sitemap: { url: "https://example.com/sitemap.xml", status: "VERIFIED", httpStatus: 200 },
+      },
+    });
+
+    expect(summary.resultCoverage.coveredCategories).not.toContain("SEO");
+    expect(summary.resultCoverage.unavailableCategories).toContain("SEO");
+    expect(summary.resultCoverage.ratio).toBe(3 / 6);
+  });
+
+  it("records SEO coverage only when both file probes have conclusive outcomes", () => {
+    const summary = buildAuditSummaryV1({
+      ...baseInput,
+      seoFiles: {
+        robots: { url: "https://example.com/robots.txt", status: "MISSING", httpStatus: 404 },
+        sitemap: { url: "https://example.com/sitemap.xml", status: "VERIFIED", httpStatus: 200 },
+      },
+    });
+
+    expect(summary.resultCoverage.coveredCategories).toContain("SEO");
+    expect(summary.resultCoverage.ratio).toBe(4 / 6);
+  });
+
   it("extracts third-party resources", () => {
     const summary = buildAuditSummaryV1({
       ...baseInput,

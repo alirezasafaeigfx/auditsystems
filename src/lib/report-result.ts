@@ -4,7 +4,7 @@ import type { FindingCategory, FindingSeverity } from "./types";
 
 export const RESULT_COVERAGE_SCHEMA = "asdev.audit.result-coverage.v1";
 export const RESULT_CATEGORIES: FindingCategory[] = ["SEO", "PERFORMANCE", "SECURITY", "UX", "ACCESSIBILITY", "RESILIENCE"];
-const CURRENT_COVERED_CATEGORIES: FindingCategory[] = ["SEO", "SECURITY", "ACCESSIBILITY", "RESILIENCE"];
+const CURRENT_ALWAYS_COVERED_CATEGORIES: FindingCategory[] = ["SECURITY", "ACCESSIBILITY", "RESILIENCE"];
 
 export type ResultAvailability = "AVAILABLE" | "PARTIAL" | "UNAVAILABLE" | "LEGACY" | "INVALID";
 
@@ -123,6 +123,11 @@ export function resolveReportResult(input: { summary: unknown; findings: Finding
     ? rawCoverage.measurementIds as string[] : null;
   const limitations = Array.isArray(rawCoverage.limitations) && rawCoverage.limitations.every((item) => typeof item === "string")
     ? rawCoverage.limitations as string[] : null;
+  const seoFiles = record(summary.seoFiles);
+  const robots = seoFiles ? record(seoFiles.robots) : null;
+  const sitemap = seoFiles ? record(seoFiles.sitemap) : null;
+  const seoEvidenceComplete = [robots?.status, sitemap?.status].every((status) => status === "VERIFIED" || status === "MISSING");
+  const expectedCoveredCategories = [...(seoEvidenceComplete ? ["SEO" as const] : []), ...CURRENT_ALWAYS_COVERED_CATEGORIES];
   if (
     !covered || !missing || !measurementIds || !limitations
     || new Set(measurementIds).size !== measurementIds.length
@@ -133,8 +138,8 @@ export function resolveReportResult(input: { summary: unknown; findings: Finding
     || covered.some((category) => missing.includes(category))
     || new Set([...covered, ...missing]).size !== RESULT_CATEGORIES.length
     || Math.abs(rawCoverage.ratio - covered.length / RESULT_CATEGORIES.length) > 0.000001
-    || covered.length !== CURRENT_COVERED_CATEGORIES.length
-    || CURRENT_COVERED_CATEGORIES.some((category) => !covered.includes(category))
+    || covered.length !== expectedCoveredCategories.length
+    || expectedCoveredCategories.some((category) => !covered.includes(category))
   ) return unavailable(input.runStatus, "INVALID", "Measurement coverage is malformed or contradictory.");
 
   if (rawCoverage.freshness === "STALE_BLOCKED") return unavailable(input.runStatus, "UNAVAILABLE", "Measurement evidence is stale and blocked.");
