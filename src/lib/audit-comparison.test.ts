@@ -20,6 +20,7 @@ function makeRun(findings: ReturnType<typeof makeFinding>[]): AuditRun {
       grade: score.grade,
       categoryScores: score.categories,
       severityCounts: score.severityCounts,
+      seoFiles: { robots: { status: "VERIFIED" }, sitemap: { status: "VERIFIED" } },
       resultCoverage: {
         schema: "asdev.audit.result-coverage.v1",
         coveredCategories: ["SEO", "SECURITY", "ACCESSIBILITY", "RESILIENCE"],

@@ -18,6 +18,7 @@ function currentSummary(overrides: Record<string, unknown> = {}) {
     grade: "EXCELLENT",
     categoryScores: Object.fromEntries(categories.map((category) => [category, 100])),
     severityCounts: counts,
+    seoFiles: { robots: { status: "VERIFIED" }, sitemap: { status: "VERIFIED" } },
     resultCoverage: {
       schema: "asdev.audit.result-coverage.v1",
       coveredCategories,
@@ -56,6 +57,23 @@ describe("resolveReportResult", () => {
     expect(result).toMatchObject({ availability: "PARTIAL", score: { overall: 40 }, coverage: { ratio: 4 / 6 } });
     expect(result.categoryScores.PERFORMANCE).toBeNull();
     expect(result.categoryScores.SECURITY).toBe(40);
+  });
+
+  it("withholds a perfect SEO category when file probes are unavailable", () => {
+    const summary = currentSummary({
+      seoFiles: { robots: { status: "UNAVAILABLE" }, sitemap: { status: "VERIFIED" } },
+      resultCoverage: {
+        ...currentSummary().resultCoverage,
+        coveredCategories: ["SECURITY", "ACCESSIBILITY", "RESILIENCE"],
+        unavailableCategories: ["PERFORMANCE", "UX", "SEO"],
+        ratio: 3 / 6,
+        confidence: 3 / 6,
+        measurementIds: ["category:SECURITY", "category:ACCESSIBILITY", "category:RESILIENCE"],
+      },
+    });
+    const result = resolveReportResult({ summary, findings: [], runStatus: "SUCCEEDED" });
+    expect(result).toMatchObject({ availability: "PARTIAL", score: { overall: 100 }, coverage: { ratio: 3 / 6 } });
+    expect(result.categoryScores.SEO).toBeNull();
   });
 
   it.each([
