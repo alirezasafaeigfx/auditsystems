@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { prisma } from "../../../../../lib/db";
 import { isReportShareAccessible } from "../../../../../lib/reportShare";
+import { hasPassword } from "../../../../../lib/reportShare";
+import { cookies } from "next/headers";
+import { ReportAccessChallenge } from "../../../../../components/ReportAccessChallenge";
+import { getReportAccessCookieName, verifyReportAccessCredential } from "../../../../../lib/report-access";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 function severityClass(severity: string): string {
   const s = severity.toUpperCase();
@@ -31,6 +38,14 @@ export default async function ReportPageEn({ params }: { params: Promise<{ token
         </section>
       </main>
     );
+  }
+
+  if (hasPassword(share)) {
+    const cookieStore = await cookies();
+    const credential = cookieStore.get(getReportAccessCookieName(token))?.value;
+    if (!verifyReportAccessCredential(credential, token)) {
+      return <ReportAccessChallenge token={token} locale="en" />;
+    }
   }
 
   return (

@@ -11,6 +11,10 @@ const mocks = vi.hoisted(() => ({
   observeApiRequest: vi.fn(),
   createRequestId: vi.fn(() => "request-report-1"),
   logEvent: vi.fn(),
+  createReportAccessCredential: vi.fn(() => "signed-report-credential"),
+  readReportAccessCredential: vi.fn<(cookieHeader: string | null, token: string) => string | null>(() => null),
+  serializeReportAccessCookie: vi.fn(() => "report_access_fixture=signed-report-credential; HttpOnly; SameSite=Strict; Path=/; Max-Age=900"),
+  verifyReportAccessCredential: vi.fn(() => false),
 }));
 
 vi.mock("../../../../lib/db", () => ({
@@ -47,6 +51,13 @@ vi.mock("../../../../lib/observability", () => ({
   },
 }));
 
+vi.mock("../../../../lib/report-access", () => ({
+  createReportAccessCredential: mocks.createReportAccessCredential,
+  readReportAccessCredential: mocks.readReportAccessCredential,
+  serializeReportAccessCookie: mocks.serializeReportAccessCookie,
+  verifyReportAccessCredential: mocks.verifyReportAccessCredential,
+}));
+
 function makeShare(overrides: Record<string, unknown> = {}) {
   return {
     id: "share-1",
@@ -81,6 +92,7 @@ describe("GET /api/reports/[token]", () => {
       backend: "local-redis",
     });
     mocks.verifyPassword.mockResolvedValue(true);
+    mocks.verifyReportAccessCredential.mockReturnValue(false);
   });
 
   it("returns 404 for missing share without logging the raw token", async () => {
@@ -126,6 +138,21 @@ describe("GET /api/reports/[token]", () => {
     expect((await response.json()).error).toBe("PASSWORD_REQUIRED");
     expect(mocks.verifyPassword).not.toHaveBeenCalled();
   });
+
+  it("returns protected report data only with a valid report-bound session", async () => {
+    mocks.findUnique.mockResolvedValue(makeShare({ passwordHash: "hashed-pw" }));
+    mocks.readReportAccessCredential.mockReturnValue("signed-report-credential");
+    mocks.verifyReportAccessCredential.mockReturnValue(true);
+    const { GET } = await import("./route");
+    const response = await GET(
+      new Request("https://test/api/reports/test-token", { headers: { cookie: "report_access_fixture=signed-report-credential" } }),
+      { params: Promise.resolve({ token: "test-token" }) },
+    );
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).run.id).toBe("run-1");
+    expect(mocks.verifyReportAccessCredential).toHaveBeenCalledWith("signed-report-credential", "test-token");
+  });
 });
 
 describe("POST /api/reports/[token]", () => {
@@ -141,6 +168,7 @@ describe("POST /api/reports/[token]", () => {
       backend: "local-redis",
     });
     mocks.verifyPassword.mockImplementation(async (password: string) => password === "correct-password");
+    mocks.createReportAccessCredential.mockReturnValue("signed-report-credential");
   });
 
   it("returns report data for an unpassworded share without consuming the password limiter", async () => {
@@ -245,5 +273,25 @@ describe("POST /api/reports/[token]", () => {
         lastViewedAt: expect.any(Date),
       },
     });
+    expect(response.headers.get("set-cookie")).toContain("report_access_fixture=signed-report-credential");
+    expect(response.headers.get("set-cookie")).not.toContain("test-token");
+  });
+
+  it("fails closed without incrementing a view when session signing is unavailable", async () => {
+    mocks.findUnique.mockResolvedValue(makeShare({ passwordHash: "hashed-pw" }));
+    mocks.createReportAccessCredential.mockImplementationOnce(() => { throw new Error("missing secret"); });
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("https://test/api/reports/test-token", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password: "correct-password" }),
+      }),
+      { params: Promise.resolve({ token: "test-token" }) },
+    );
+
+    expect(response.status).toBe(503);
+    expect((await response.json()).error).toBe("ACCESS_UNAVAILABLE");
+    expect(mocks.update).not.toHaveBeenCalled();
   });
 });

@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { PaymentProvider } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
-import { createDownloadToken } from "../../../../lib/downloadToken";
+import { createDownloadToken, serializeDownloadTokenCookie } from "../../../../lib/downloadToken";
 import { observeApiRequest } from "../../../../lib/metrics";
 import { createRequestId, logEvent, respondJson } from "../../../../lib/observability";
 import {
@@ -32,9 +32,9 @@ function resolveLocale(locale: string | null | undefined): "fa" | "en" {
   return locale.toLowerCase().startsWith("en") ? "en" : "fa";
 }
 
-function buildSuccessPath(locale: "fa" | "en", token: string, orderId: string, downloadToken: string): string {
+function buildSuccessPath(locale: "fa" | "en", token: string, orderId: string): string {
   const prefix = locale === "en" ? "/en" : "";
-  return `${prefix}/audit/r/${token}/success?orderId=${encodeURIComponent(orderId)}&dl=${encodeURIComponent(downloadToken)}`;
+  return `${prefix}/audit/r/${token}/success?orderId=${encodeURIComponent(orderId)}`;
 }
 
 function buildFailedPath(locale: "fa" | "en", reason: string): string {
@@ -120,12 +120,15 @@ async function respondForTerminalOrder(
   }
 
   const download = createDownloadToken({ runId: order.runId, orderId: order.id, email: order.email });
-  const downloadUrl = `/api/pdf/${shareToken}?dl=${encodeURIComponent(download)}`;
-  const successUrl = buildSuccessPath(locale, shareToken, order.id, download);
+  const downloadUrl = `/api/pdf/${shareToken}`;
+  const successUrl = buildSuccessPath(locale, shareToken, order.id);
+  const downloadCookie = serializeDownloadTokenCookie(shareToken, download);
   if (shouldRedirectBrowser(request)) {
-    return redirectWithRequestId(requestId, request, successUrl);
+    const response = redirectWithRequestId(requestId, request, successUrl);
+    response.headers.append("Set-Cookie", downloadCookie);
+    return response;
   }
-  return respondJson(
+  const response = respondJson(
     {
       ok: true,
       orderId: order.id,
@@ -138,6 +141,8 @@ async function respondForTerminalOrder(
     requestId,
     { headers: { "Cache-Control": "no-store" } },
   );
+  response.headers.append("Set-Cookie", downloadCookie);
+  return response;
 }
 
 async function claimWithBoundedPolling(input: {

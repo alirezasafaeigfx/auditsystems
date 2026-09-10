@@ -9,6 +9,12 @@ import {
   isReportShareAccessible,
   verifyPassword,
 } from "../../../../lib/reportShare";
+import {
+  createReportAccessCredential,
+  readReportAccessCredential,
+  serializeReportAccessCookie,
+  verifyReportAccessCredential,
+} from "../../../../lib/report-access";
 
 const PASSWORD_ATTEMPT_LIMIT = 10;
 const PASSWORD_ATTEMPT_WINDOW_SEC = 15 * 60;
@@ -53,7 +59,7 @@ function buildReportResponse(share: Awaited<ReturnType<typeof fetchShareWithFind
   };
 }
 
-export async function GET(_request: Request, context: { params: Promise<{ token: string }> }) {
+export async function GET(request: Request, context: { params: Promise<{ token: string }> }) {
   const requestId = createRequestId();
   const startedAt = Date.now();
   let statusCode = 200;
@@ -68,7 +74,13 @@ export async function GET(_request: Request, context: { params: Promise<{ token:
       return respondJson({ error: "NOT_FOUND", requestId }, requestId, { status: 404, headers: { "Cache-Control": "no-store" } });
     }
 
-    if (hasPassword(share)) {
+    if (
+      hasPassword(share)
+      && !verifyReportAccessCredential(
+        readReportAccessCredential(request.headers.get("cookie"), token),
+        token,
+      )
+    ) {
       statusCode = 401;
       return respondJson(
         { error: "PASSWORD_REQUIRED", requestId },
@@ -104,6 +116,7 @@ export async function POST(request: Request, context: { params: Promise<{ token:
     const { token } = await context.params;
     const digest = tokenDigest(token);
     const share = await fetchShareWithFindings(token);
+    let accessCookie: string | null = null;
 
     if (!share || !isReportShareAccessible(share)) {
       statusCode = 404;
@@ -165,6 +178,18 @@ export async function POST(request: Request, context: { params: Promise<{ token:
           { status: 401, headers: { "Cache-Control": "no-store" } },
         );
       }
+
+      try {
+        const credential = createReportAccessCredential(token);
+        accessCookie = serializeReportAccessCookie(token, credential);
+      } catch {
+        statusCode = 503;
+        return respondJson(
+          { error: "ACCESS_UNAVAILABLE", requestId },
+          requestId,
+          { status: 503, headers: { "Cache-Control": "no-store" } },
+        );
+      }
     }
 
     await prisma.reportShare.update({
@@ -176,11 +201,13 @@ export async function POST(request: Request, context: { params: Promise<{ token:
     });
 
     logEvent("info", "report_fetched", { requestId, runId: share.run.id, durationMs: Date.now() - startedAt });
-    return respondJson(
+    const response = respondJson(
       buildReportResponse(share, requestId),
       requestId,
       { headers: { "Cache-Control": "no-store" } },
     );
+    if (accessCookie) response.headers.append("Set-Cookie", accessCookie);
+    return response;
   } finally {
     observeApiRequest("/api/reports/[token]", statusCode, Date.now() - startedAt);
   }

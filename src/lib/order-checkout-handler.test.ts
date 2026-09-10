@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   consumeDistributedRateLimit: vi.fn(),
   isReportShareAccessible: vi.fn(() => true),
   createDownloadToken: vi.fn(() => "download-token"),
+  serializeDownloadTokenCookie: vi.fn(() => "report_download_fixture=download-token; HttpOnly; SameSite=Strict; Path=/"),
   observeApiRequest: vi.fn(),
   logEvent: vi.fn(),
 }));
@@ -40,7 +41,10 @@ vi.mock("./payments", () => ({
 }));
 vi.mock("./rateLimit", () => ({ consumeDistributedRateLimit: mocks.consumeDistributedRateLimit }));
 vi.mock("./reportShare", () => ({ isReportShareAccessible: mocks.isReportShareAccessible }));
-vi.mock("./downloadToken", () => ({ createDownloadToken: mocks.createDownloadToken }));
+vi.mock("./downloadToken", () => ({
+  createDownloadToken: mocks.createDownloadToken,
+  serializeDownloadTokenCookie: mocks.serializeDownloadTokenCookie,
+}));
 vi.mock("./metrics", () => ({ observeApiRequest: mocks.observeApiRequest }));
 vi.mock("./observability", () => ({
   createRequestId: () => "request-order-1",

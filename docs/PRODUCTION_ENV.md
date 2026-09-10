@@ -8,6 +8,7 @@
 - `APP_BASE_URL_STRICT=true`
 - `IP_HASH_SALT`: random secret (>=32 chars)
 - `DOWNLOAD_TOKEN_SECRET`: random secret (>=32 chars)
+- `REPORT_ACCESS_SECRET`: stable random secret (>=32 UTF-8 bytes); rotating it revokes every protected-report access cookie
 - `PAYMENT_PROVIDER_DEFAULT`: `ZARINPAL` یا provider مورد تایید
 - `UPSTASH_REDIS_REST_URL`
 - `UPSTASH_REDIS_REST_TOKEN`

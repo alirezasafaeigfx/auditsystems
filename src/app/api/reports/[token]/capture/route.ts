@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../../../../lib/db";
 import { isReportShareAccessible } from "../../../../../lib/reportShare";
+import { hasPassword } from "../../../../../lib/reportShare";
+import { getReportAccessCookieName, verifyReportAccessCredential } from "../../../../../lib/report-access";
 
 export async function POST(
   request: NextRequest,
@@ -14,7 +16,14 @@ export async function POST(
   });
 
   if (!share || !isReportShareAccessible(share)) {
-    return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
+    return NextResponse.json({ error: "NOT_FOUND" }, { status: 404, headers: { "Cache-Control": "no-store" } });
+  }
+
+  if (
+    hasPassword(share)
+    && !verifyReportAccessCredential(request.cookies.get(getReportAccessCookieName(token))?.value, token)
+  ) {
+    return NextResponse.json({ error: "NOT_FOUND" }, { status: 404, headers: { "Cache-Control": "no-store" } });
   }
 
   if (share.run.status !== "SUCCEEDED") {

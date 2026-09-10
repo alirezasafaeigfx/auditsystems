@@ -117,3 +117,18 @@
 | Evidence durability | PARTIAL | GitHub issue/PR and committed ledger are durable; Actions run `34387931972` and its artifact are expiring evidence, while live DNS/HTTP observations are timestamped snapshots. |
 
 The four `pattern not found` failures in run `34387931972` were repository diagnostic false positives: the raw hosted log records `rg: command not found`, while every expected literal exists at the exact candidate SHA. The production A-record expectation dated to February 2026 and was stale against July governance plus three fresh public resolvers. The remaining staging and active-runtime questions require the authorization and evidence listed in issue #12.
+
+## Follow-up — AU-01 Report Access Enforcement (2026-09-09)
+
+| Boundary | Verdict | Evidence |
+|---|---|---|
+| Repository implementation | CORRECTION_IN_REVIEW | Synthetic tests proved that password-protected report HTML/RSC and comparisons rendered protected fields before authorization. A report-bound, expiring, HttpOnly HMAC credential now gates HTML/RSC, report API, capture, and comparison consumers; PDF delivery accepts that credential or the existing paid download credential. |
+| Access semantics | PASS_SYNTHETIC | Public legacy reports remain readable. Absent, malformed, expired, revoked, and cross-report credentials fail closed. Protected report body, findings, scores, customer URL, comparison data, capture metadata, and PDF bytes are absent from unauthorized responses. |
+| Credential transport | PASS_SYNTHETIC | Passwords remain request-body-only. Newly issued access and paid-download credentials are HttpOnly, SameSite=Strict cookies and are not placed in success URLs, redirect locations, or rendered links. The legacy direct PDF `dl` input remains accepted for backward compatibility. |
+| Cache boundary | PASS_STATIC_AND_UNIT | Protected server-rendered routes are force-dynamic with zero revalidation; unauthorized APIs and generated PDF responses use private/no-store semantics. Shared-cache/CDN behavior has not been asserted against Production. |
+| Dependency advisories | PARTIAL | Next.js is updated from 16.2.10 to 16.3.3 and Cheerio's Undici is overridden to 7.29.0. One high-severity `deepmerge-ts` advisory remains in the Prisma 6 configuration-tool chain; the available patched path requires a major Prisma upgrade and is outside this bounded task. |
+| Browser/runtime acceptance | UNAVAILABLE | No disposable PostgreSQL `DATABASE_URL`, Docker, Podman, or local PostgreSQL executable was available, so a built application backed by synthetic database rows could not be exercised in a browser. Route, RSC-render, API, comparison, capture, and PDF handlers were exercised directly with disposable fixtures. |
+| Production | UNVERIFIED | No customer data, real customer URL/token, Production response, or active cache was used as acceptance evidence. |
+| Deployment | NOT_PERFORMED | No deploy, migration, DNS, Nginx, firewall, VPS, staging, runner, secret, database, payment, or live-service mutation occurred. |
+
+The AU-01 candidate is based on `e6165a825376e52cb61447e67fd734dd2d67ced8`. Final PR head, hosted checks, review disposition, and merge SHA must be recorded from GitHub before this entry is treated as merged evidence.
