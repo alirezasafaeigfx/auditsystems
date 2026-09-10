@@ -138,6 +138,7 @@ export function resolveReportResult(input: { summary: unknown; findings: Finding
     || covered.some((category) => missing.includes(category))
     || new Set([...covered, ...missing]).size !== RESULT_CATEGORIES.length
     || Math.abs(rawCoverage.ratio - covered.length / RESULT_CATEGORIES.length) > 0.000001
+    || Math.abs(rawCoverage.confidence - rawCoverage.ratio) > 0.000001
     || covered.length !== expectedCoveredCategories.length
     || expectedCoveredCategories.some((category) => !covered.includes(category))
   ) return unavailable(input.runStatus, "INVALID", "Measurement coverage is malformed or contradictory.");

@@ -15,7 +15,7 @@ import {
   serializeReportAccessCookie,
   verifyReportAccessCredential,
 } from "../../../../lib/report-access";
-import { resolveReportResult } from "../../../../lib/report-result";
+import { resolveReportResult, RESULT_COVERAGE_SCHEMA } from "../../../../lib/report-result";
 
 const PASSWORD_ATTEMPT_LIMIT = 10;
 const PASSWORD_ATTEMPT_WINDOW_SEC = 15 * 60;
@@ -54,7 +54,11 @@ function buildReportResponse(share: Awaited<ReturnType<typeof fetchShareWithFind
     grade: result.score?.grade ?? null,
     categoryScores: result.categoryScores,
     severityCounts: result.score?.severityCounts ?? null,
-    resultCoverage: result.coverage,
+    resultCoverage: result.availability === "LEGACY" ? null : {
+      schema: RESULT_COVERAGE_SCHEMA,
+      ...result.coverage,
+      measurementIds: result.coverage.coveredCategories.map((category) => `category:${category}`),
+    },
     resultAvailability: result.availability,
   };
   return {
