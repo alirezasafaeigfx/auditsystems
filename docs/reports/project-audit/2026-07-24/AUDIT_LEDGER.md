@@ -147,3 +147,16 @@ The AU-01 candidate is based on `e6165a825376e52cb61447e67fd734dd2d67ced8`. Fina
 | Deployment | NOT_PERFORMED | No deployment, migration, DNS, Nginx, firewall, VPS, staging, runner, database, payment, or live-service mutation occurred. |
 
 AU-02 is based on `e8c9f03d72acc1cdb0ebecf12c5c9fe1cc90cdac`. The exact PR head, hosted results, independent review disposition, and merge SHA remain GitHub integration evidence and must be recorded separately.
+
+## Follow-up — AU-11 Disposable Audit Flow (2026-09-10)
+
+| Boundary | Verdict | Evidence |
+|---|---|---|
+| Repository implementation | CANDIDATE | PR [#17](https://github.com/alirezasafaeigfx/auditsystems/pull/17) extracts the daemon's existing lease lifecycle into a reusable worker cycle without changing queue ownership, heartbeat, timeout, retry, or terminal-failure policy. |
+| End-to-end path | PASS_HOSTED_DISPOSABLE | Hosted PostgreSQL run [34513738299](https://github.com/alirezasafaeigfx/auditsystems/actions/runs/34513738299) on candidate `2ae9e981b923933dfad334d8b3b090d4fc3cf6b0` passed real route submission, transactional enqueue, worker execution, persistence, duplicate idempotency, retry to terminal failure, protected report API, and paid PDF bytes against a loopback synthetic HTTP fixture. |
+| AU-01 access | PASS_HOSTED_DISPOSABLE | The protected synthetic share returned `401` with no fixture report body before its report-bound HMAC credential, then returned `200` with `Cache-Control: no-store`; PDF required a synthetic run-bound paid download credential. |
+| AU-02 semantics | PASS_HOSTED_DISPOSABLE | A successful fixture with unavailable PageSpeed evidence persisted and delivered `PARTIAL` coverage rather than complete coverage. |
+| Mutation evidence | PASS | Deliberately replacing worker execution with a `0` return on isolated SHA `0e703cb04b4a2b198b40554a019ff798c7feb599` made hosted run [34513989286](https://github.com/alirezasafaeigfx/auditsystems/actions/runs/34513989286) fail both completion assertions. The isolated remote mutation branch was deleted; PR #17 remains on the restored candidate SHA. |
+| Local limitations | PARTIAL | LOCAL_PC has no Docker, Podman, PostgreSQL, or browser database environment. The opt-in PostgreSQL tests skip locally and execute only in the ephemeral hosted service; ordinary lint/typecheck/unit/build gates remain local evidence. |
+| Production and deployment | UNVERIFIED / NOT_PERFORMED | No customer URL, report, token, Production row, deployment, migration outside the ephemeral hosted database, or infrastructure mutation was used. |
+| Dependency advisory | OPEN_SEPARATE | Issue [#15](https://github.com/alirezasafaeigfx/auditsystems/issues/15) remains a non-suppressed High Prisma configuration-tooling dependency blocker. |
