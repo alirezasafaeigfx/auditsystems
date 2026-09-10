@@ -103,6 +103,18 @@ export function resolveReportResult(input: { summary: unknown; findings: Finding
   if (!persisted.compatible || persisted.policyVersion !== "worst-severity-v2") {
     return unavailable(input.runStatus, "INVALID", "The scoring policy is unsupported.");
   }
+  if (summary.resultCoverage === undefined) {
+    return {
+      processingStatus: input.runStatus,
+      availability: "LEGACY",
+      score: calculated,
+      categoryScores: { ...calculated.categories },
+      coverage: { ratio: null, confidence: null, freshness: "UNKNOWN", coveredCategories: [], unavailableCategories: [...RESULT_CATEGORIES], limitations: ["Historical report: measurement coverage was not recorded."] },
+      withheldReason: null,
+      policyVersion: persisted.policyVersion,
+      comparable: false,
+    };
+  }
   const rawCoverage = record(summary.resultCoverage);
   if (!rawCoverage || rawCoverage.schema !== RESULT_COVERAGE_SCHEMA) return unavailable(input.runStatus, "INVALID", "Current measurement coverage is missing or unsupported.");
   const covered = categoryList(rawCoverage.coveredCategories);

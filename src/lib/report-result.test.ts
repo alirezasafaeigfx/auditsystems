@@ -61,13 +61,18 @@ describe("resolveReportResult", () => {
   it.each([
     ["terminal failure", currentSummary(), "FAILED"],
     ["stale evidence", currentSummary({ resultCoverage: { ...currentSummary().resultCoverage, freshness: "STALE_BLOCKED" } }), "SUCCEEDED"],
-    ["missing coverage", currentSummary({ resultCoverage: undefined }), "SUCCEEDED"],
     ["unsupported coverage schema", currentSummary({ resultCoverage: { ...currentSummary().resultCoverage, schema: "future-v2" } }), "SUCCEEDED"],
     ["malformed ratio", currentSummary({ resultCoverage: { ...currentSummary().resultCoverage, ratio: 2 } }), "SUCCEEDED"],
     ["duplicate measurements", currentSummary({ resultCoverage: { ...currentSummary().resultCoverage, measurementIds: ["duplicate", "duplicate"] } }), "SUCCEEDED"],
     ["contradictory measurement identities", currentSummary({ resultCoverage: { ...currentSummary().resultCoverage, measurementIds: ["category:SEO"] } }), "SUCCEEDED"],
   ])("withholds a numeric score for %s", (_name, summary, runStatus) => {
     expect(resolveReportResult({ summary, findings: [], runStatus: runStatus as string }).score).toBeNull();
+  });
+
+  it("preserves a real historical v1 summary that predates resultCoverage", () => {
+    expect(resolveReportResult({ summary: currentSummary({ resultCoverage: undefined }), findings: [], runStatus: "SUCCEEDED" })).toMatchObject({
+      availability: "LEGACY", score: { overall: 100 }, coverage: { ratio: null }, comparable: false,
+    });
   });
 
   it("fails closed when current persisted aggregates contradict the measurements", () => {
