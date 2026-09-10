@@ -14,7 +14,7 @@ The existing worst-severity score weights, thresholds, grade boundaries, and rou
 - availability (`AVAILABLE`, `PARTIAL`, `UNAVAILABLE`, `LEGACY`, or `INVALID`);
 - confidence and an explicit withheld reason.
 
-Current summaries produced by the worker persist a versioned `resultCoverage` object. The five HTML-derived categories are covered only after a successful bounded fetch/parser/rule pass. Performance coverage comes from the validated performance evidence bundle; because no approved performance scoring policy exists, the performance category never receives a synthetic `100`.
+Current summaries produced by the worker persist a versioned `resultCoverage` object. SEO, security, accessibility, and resilience are covered only after a successful bounded fetch/parser/rule pass. Performance evidence is diagnostic and has no approved numeric scoring policy, while no runtime UX measurement policy exists; both categories therefore remain unavailable and never receive a synthetic `100`.
 
 Legacy summaries remain readable but are labeled `LEGACY` with unknown coverage. A complete internally consistent legacy numeric score may be displayed only with that limitation. Missing or malformed current coverage, unsupported schema/policy versions, contradictory stored aggregates, impossible ratios, duplicate measurement identities, or non-terminal processing states with a score cause the numeric result to be withheld.
 

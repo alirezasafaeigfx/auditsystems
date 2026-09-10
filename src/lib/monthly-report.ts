@@ -1,6 +1,7 @@
 import { prisma } from "./db";
 import { calculateScore } from "./scoring";
 import { CURRENT_SCORING_POLICY_VERSION } from "./persisted-score";
+import { resolveReportResult, RESULT_CATEGORIES } from "./report-result";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 type MonthlyReportData = {
@@ -11,11 +12,14 @@ type MonthlyReportData = {
   scoringPolicyVersion: string;
   totalAudits: number;
   successfulAudits: number;
-  averageScore: number;
+  comparableAudits: number;
+  partialAudits: number;
+  unavailableAudits: number;
+  averageScore: number | null;
   scoreBreakdown: {
-    overall: number;
-    grade: string;
-    categories: Record<string, number>;
+    overall: number | null;
+    grade: string | null;
+    categories: Record<string, number | null>;
     severityCounts: Record<string, number>;
     totalFindings: number;
   };
@@ -71,6 +75,8 @@ export async function generateMonthlyReport(
   const issueMap = new Map<string, { code: string; title: string; severity: string; count: number }>();
   const projectMap = new Map<string, { projectId: string; projectName: string; auditCount: number; totalScore: number }>();
   const auditScores: ReturnType<typeof calculateScore>[] = [];
+  let partialAudits = 0;
+  let unavailableAudits = 0;
 
   for (const audit of audits) {
     const findings = audit.findings.map((f) => ({
@@ -78,26 +84,22 @@ export async function generateMonthlyReport(
       severity: f.severity
     }));
 
-    const score = calculateScore(findings as { category: never; severity: never }[]);
-    totalScore += score.overall;
-    auditScores.push(score);
+    const result = resolveReportResult({ summary: audit.summary, findings: findings as { category: never; severity: never }[], runStatus: audit.status });
+    if (result.availability === "PARTIAL") partialAudits++;
     allFindings.push(...findings);
-
     for (const finding of audit.findings) {
       const key = finding.code;
       const existing = issueMap.get(key);
-      if (existing) {
-        existing.count++;
-      } else {
-        issueMap.set(key, {
-          code: finding.code,
-          title: finding.title,
-          severity: finding.severity,
-          count: 1
-        });
-      }
+      if (existing) existing.count++;
+      else issueMap.set(key, { code: finding.code, title: finding.title, severity: finding.severity, count: 1 });
     }
-
+    if (!result.score || result.availability !== "AVAILABLE") {
+      if (result.availability !== "PARTIAL") unavailableAudits++;
+      continue;
+    }
+    const score = result.score;
+    totalScore += score.overall;
+    auditScores.push(score);
     if (audit.project) {
       const projectKey = audit.project.id;
       const existing = projectMap.get(projectKey);
@@ -115,10 +117,11 @@ export async function generateMonthlyReport(
     }
   }
 
-  const averageScore = successfulAudits > 0 ? Math.round(totalScore / successfulAudits) : 0;
+  const comparableAudits = auditScores.length;
+  const averageScore = comparableAudits > 0 ? Math.round(totalScore / comparableAudits) : null;
   const calculatedBreakdown = calculateScore(allFindings as { category: never; severity: never }[]);
   const scoreBreakdown = auditScores.length === 0
-    ? calculatedBreakdown
+    ? { ...calculatedBreakdown, overall: null, grade: null, categories: Object.fromEntries(RESULT_CATEGORIES.map((category) => [category, null])) }
     : {
       ...calculatedBreakdown,
       overall: Math.round(totalScore / auditScores.length),
@@ -159,15 +162,16 @@ export async function generateMonthlyReport(
 
   const categoryScores: Record<string, { current: number; previous: number }> = {};
   for (const cat of Object.keys(scoreBreakdown.categories)) {
-    const current = scoreBreakdown.categories[cat as keyof typeof scoreBreakdown.categories] ?? 0;
-    const previousScores = previousAudits.map((audit) => calculateScore(
-      audit.findings.map((f) => ({ category: f.category, severity: f.severity })) as { category: never; severity: never }[],
-    ));
+    const current = scoreBreakdown.categories[cat as keyof typeof scoreBreakdown.categories];
+    const previousScores = previousAudits.map((audit) => resolveReportResult({
+      summary: audit.summary,
+      findings: audit.findings.map((f) => ({ category: f.category, severity: f.severity })) as { category: never; severity: never }[],
+      runStatus: audit.status,
+    })).filter((result) => result.availability === "AVAILABLE" && result.score).map((result) => result.score!);
+    if (current === null || previousScores.length === 0) continue;
     categoryScores[cat] = {
       current,
-      previous: previousScores.length > 0
-        ? Math.round(previousScores.reduce((sum, score) => sum + score.categories[cat as keyof typeof score.categories], 0) / previousScores.length)
-        : current
+      previous: Math.round(previousScores.reduce((sum, score) => sum + score.categories[cat as keyof typeof score.categories], 0) / previousScores.length)
     };
   }
 
@@ -187,11 +191,14 @@ export async function generateMonthlyReport(
     scoringPolicyVersion: CURRENT_SCORING_POLICY_VERSION,
     totalAudits,
     successfulAudits,
+    comparableAudits,
+    partialAudits,
+    unavailableAudits,
     averageScore,
     scoreBreakdown: {
       overall: scoreBreakdown.overall,
       grade: scoreBreakdown.grade,
-      categories: scoreBreakdown.categories as Record<string, number>,
+      categories: scoreBreakdown.categories as Record<string, number | null>,
       severityCounts: scoreBreakdown.severityCounts as Record<string, number>,
       totalFindings: scoreBreakdown.totalFindings
     },
@@ -221,7 +228,10 @@ function generateMarkdown(data: MonthlyReportData): string {
     "",
     `- **Total Audits:** ${data.totalAudits}`,
     `- **Successful Audits:** ${data.successfulAudits}`,
-    `- **Average Score:** ${data.averageScore}/100 (${data.scoreBreakdown.grade})`,
+    `- **Comparable Audits:** ${data.comparableAudits}`,
+    `- **Partial Audits:** ${data.partialAudits}`,
+    `- **Unavailable Audits:** ${data.unavailableAudits}`,
+    `- **Average Score:** ${data.averageScore === null ? "unavailable" : `${data.averageScore}/100 (${data.scoreBreakdown.grade})`}`,
     `- **Scoring Policy:** ${data.scoringPolicyVersion}`,
     "",
     "## Score Breakdown",
@@ -231,7 +241,7 @@ function generateMarkdown(data: MonthlyReportData): string {
   ];
 
   for (const [cat, score] of Object.entries(data.scoreBreakdown.categories)) {
-    lines.push(`| ${cat} | ${score}/100 |`);
+    lines.push(`| ${cat} | ${score === null ? "unavailable" : `${score}/100`} |`);
   }
 
   lines.push("");
@@ -362,10 +372,10 @@ async function generatePdf(data: MonthlyReportData): Promise<Uint8Array> {
   y -= 24;
 
   drawRect(40, y - 60, 160, 80, [0.96, 0.96, 0.96]);
-  const gradeColor = getGradeColor(data.scoreBreakdown.grade);
+  const gradeColor = getGradeColor(data.scoreBreakdown.grade ?? "UNAVAILABLE");
   drawRect(40, y - 60, 160, 4, gradeColor);
 
-  page.drawText(String(data.averageScore), {
+  page.drawText(data.averageScore === null ? "N/A" : String(data.averageScore), {
     x: 90,
     y: y - 35,
     size: 32,
@@ -379,7 +389,7 @@ async function generatePdf(data: MonthlyReportData): Promise<Uint8Array> {
     font,
     color: rgb(0.4, 0.4, 0.4)
   });
-  page.drawText(data.scoreBreakdown.grade.replace("_", " "), {
+  page.drawText((data.scoreBreakdown.grade ?? "UNAVAILABLE").replace("_", " "), {
     x: 65,
     y: y - 55,
     size: 12,
@@ -403,6 +413,11 @@ async function generatePdf(data: MonthlyReportData): Promise<Uint8Array> {
 
   for (const [cat, catScore] of Object.entries(data.scoreBreakdown.categories)) {
     if (y < 60) newPage();
+
+    if (catScore === null) {
+      draw(`${cat}: Unavailable`, { size: 10, color: [0.4, 0.4, 0.4] });
+      continue;
+    }
 
     const barWidth = (catScore / 100) * 200;
     const barColor: [number, number, number] = catScore >= 80 ? [0.13, 0.55, 0.13] : catScore >= 60 ? [0.85, 0.55, 0.05] : [0.8, 0.1, 0.1];

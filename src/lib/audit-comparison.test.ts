@@ -22,9 +22,9 @@ function makeRun(findings: ReturnType<typeof makeFinding>[]): AuditRun {
       severityCounts: score.severityCounts,
       resultCoverage: {
         schema: "asdev.audit.result-coverage.v1",
-        coveredCategories: ["SEO", "PERFORMANCE", "SECURITY", "UX", "ACCESSIBILITY", "RESILIENCE"],
-        unavailableCategories: [], ratio: 1, confidence: 1, freshness: "FRESH",
-        measurementIds: ["category:SEO", "category:PERFORMANCE", "category:SECURITY", "category:UX", "category:ACCESSIBILITY", "category:RESILIENCE"],
+        coveredCategories: ["SEO", "SECURITY", "ACCESSIBILITY", "RESILIENCE"],
+        unavailableCategories: ["PERFORMANCE", "UX"], ratio: 4 / 6, confidence: 4 / 6, freshness: "FRESH",
+        measurementIds: ["category:SEO", "category:SECURITY", "category:ACCESSIBILITY", "category:RESILIENCE"],
         limitations: [],
       },
     },
@@ -144,7 +144,7 @@ describe("audit-comparison", () => {
     expect(result.overall.direction).toBe("unavailable");
   });
 
-  it("does not calculate deltas between complete and partial results", () => {
+  it("does not calculate deltas when coverage records contradict the current policy", () => {
     const complete = makeRun([]);
     const partial = makeRun([]);
     partial.summary!.resultCoverage = {
@@ -157,13 +157,15 @@ describe("audit-comparison", () => {
 
     const result = compareAuditRuns(complete, partial);
     expect(result.overall).toMatchObject({ delta: null, direction: "unavailable" });
-    expect(result.availabilityAfter).toBe("PARTIAL");
+    expect(result.availabilityAfter).toBe("INVALID");
   });
 
   it("withholds comparison scores for a failed result", () => {
+    const complete = makeRun([makeFinding("F1", "SECURITY", "HIGH")]);
     const failed = { ...makeRun([]), status: "FAILED" };
-    const result = compareAuditRuns(makeRun([]), failed);
+    const result = compareAuditRuns(complete, failed);
     expect(result.overall.after).toBeNull();
     expect(result.overall.direction).toBe("unavailable");
+    expect(result.resolvedIssues).toEqual([]);
   });
 });

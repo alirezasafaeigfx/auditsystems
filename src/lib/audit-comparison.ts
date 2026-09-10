@@ -43,6 +43,8 @@ export type AuditComparison = {
   categories: CategoryDelta[];
   availabilityBefore: ResultAvailability;
   availabilityAfter: ResultAvailability;
+  coverageBefore: number | null;
+  coverageAfter: number | null;
 };
 
 function direction(delta: number): "improved" | "regressed" | "stable" {
@@ -56,23 +58,28 @@ export function compareAuditRuns(runA: AuditRun, runB: AuditRun): AuditCompariso
   const resolvedB = resolveReportResult({ summary: runB.summary, findings: runB.findings, runStatus: runB.status ?? "SUCCEEDED" });
   const scoreABefore = resolvedA.score?.overall ?? null;
   const scoreBAfter = resolvedB.score?.overall ?? null;
-  const comparable = resolvedA.comparable && resolvedB.comparable && resolvedA.policyVersion === resolvedB.policyVersion;
+  const comparable = resolvedA.comparable
+    && resolvedB.comparable
+    && resolvedA.policyVersion === resolvedB.policyVersion
+    && resolvedA.availability === resolvedB.availability
+    && resolvedA.coverage.ratio === resolvedB.coverage.ratio
+    && resolvedA.coverage.coveredCategories.join("|") === resolvedB.coverage.coveredCategories.join("|");
   const scoreDelta = comparable && scoreABefore !== null && scoreBAfter !== null ? scoreBAfter - scoreABefore : null;
 
   const codesA = new Set(runA.findings.map((f) => f.code));
   const codesB = new Set(runB.findings.map((f) => f.code));
 
-  const newIssues: IssueDelta[] = runB.findings
+  const newIssues: IssueDelta[] = comparable ? runB.findings
     .filter((f) => !codesA.has(f.code))
-    .map((f) => ({ code: f.code, title: f.title, category: f.category, severity: f.severity }));
+    .map((f) => ({ code: f.code, title: f.title, category: f.category, severity: f.severity })) : [];
 
-  const resolvedIssues: IssueDelta[] = runA.findings
+  const resolvedIssues: IssueDelta[] = comparable ? runA.findings
     .filter((f) => !codesB.has(f.code))
-    .map((f) => ({ code: f.code, title: f.title, category: f.category, severity: f.severity }));
+    .map((f) => ({ code: f.code, title: f.title, category: f.category, severity: f.severity })) : [];
 
-  const unchangedIssues: IssueDelta[] = runA.findings
+  const unchangedIssues: IssueDelta[] = comparable ? runA.findings
     .filter((f) => codesB.has(f.code))
-    .map((f) => ({ code: f.code, title: f.title, category: f.category, severity: f.severity }));
+    .map((f) => ({ code: f.code, title: f.title, category: f.category, severity: f.severity })) : [];
 
   const categoryMapA = resolvedA.categoryScores;
   const categoryMapB = resolvedB.categoryScores;
@@ -112,5 +119,7 @@ export function compareAuditRuns(runA: AuditRun, runB: AuditRun): AuditCompariso
     categories,
     availabilityBefore: resolvedA.availability,
     availabilityAfter: resolvedB.availability,
+    coverageBefore: resolvedA.coverage.ratio,
+    coverageAfter: resolvedB.coverage.ratio,
   };
 }

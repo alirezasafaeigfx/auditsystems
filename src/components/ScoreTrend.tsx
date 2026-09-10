@@ -1,6 +1,6 @@
 "use client";
 
-type AuditScore = { score: number; createdAt: string };
+type AuditScore = { score: number; createdAt: string; partial: boolean };
 
 type Props = {
   audits: AuditScore[];
@@ -31,6 +31,7 @@ export function ScoreTrend({ audits }: Props) {
   const scores = audits.map((a) => a.score);
   const trend = trendIndicator(scores);
   const latest = scores[scores.length - 1];
+  const hasPartialCoverage = audits.some((audit) => audit.partial);
 
   const width = 400;
   const height = 120;
@@ -55,7 +56,7 @@ export function ScoreTrend({ audits }: Props) {
   return (
     <div style={{ marginBottom: "2rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-        <h2 style={{ fontSize: "1.125rem", fontWeight: 600 }}>روند امتیاز</h2>
+        <h2 style={{ fontSize: "1.125rem", fontWeight: 600 }}>روند امتیاز {hasPartialCoverage ? "(پوشش ناقص)" : "(پوشش کامل)"}</h2>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <span style={{ fontSize: "0.75rem", color: trend.color, fontWeight: 600 }}>
             {trend.arrow} {trend.label}

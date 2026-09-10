@@ -9,7 +9,7 @@ export type AuditCompletionData = {
   grade: string;
   totalFindings: number;
   severityCounts: Record<string, number>;
-  categoryScores: Record<string, number>;
+  categoryScores: Record<string, number | null>;
   resultAvailability: "AVAILABLE" | "PARTIAL" | "UNAVAILABLE" | "LEGACY" | "INVALID";
   coverageRatio: number | null;
 };
@@ -99,7 +99,7 @@ function renderEmailBody(
     .join("\n");
 
   const categoryLines = Object.entries(data.categoryScores)
-    .map(([cat, score]) => `  - ${cat}: ${score}/100`)
+    .map(([cat, score]) => `  - ${cat}: ${score === null ? "unavailable" : `${score}/100`}`)
     .join("\n");
 
   const unsubSecret = process.env.CSRF_SECRET; if (!unsubSecret) throw new Error("CSRF_SECRET required"); const unsubscribeToken = signUnsubToken(organizationId, unsubSecret);

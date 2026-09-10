@@ -127,12 +127,12 @@ describe("protected report HTML/RSC access", () => {
       severityCounts: { INFO: 0, LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 },
       resultCoverage: {
         schema: "asdev.audit.result-coverage.v1",
-        coveredCategories: ["SEO", "SECURITY", "UX", "ACCESSIBILITY", "RESILIENCE"],
-        unavailableCategories: ["PERFORMANCE"],
-        ratio: 5 / 6,
-        confidence: 5 / 6,
+        coveredCategories: ["SEO", "SECURITY", "ACCESSIBILITY", "RESILIENCE"],
+        unavailableCategories: ["PERFORMANCE", "UX"],
+        ratio: 4 / 6,
+        confidence: 4 / 6,
         freshness: "FRESH",
-        measurementIds: ["category:SEO", "category:SECURITY", "category:UX", "category:ACCESSIBILITY", "category:RESILIENCE"],
+        measurementIds: ["category:SEO", "category:SECURITY", "category:ACCESSIBILITY", "category:RESILIENCE"],
         limitations: ["Performance score withheld."],
       },
     } as never;
@@ -144,10 +144,10 @@ describe("protected report HTML/RSC access", () => {
     const englishMarkup = renderToStaticMarkup(await ReportPageEn({ params: Promise.resolve({ token: "protected-report-token" }) }));
 
     expect(markup).toContain("نتیجه ناقص");
-    expect(markup).toContain("83%");
+    expect(markup).toContain("67%");
     expect(markup).not.toContain("سرعت</div><div style=\"font-size:1.25rem;font-weight:700\">100");
     expect(englishMarkup).toContain("Partial result");
-    expect(englishMarkup).toContain("83%");
+    expect(englishMarkup).toContain("67%");
     expect(englishMarkup).not.toContain("Performance</div><div style=\"font-size:1.25rem;font-weight:700\">100");
   });
 });

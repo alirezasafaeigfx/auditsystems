@@ -132,14 +132,14 @@ describe("GET /api/reports/[token]", () => {
       schema: "asdev.audit.summary.v1", scoringPolicyVersion: "worst-severity-v2", score: 100, grade: "EXCELLENT",
       categoryScores: { SEO: 100, PERFORMANCE: 100, SECURITY: 100, UX: 100, ACCESSIBILITY: 100, RESILIENCE: 100 },
       severityCounts: { INFO: 0, LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 },
-      resultCoverage: { schema: "asdev.audit.result-coverage.v1", coveredCategories: ["SEO", "SECURITY", "UX", "ACCESSIBILITY", "RESILIENCE"], unavailableCategories: ["PERFORMANCE"], ratio: 5 / 6, confidence: 5 / 6, freshness: "FRESH", measurementIds: ["category:SEO", "category:SECURITY", "category:UX", "category:ACCESSIBILITY", "category:RESILIENCE"], limitations: ["Performance score withheld."] },
+      resultCoverage: { schema: "asdev.audit.result-coverage.v1", coveredCategories: ["SEO", "SECURITY", "ACCESSIBILITY", "RESILIENCE"], unavailableCategories: ["PERFORMANCE", "UX"], ratio: 4 / 6, confidence: 4 / 6, freshness: "FRESH", measurementIds: ["category:SEO", "category:SECURITY", "category:ACCESSIBILITY", "category:RESILIENCE"], limitations: ["Performance and UX scores withheld."] },
     } as never;
     mocks.findUnique.mockResolvedValue(share);
     const { GET } = await import("./route");
     const response = await GET(new Request("https://test/api/reports/test-token"), { params: Promise.resolve({ token: "test-token" }) });
     const json = await response.json();
 
-    expect(json.result).toMatchObject({ availability: "PARTIAL", coverage: { ratio: 5 / 6 } });
+    expect(json.result).toMatchObject({ availability: "PARTIAL", coverage: { ratio: 4 / 6 } });
     expect(json.result.categoryScores.PERFORMANCE).toBeNull();
   });
 

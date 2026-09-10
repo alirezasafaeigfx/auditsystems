@@ -204,7 +204,7 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
           grade: score.grade,
           totalFindings: score.totalFindings,
           severityCounts: score.severityCounts as Record<string, number>,
-          categoryScores: score.categories as Record<string, number>,
+          categoryScores: result.categoryScores,
           resultAvailability: result.availability,
           coverageRatio: result.coverage.ratio
         }).catch((err) => {
