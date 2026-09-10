@@ -54,4 +54,3 @@
 - [ ] Run focused tests, local synthetic HTTP/browser checks, and all repository gates under Node 20.20.2/pnpm 9.15.0.
 - [ ] Record factual AU-01 evidence and limitations in the ledger.
 - [ ] Inspect the complete diff, request exact-head independent review, run hosted checks, and merge only if policy permits.
-

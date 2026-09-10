@@ -17,4 +17,3 @@ Password-protected report content is rendered or serialized only after a short-l
 ## Secret and compatibility
 
 `REPORT_ACCESS_SECRET` is a dedicated signing secret documented in `.env.example`. When it is unavailable, protected session creation and validation fail closed. Existing unpassworded legacy reports remain compatible.
-

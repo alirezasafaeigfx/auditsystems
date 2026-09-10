@@ -57,4 +57,3 @@ export function ReportAccessChallenge({ token, locale }: { token: string; locale
     </main>
   );
 }
-
