@@ -53,9 +53,12 @@ describe("generateMonthlyReport coverage semantics", () => {
     const { generateMonthlyReport } = await import("./monthly-report");
     const report = await generateMonthlyReport("org-1", 9, 2026);
 
-    expect(report.data).toMatchObject({ successfulAudits: 1, comparableAudits: 0, partialAudits: 1, unavailableAudits: 0, averageScore: null });
-    expect(Object.values(report.data.scoreBreakdown.categories)).toEqual([null, null, null, null, null, null]);
-    expect(report.markdown).toContain("Average Score:** unavailable");
-    expect(report.markdown).not.toContain("Average Score: 100/100");
+    expect(report.data).toMatchObject({ successfulAudits: 1, comparableAudits: 1, partialAudits: 1, unavailableAudits: 0, resultAvailability: "PARTIAL", coverageRatio: 4 / 6, averageScore: 100 });
+    expect(report.data.scoreBreakdown.categories.PERFORMANCE).toBeNull();
+    expect(report.data.scoreBreakdown.categories.UX).toBeNull();
+    expect(report.markdown).toContain("Result Availability:** PARTIAL");
+    expect(report.markdown).toContain("Coverage:** 67%");
+    expect(report.markdown).toContain("Average Score:** 100/100 (EXCELLENT, PARTIAL)");
+    expect(report.markdown).not.toContain("| PERFORMANCE | 100/100 |");
   });
 });

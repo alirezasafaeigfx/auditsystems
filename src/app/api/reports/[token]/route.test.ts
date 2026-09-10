@@ -141,6 +141,26 @@ describe("GET /api/reports/[token]", () => {
 
     expect(json.result).toMatchObject({ availability: "PARTIAL", coverage: { ratio: 4 / 6 } });
     expect(json.result.categoryScores.PERFORMANCE).toBeNull();
+    expect(json.run.summary.resultAvailability).toBe("PARTIAL");
+    expect(json.run.summary.categoryScores.PERFORMANCE).toBeNull();
+  });
+
+  it("redacts contradictory stored aggregates from the compatibility summary", async () => {
+    const share = makeShare();
+    share.run.summary = {
+      schema: "asdev.audit.summary.v1", scoringPolicyVersion: "worst-severity-v2", score: 100, grade: "EXCELLENT",
+      categoryScores: { SEO: 100, PERFORMANCE: 100, SECURITY: 100, UX: 100, ACCESSIBILITY: 100, RESILIENCE: 100 },
+      severityCounts: { INFO: 0, LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 },
+      resultCoverage: { schema: "future-unsupported" },
+    } as never;
+    mocks.findUnique.mockResolvedValue(share);
+    const { GET } = await import("./route");
+    const response = await GET(new Request("https://test/api/reports/test-token"), { params: Promise.resolve({ token: "test-token" }) });
+    const json = await response.json();
+
+    expect(json.result).toMatchObject({ availability: "INVALID", score: null });
+    expect(json.run.summary).toMatchObject({ score: null, grade: null, resultAvailability: "INVALID" });
+    expect(Object.values(json.run.summary.categoryScores)).not.toContain(100);
   });
 
   it("returns PASSWORD_REQUIRED for a protected share and ignores query passwords", async () => {

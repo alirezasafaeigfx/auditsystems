@@ -1,7 +1,7 @@
 import { prisma } from "./db";
 import { calculateScore } from "./scoring";
 import { CURRENT_SCORING_POLICY_VERSION } from "./persisted-score";
-import { resolveReportResult, RESULT_CATEGORIES } from "./report-result";
+import { resolveReportResult, RESULT_CATEGORIES, type ReportResult, type ResultAvailability } from "./report-result";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
 type MonthlyReportData = {
@@ -15,6 +15,8 @@ type MonthlyReportData = {
   comparableAudits: number;
   partialAudits: number;
   unavailableAudits: number;
+  resultAvailability: ResultAvailability;
+  coverageRatio: number | null;
   averageScore: number | null;
   scoreBreakdown: {
     overall: number | null;
@@ -74,7 +76,7 @@ export async function generateMonthlyReport(
   const allFindings: { category: string; severity: string }[] = [];
   const issueMap = new Map<string, { code: string; title: string; severity: string; count: number }>();
   const projectMap = new Map<string, { projectId: string; projectName: string; auditCount: number; totalScore: number }>();
-  const auditScores: ReturnType<typeof calculateScore>[] = [];
+  const auditResults: ReportResult[] = [];
   let partialAudits = 0;
   let unavailableAudits = 0;
 
@@ -93,13 +95,13 @@ export async function generateMonthlyReport(
       if (existing) existing.count++;
       else issueMap.set(key, { code: finding.code, title: finding.title, severity: finding.severity, count: 1 });
     }
-    if (!result.score || result.availability !== "AVAILABLE") {
+    if (!result.score || (result.availability !== "AVAILABLE" && result.availability !== "PARTIAL")) {
       if (result.availability !== "PARTIAL") unavailableAudits++;
       continue;
     }
     const score = result.score;
     totalScore += score.overall;
-    auditScores.push(score);
+    auditResults.push(result);
     if (audit.project) {
       const projectKey = audit.project.id;
       const existing = projectMap.get(projectKey);
@@ -117,19 +119,24 @@ export async function generateMonthlyReport(
     }
   }
 
-  const comparableAudits = auditScores.length;
+  const comparableAudits = auditResults.length;
   const averageScore = comparableAudits > 0 ? Math.round(totalScore / comparableAudits) : null;
+  const resultAvailability: ResultAvailability = comparableAudits === 0 ? "UNAVAILABLE" : auditResults.some((result) => result.availability === "PARTIAL") ? "PARTIAL" : "AVAILABLE";
+  const coverageRatio = comparableAudits === 0 ? null : Math.min(...auditResults.map((result) => result.coverage.ratio ?? 0));
   const calculatedBreakdown = calculateScore(allFindings as { category: never; severity: never }[]);
-  const scoreBreakdown = auditScores.length === 0
+  const scoreBreakdown = auditResults.length === 0
     ? { ...calculatedBreakdown, overall: null, grade: null, categories: Object.fromEntries(RESULT_CATEGORIES.map((category) => [category, null])) }
     : {
       ...calculatedBreakdown,
-      overall: Math.round(totalScore / auditScores.length),
-      grade: gradeFromScore(Math.round(totalScore / auditScores.length)),
+      overall: Math.round(totalScore / auditResults.length),
+      grade: gradeFromScore(Math.round(totalScore / auditResults.length)),
       categories: Object.fromEntries(Object.keys(calculatedBreakdown.categories).map((category) => [
         category,
-        Math.round(auditScores.reduce((sum, score) => sum + score.categories[category as keyof typeof score.categories], 0) / auditScores.length),
-      ])) as typeof calculatedBreakdown.categories,
+        (() => {
+          const values = auditResults.map((result) => result.categoryScores[category as keyof typeof result.categoryScores]).filter((value): value is number => value !== null);
+          return values.length === 0 ? null : Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+        })(),
+      ])),
     };
 
   const topIssues = Array.from(issueMap.values())
@@ -167,11 +174,11 @@ export async function generateMonthlyReport(
       summary: audit.summary,
       findings: audit.findings.map((f) => ({ category: f.category, severity: f.severity })) as { category: never; severity: never }[],
       runStatus: audit.status,
-    })).filter((result) => result.availability === "AVAILABLE" && result.score).map((result) => result.score!);
+    })).filter((result) => result.score && result.availability === resultAvailability && result.coverage.ratio === coverageRatio);
     if (current === null || previousScores.length === 0) continue;
     categoryScores[cat] = {
       current,
-      previous: Math.round(previousScores.reduce((sum, score) => sum + score.categories[cat as keyof typeof score.categories], 0) / previousScores.length)
+      previous: Math.round(previousScores.reduce((sum, result) => sum + (result.categoryScores[cat as keyof typeof result.categoryScores] ?? current), 0) / previousScores.length)
     };
   }
 
@@ -194,6 +201,8 @@ export async function generateMonthlyReport(
     comparableAudits,
     partialAudits,
     unavailableAudits,
+    resultAvailability,
+    coverageRatio,
     averageScore,
     scoreBreakdown: {
       overall: scoreBreakdown.overall,
@@ -231,7 +240,9 @@ function generateMarkdown(data: MonthlyReportData): string {
     `- **Comparable Audits:** ${data.comparableAudits}`,
     `- **Partial Audits:** ${data.partialAudits}`,
     `- **Unavailable Audits:** ${data.unavailableAudits}`,
-    `- **Average Score:** ${data.averageScore === null ? "unavailable" : `${data.averageScore}/100 (${data.scoreBreakdown.grade})`}`,
+    `- **Result Availability:** ${data.resultAvailability}`,
+    `- **Coverage:** ${data.coverageRatio === null ? "unknown" : `${Math.round(data.coverageRatio * 100)}%`}`,
+    `- **Average Score:** ${data.averageScore === null ? "unavailable" : `${data.averageScore}/100 (${data.scoreBreakdown.grade}, ${data.resultAvailability})`}`,
     `- **Scoring Policy:** ${data.scoringPolicyVersion}`,
     "",
     "## Score Breakdown",

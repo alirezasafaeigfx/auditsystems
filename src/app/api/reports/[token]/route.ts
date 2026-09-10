@@ -46,13 +46,24 @@ function buildReportResponse(share: Awaited<ReturnType<typeof fetchShareWithFind
     findings: share.run.findings,
     runStatus: share.run.status,
   });
+  const storedSummary = share.run.summary && typeof share.run.summary === "object" && !Array.isArray(share.run.summary)
+    ? share.run.summary as Record<string, unknown> : {};
+  const safeSummary = {
+    ...storedSummary,
+    score: result.score?.overall ?? null,
+    grade: result.score?.grade ?? null,
+    categoryScores: result.categoryScores,
+    severityCounts: result.score?.severityCounts ?? null,
+    resultCoverage: result.coverage,
+    resultAvailability: result.availability,
+  };
   return {
     run: {
       id: share.run.id,
       url: share.run.url,
       normalizedUrl: share.run.normalizedUrl,
       status: share.run.status,
-      summary: share.run.summary,
+      summary: safeSummary,
     },
     findings: share.run.findings,
     result,
