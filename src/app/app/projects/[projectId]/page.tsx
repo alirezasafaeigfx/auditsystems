@@ -6,6 +6,7 @@ import { RunAuditButton } from "../../../../components/RunAuditButton";
 import { ScheduleManager } from "../../../../components/ScheduleManager";
 import { ScoreTrend } from "../../../../components/ScoreTrend";
 import { getUsageStats, canScheduleAudit } from "../../../../lib/usage";
+import { resolveReportResult } from "../../../../lib/report-result";
 
 type Props = { params: Promise<{ projectId: string }> };
 
@@ -40,6 +41,7 @@ export default async function ProjectDetailPage({ params }: Props) {
       createdAt: true,
       finishedAt: true,
       summary: true,
+      findings: { select: { code: true, category: true, severity: true } },
       shares: { select: { token: true }, take: 1 }
     }
   });
@@ -106,12 +108,13 @@ export default async function ProjectDetailPage({ params }: Props) {
 
       <ScoreTrend
         audits={audits
-          .filter((a) => a.status === "SUCCEEDED" && a.summary)
+          .map((audit) => ({ audit, result: resolveReportResult({ summary: audit.summary, findings: audit.findings, runStatus: audit.status }) }))
+          .filter(({ result }) => result.comparable && result.score)
           .slice(0, 12)
           .reverse()
-          .map((a) => ({
-            score: (a.summary as Record<string, unknown> | null)?.score as number ?? 0,
-            createdAt: a.createdAt.toISOString(),
+          .map(({ audit, result }) => ({
+            score: result.score!.overall,
+            createdAt: audit.createdAt.toISOString(),
           }))}
       />
 

@@ -13,6 +13,7 @@ import { buildAuditSummaryV1 } from "../lib/summary";
 import { calculateScore } from "../lib/scoring";
 import { createAuditLogger } from "../lib/logger";
 import { createRequestId } from "../lib/observability";
+import { resolveReportResult } from "../lib/report-result";
 import { sendAuditCompleteNotification } from "../lib/notifications";
 import { recordFunnelEvent } from "../lib/funnel-events";
 import { fetchAuditHtml } from "../lib/safeAuditFetch";
@@ -126,6 +127,17 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
     });
 
     const score = calculateScore(findings);
+    const result = resolveReportResult({
+      summary: {
+        ...(summary as unknown as Record<string, unknown>),
+        score: score.overall,
+        grade: score.grade,
+        categoryScores: score.categories,
+        severityCounts: score.severityCounts,
+      },
+      findings,
+      runStatus: "SUCCEEDED",
+    });
 
     await prisma.$transaction([
       prisma.auditResource.deleteMany({ where: { runId: run.id } }),
@@ -192,7 +204,9 @@ export const auditRunHandler: JobHandler = async (job, signal) => {
           grade: score.grade,
           totalFindings: score.totalFindings,
           severityCounts: score.severityCounts as Record<string, number>,
-          categoryScores: score.categories as Record<string, number>
+          categoryScores: score.categories as Record<string, number>,
+          resultAvailability: result.availability,
+          coverageRatio: result.coverage.ratio
         }).catch((err) => {
           console.error(`[Worker] notification failed for audit ${run.id}:`, err);
         });

@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import type { ReportResult } from "./report-result";
 
 type FindingItem = {
   code: string;
@@ -13,7 +14,7 @@ type FindingItem = {
 type ScoreData = {
   overall: number;
   grade: "EXCELLENT" | "GOOD" | "NEEDS_WORK" | "CRITICAL";
-  categories: Record<string, number>;
+  categories: Record<string, number | null>;
   severityCounts: Record<string, number>;
   totalFindings: number;
 };
@@ -32,6 +33,7 @@ export async function buildAuditReportPdf(input: {
   generatedAt: string;
   locale?: string;
   score?: ScoreData;
+  result?: ReportResult;
   agencyName?: string;
   agencyLogo?: string;
   agencyContact?: string;
@@ -162,6 +164,13 @@ export async function buildAuditReportPdf(input: {
   drawLine(40, y, 555, y);
   y -= 24;
 
+  if (input.result) {
+    const coverage = input.result.coverage.ratio === null ? "unknown" : `${Math.round(input.result.coverage.ratio * 100)}%`;
+    draw(`Result availability: ${input.result.availability} | Coverage: ${coverage}`, { size: 11, bold: true });
+    if (input.result.withheldReason) draw(`Score withheld: ${input.result.withheldReason}`, { size: 9, color: [0.5, 0.2, 0.1] });
+    y -= 8;
+  }
+
   // --- Score Badge Section ---
   if (input.score) {
     const score = input.score;
@@ -248,6 +257,11 @@ export async function buildAuditReportPdf(input: {
     const categories = Object.entries(score.categories);
     for (const [cat, catScore] of categories) {
       if (y < 60) newPage();
+
+      if (catScore === null) {
+        draw(`${cat}: Unavailable`, { size: 10, color: [0.4, 0.4, 0.4] });
+        continue;
+      }
 
       const barWidth = (catScore / 100) * 200;
       const barColor: [number, number, number] = catScore >= 80 ? [0.13, 0.55, 0.13] : catScore >= 60 ? [0.85, 0.55, 0.05] : [0.8, 0.1, 0.1];

@@ -9,6 +9,7 @@ import { cookies } from "next/headers";
 import { ReportAccessChallenge } from "../../../../components/ReportAccessChallenge";
 import { getReportAccessCookieName, verifyReportAccessCredential } from "../../../../lib/report-access";
 import { hasPassword } from "../../../../lib/reportShare";
+import { resolveReportResult } from "../../../../lib/report-result";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -31,13 +32,6 @@ function gradeColor(grade: string): string {
   if (grade === "NEEDS_WORK") return "#d97706";
   return "#dc2626";
 }
-
-type Summary = {
-  score?: number;
-  grade?: string;
-  categoryScores?: Record<FindingCategory, number>;
-  severityCounts?: Record<string, number>;
-};
 
 export default async function ReportPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -80,11 +74,11 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
     }
   });
 
-  const summary = (share.run.summary as Summary) ?? {};
-  const score = summary.score;
-  const grade = summary.grade;
-  const categoryScores = summary.categoryScores ?? {};
-  const severityCounts = summary.severityCounts ?? {};
+  const result = resolveReportResult({ summary: share.run.summary, findings: share.run.findings, runStatus: share.run.status });
+  const score = result.score?.overall;
+  const grade = result.score?.grade;
+  const categoryScores = result.categoryScores;
+  const severityCounts: Record<string, number> = result.score?.severityCounts ?? {};
   const criticalCount = (severityCounts.CRITICAL ?? 0) + (severityCounts.HIGH ?? 0);
   const findings = share.run.findings;
   const topIssues = findings.filter((f) => f.severity === "CRITICAL" || f.severity === "HIGH").slice(0, 3);
@@ -105,6 +99,14 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
         </div>
       </section>
 
+      <section className="card" aria-label="وضعیت پوشش نتیجه">
+        <strong>{result.availability === "AVAILABLE" ? "نتیجه کامل" : result.availability === "PARTIAL" ? "نتیجه ناقص" : result.availability === "LEGACY" ? "گزارش قدیمی با پوشش نامشخص" : "امتیاز در دسترس نیست"}</strong>
+        <p>
+          پوشش: {result.coverage.ratio == null ? "نامشخص" : `${Math.round(result.coverage.ratio * 100)}%`}
+          {result.withheldReason ? ` — ${result.withheldReason}` : ""}
+        </p>
+      </section>
+
       {score != null && grade != null && (
         <section className="card" style={{ textAlign: "center", padding: "2rem" }}>
           <div style={{ fontSize: "3rem", fontWeight: 800, color: gradeColor(grade) }}>{score}<span style={{ fontSize: "1.5rem" }}>/100</span></div>
@@ -112,10 +114,10 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
 
           {Object.keys(categoryScores).length > 0 && (
             <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap", marginTop: "1rem" }}>
-              {Object.entries(categoryScores as Record<string, number>).map(([cat, catScore]) => (
+              {Object.entries(categoryScores).map(([cat, catScore]) => (
                 <div key={cat} style={{ textAlign: "center", minWidth: "80px" }}>
                   <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{categoryLabel(cat as FindingCategory)}</div>
-                  <div style={{ fontSize: "1.25rem", fontWeight: 700 }}>{catScore}</div>
+                  <div style={{ fontSize: "1.25rem", fontWeight: 700 }}>{catScore ?? "ناموجود"}</div>
                 </div>
               ))}
             </div>

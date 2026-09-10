@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "../../../lib/db";
 import { validateSession, getOrganizationForUser } from "../../../lib/auth";
+import { resolveReportResult } from "../../../lib/report-result";
 
 export const metadata = {
   title: "تاریخچه گزارش‌ها"
@@ -29,7 +30,8 @@ export default async function ReportsPage({
       include: {
         project: { select: { name: true } },
         shares: { select: { token: true }, take: 1 },
-        _count: { select: { findings: true } }
+        _count: { select: { findings: true } },
+        findings: { select: { code: true, category: true, severity: true } }
       },
       orderBy: { createdAt: "desc" },
       skip,
@@ -39,12 +41,6 @@ export default async function ReportsPage({
   ]);
 
   const totalPages = Math.ceil(total / pageSize);
-
-  function getScore(run: { summary: unknown }): number | null {
-    if (!run.summary || typeof run.summary !== "object") return null;
-    const s = run.summary as Record<string, unknown>;
-    return typeof s.score === "number" ? s.score : null;
-  }
 
   function scoreColor(score: number): string {
     if (score >= 81) return "#059669";
@@ -80,7 +76,8 @@ export default async function ReportsPage({
               </thead>
               <tbody>
                 {reports.map((report) => {
-                  const score = getScore(report);
+                  const result = resolveReportResult({ summary: report.summary, findings: report.findings, runStatus: report.status });
+                  const score = result.score?.overall ?? null;
                   const token = report.shares[0]?.token;
                   return (
                     <tr key={report.id} style={{ borderBottom: "1px solid var(--line)" }}>
@@ -92,7 +89,7 @@ export default async function ReportsPage({
                       </td>
                       <td style={{ padding: "0.75rem", textAlign: "center" }}>
                         {score != null ? (
-                          <span style={{ fontWeight: 700, color: scoreColor(score) }}>{score}</span>
+                          <span style={{ fontWeight: 700, color: scoreColor(score) }}>{score} <small>({result.availability === "PARTIAL" ? "ناقص" : result.availability === "LEGACY" ? "قدیمی" : "کامل"})</small></span>
                         ) : "—"}
                       </td>
                       <td style={{ padding: "0.75rem", textAlign: "center" }}>

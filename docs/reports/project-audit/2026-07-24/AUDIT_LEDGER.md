@@ -132,3 +132,18 @@ The four `pattern not found` failures in run `34387931972` were repository diagn
 | Deployment | NOT_PERFORMED | No deploy, migration, DNS, Nginx, firewall, VPS, staging, runner, secret, database, payment, or live-service mutation occurred. |
 
 The AU-01 candidate is based on `e6165a825376e52cb61447e67fd734dd2d67ced8`. Final PR head, hosted checks, review disposition, and merge SHA must be recorded from GitHub before this entry is treated as merged evidence.
+
+## Follow-up — AU-02 Score and Coverage Semantics (2026-09-10)
+
+| Boundary | Verdict | Evidence |
+|---|---|---|
+| Demonstrated defect | CORRECTED_IN_REVIEW | `calculateScore([])` and empty per-category finding sets produced `100`/`EXCELLENT`; report, API, comparison, and PDF consumers then reused or recomputed that aggregate without an authoritative coverage state. |
+| Canonical semantics | PASS_SYNTHETIC | The shared result resolver separates processing status, score, coverage, availability, confidence, and comparison eligibility. Unknown, failed, stale, malformed, unsupported, contradictory, duplicate, and empty current evidence fail closed; partial numeric risk scores remain explicitly partial. |
+| Surface consistency | PASS_SYNTHETIC | Synthetic entry-point tests cover FA/EN report rendering, machine-readable report API output, comparison deltas, and PDF generation. Missing categories are unavailable rather than `100`; failed and invalid records expose no numeric score. |
+| Legacy compatibility | PASS_SYNTHETIC | Structurally valid historical aggregates remain readable as `LEGACY` with unknown coverage and are excluded from comparable deltas. No stored report or Production row is rewritten. |
+| Database/browser acceptance | PARTIAL | Direct route, RSC-render, comparison, and PDF tests use disposable `.invalid` fixtures. The local Windows worktree has no disposable PostgreSQL/browser database environment; hosted PostgreSQL validation remains candidate-bound evidence. |
+| Dependency advisory | OPEN_SEPARATE | Issue [#15](https://github.com/alirezasafaeigfx/auditsystems/issues/15) tracks `GHSA-ggr8-5vv4-36mx` through Prisma 6 configuration tooling. AU-02 does not suppress the advisory or perform a major dependency upgrade. |
+| Production | UNVERIFIED | Public smoke checks are reachability snapshots only. No customer report, token, URL, Production database row, deployed SHA, or live cache was used as AU-02 acceptance evidence. |
+| Deployment | NOT_PERFORMED | No deployment, migration, DNS, Nginx, firewall, VPS, staging, runner, database, payment, or live-service mutation occurred. |
+
+AU-02 is based on `e8c9f03d72acc1cdb0ebecf12c5c9fe1cc90cdac`. The exact PR head, hosted results, independent review disposition, and merge SHA remain GitHub integration evidence and must be recorded separately.

@@ -75,6 +75,25 @@ describe("GET /api/pdf/[token] access", () => {
     expect(mocks.buildAuditReportPdf).not.toHaveBeenCalled();
   });
 
+  it("passes partial coverage to PDF rendering without a synthetic performance score", async () => {
+    const share = protectedShare();
+    share.run.summary = {
+      schema: "asdev.audit.summary.v1", scoringPolicyVersion: "worst-severity-v2", score: 100, grade: "EXCELLENT",
+      categoryScores: { SEO: 100, PERFORMANCE: 100, SECURITY: 100, UX: 100, ACCESSIBILITY: 100, RESILIENCE: 100 },
+      severityCounts: { INFO: 0, LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 },
+      resultCoverage: { schema: "asdev.audit.result-coverage.v1", coveredCategories: ["SEO", "SECURITY", "UX", "ACCESSIBILITY", "RESILIENCE"], unavailableCategories: ["PERFORMANCE"], ratio: 5 / 6, confidence: 5 / 6, freshness: "FRESH", measurementIds: ["category:SEO", "category:SECURITY", "category:UX", "category:ACCESSIBILITY", "category:RESILIENCE"], limitations: ["Performance score withheld."] },
+    } as never;
+    mocks.findUnique.mockResolvedValue(share);
+    const { GET } = await import("./route");
+    const response = await GET(request("signed-valid"), { params: Promise.resolve({ token: "protected-share" }) });
+
+    expect(response.status).toBe(200);
+    expect(mocks.buildAuditReportPdf).toHaveBeenCalledWith(expect.objectContaining({
+      result: expect.objectContaining({ availability: "PARTIAL", coverage: expect.objectContaining({ ratio: 5 / 6 }) }),
+      score: expect.objectContaining({ categories: expect.objectContaining({ PERFORMANCE: null }) }),
+    }));
+  });
+
   it("rejects a credential belonging to a different report before PDF generation", async () => {
     mocks.verifyDownloadToken.mockReturnValue({ runId: "other-run", orderId: "order-1", email: "synthetic@example.invalid", exp: 2_000_000_000 });
     const { GET } = await import("./route");

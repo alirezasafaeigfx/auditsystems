@@ -3,6 +3,7 @@ import { prisma } from "../../lib/db";
 import { validateSession, getOrganizationForUser } from "../../lib/auth";
 import { getUsageStats } from "../../lib/usage";
 import { formatPriceToman, isPaidPlan, type PlanCode } from "../../lib/plans";
+import { resolveReportResult } from "../../lib/report-result";
 
 export const metadata = {
   title: "داشبورد"
@@ -39,6 +40,7 @@ export default async function AppDashboardPage() {
       createdAt: true,
       finishedAt: true,
       summary: true,
+      findings: { select: { code: true, category: true, severity: true } },
       project: { select: { id: true, name: true } },
       shares: { select: { token: true }, take: 1 }
     }
@@ -46,8 +48,8 @@ export default async function AppDashboardPage() {
 
   const latestAudit = recentAudits[0];
   const latestStatus = latestAudit?.status;
-  const latestSummary = latestAudit?.summary as { score?: number } | null;
-  const latestScore = latestSummary?.score;
+  const latestResult = latestAudit ? resolveReportResult({ summary: latestAudit.summary, findings: latestAudit.findings, runStatus: latestAudit.status }) : null;
+  const latestScore = latestResult?.score?.overall;
 
   const criticalFindings = await prisma.auditFinding.count({
     where: {
@@ -142,7 +144,7 @@ export default async function AppDashboardPage() {
           </div>
           {latestScore != null && (
             <div style={{ fontSize: "0.75rem", color: "var(--muted, #6b7280)" }}>
-              امتیاز: {latestScore}/۱۰۰
+              امتیاز: {latestScore}/۱۰۰ ({latestResult?.availability === "PARTIAL" ? "پوشش ناقص" : latestResult?.availability === "LEGACY" ? "قدیمی؛ پوشش نامشخص" : "پوشش کامل"})
             </div>
           )}
           {latestAudit?.createdAt && (
@@ -263,8 +265,8 @@ export default async function AppDashboardPage() {
                 </thead>
                 <tbody>
                   {recentAudits.map((audit) => {
-                    const auditSummary = audit.summary as { score?: number } | null;
-                    const score = auditSummary?.score;
+                    const result = resolveReportResult({ summary: audit.summary, findings: audit.findings, runStatus: audit.status });
+                    const score = result.score?.overall;
                     return (
                       <tr key={audit.id} style={{ borderBottom: "1px solid var(--border, #f3f4f6)" }}>
                         <td style={{ padding: "0.75rem", maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{audit.url}</td>
@@ -275,7 +277,7 @@ export default async function AppDashboardPage() {
                           </span>
                         </td>
                         <td style={{ padding: "0.75rem", fontWeight: 600, color: score != null ? (score >= 80 ? "var(--brand, #059669)" : score >= 50 ? "var(--warn, #f59e0b)" : "var(--danger, #dc2626)") : "var(--muted, #d1d5db)" }}>
-                          {score != null ? `${score}/۱۰۰` : "—"}
+                          {score != null ? `${score}/۱۰۰ (${result.availability === "PARTIAL" ? "ناقص" : result.availability === "LEGACY" ? "قدیمی" : "کامل"})` : "ناموجود"}
                         </td>
                         <td style={{ padding: "0.75rem", color: "var(--muted, #6b7280)" }}>
                           {new Date(audit.createdAt).toLocaleDateString("fa-IR")}

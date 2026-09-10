@@ -15,6 +15,7 @@ import {
   serializeReportAccessCookie,
   verifyReportAccessCredential,
 } from "../../../../lib/report-access";
+import { resolveReportResult } from "../../../../lib/report-result";
 
 const PASSWORD_ATTEMPT_LIMIT = 10;
 const PASSWORD_ATTEMPT_WINDOW_SEC = 15 * 60;
@@ -40,6 +41,11 @@ async function fetchShareWithFindings(token: string) {
 
 function buildReportResponse(share: Awaited<ReturnType<typeof fetchShareWithFindings>>, requestId: string) {
   if (!share) return null;
+  const result = resolveReportResult({
+    summary: share.run.summary,
+    findings: share.run.findings,
+    runStatus: share.run.status,
+  });
   return {
     run: {
       id: share.run.id,
@@ -49,6 +55,7 @@ function buildReportResponse(share: Awaited<ReturnType<typeof fetchShareWithFind
       summary: share.run.summary,
     },
     findings: share.run.findings,
+    result,
     status: share.run.status,
     share: {
       viewCount: share.viewCount + 1,
