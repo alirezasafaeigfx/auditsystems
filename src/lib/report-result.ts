@@ -4,6 +4,7 @@ import type { FindingCategory, FindingSeverity } from "./types";
 
 export const RESULT_COVERAGE_SCHEMA = "asdev.audit.result-coverage.v1";
 export const RESULT_CATEGORIES: FindingCategory[] = ["SEO", "PERFORMANCE", "SECURITY", "UX", "ACCESSIBILITY", "RESILIENCE"];
+const CURRENT_COVERED_CATEGORIES: FindingCategory[] = ["SEO", "SECURITY", "ACCESSIBILITY", "RESILIENCE"];
 
 export type ResultAvailability = "AVAILABLE" | "PARTIAL" | "UNAVAILABLE" | "LEGACY" | "INVALID";
 
@@ -60,6 +61,13 @@ function finiteRatio(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1;
 }
 
+function exactNumericRecord(value: unknown, expected: Record<string, number>): boolean {
+  const candidate = record(value);
+  return candidate !== null
+    && Object.keys(candidate).length === Object.keys(expected).length
+    && Object.entries(expected).every(([key, expectedValue]) => candidate[key] === expectedValue);
+}
+
 export function resolveReportResult(input: { summary: unknown; findings: FindingInput[]; runStatus: string }): ReportResult {
   if (input.runStatus !== "SUCCEEDED") return unavailable(input.runStatus, "UNAVAILABLE", "The audit did not complete successfully.");
 
@@ -71,6 +79,7 @@ export function resolveReportResult(input: { summary: unknown; findings: Finding
   if (schema === undefined) {
     const legacy = resolvePersistedScore(summary, calculated);
     if (!legacy.compatible || legacy.policyVersion !== "legacy-v1") return unavailable(input.runStatus, "INVALID", "The legacy scoring record is unsupported or contradictory.");
+    if (!exactNumericRecord(summary.severityCounts, calculated.severityCounts)) return unavailable(input.runStatus, "INVALID", "The legacy severity aggregate contradicts the recorded findings.");
     return {
       processingStatus: input.runStatus,
       availability: "LEGACY",
@@ -84,19 +93,16 @@ export function resolveReportResult(input: { summary: unknown; findings: Finding
   }
   if (schema !== "asdev.audit.summary.v1") return unavailable(input.runStatus, "INVALID", "The result schema is unsupported.");
 
+  if (summary.score !== calculated.overall
+    || summary.grade !== calculated.grade
+    || !exactNumericRecord(summary.categoryScores, calculated.categories)
+    || !exactNumericRecord(summary.severityCounts, calculated.severityCounts)) {
+    return unavailable(input.runStatus, "INVALID", "Stored score aggregates are missing, malformed, or contradict the recorded findings.");
+  }
   const persisted = resolvePersistedScore(summary, calculated);
   if (!persisted.compatible || persisted.policyVersion !== "worst-severity-v2") {
     return unavailable(input.runStatus, "INVALID", "The scoring policy is unsupported.");
   }
-  if (
-    persisted.score.overall !== calculated.overall
-    || persisted.score.grade !== calculated.grade
-    || RESULT_CATEGORIES.some((category) => persisted.score.categories[category] !== calculated.categories[category])
-    || Object.entries(calculated.severityCounts).some(([severity, count]) => persisted.score.severityCounts[severity as FindingSeverity] !== count)
-  ) {
-    return unavailable(input.runStatus, "INVALID", "Stored score aggregates contradict the recorded findings.");
-  }
-
   const rawCoverage = record(summary.resultCoverage);
   if (!rawCoverage || rawCoverage.schema !== RESULT_COVERAGE_SCHEMA) return unavailable(input.runStatus, "INVALID", "Current measurement coverage is missing or unsupported.");
   const covered = categoryList(rawCoverage.coveredCategories);
@@ -108,11 +114,15 @@ export function resolveReportResult(input: { summary: unknown; findings: Finding
   if (
     !covered || !missing || !measurementIds || !limitations
     || new Set(measurementIds).size !== measurementIds.length
+    || measurementIds.length !== covered.length
+    || covered.some((category) => !measurementIds.includes(`category:${category}`))
     || !finiteRatio(rawCoverage.ratio) || !finiteRatio(rawCoverage.confidence)
     || (rawCoverage.freshness !== "FRESH" && rawCoverage.freshness !== "STALE_BLOCKED")
     || covered.some((category) => missing.includes(category))
     || new Set([...covered, ...missing]).size !== RESULT_CATEGORIES.length
     || Math.abs(rawCoverage.ratio - covered.length / RESULT_CATEGORIES.length) > 0.000001
+    || covered.length !== CURRENT_COVERED_CATEGORIES.length
+    || CURRENT_COVERED_CATEGORIES.some((category) => !covered.includes(category))
   ) return unavailable(input.runStatus, "INVALID", "Measurement coverage is malformed or contradictory.");
 
   if (rawCoverage.freshness === "STALE_BLOCKED") return unavailable(input.runStatus, "UNAVAILABLE", "Measurement evidence is stale and blocked.");
@@ -137,6 +147,6 @@ export function resolveReportResult(input: { summary: unknown; findings: Finding
     coverage,
     withheldReason: null,
     policyVersion: persisted.policyVersion,
-    comparable: availability === "AVAILABLE",
+    comparable: availability === "AVAILABLE" || availability === "PARTIAL",
   };
 }

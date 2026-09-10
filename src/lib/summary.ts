@@ -88,19 +88,21 @@ export function buildAuditSummaryV1(input: {
     ...(input.performance ? { performance: input.performance } : {}),
     resultCoverage: {
       schema: RESULT_COVERAGE_SCHEMA,
-      ratio: 5 / 6,
-      confidence: 5 / 6,
+      ratio: 4 / 6,
+      confidence: 4 / 6,
       freshness: "FRESH",
-      coveredCategories: ["SEO", "SECURITY", "UX", "ACCESSIBILITY", "RESILIENCE"],
-      unavailableCategories: ["PERFORMANCE"],
+      coveredCategories: ["SEO", "SECURITY", "ACCESSIBILITY", "RESILIENCE"],
+      unavailableCategories: ["PERFORMANCE", "UX"],
       measurementIds: [
         "category:SEO",
         "category:SECURITY",
-        "category:UX",
         "category:ACCESSIBILITY",
         "category:RESILIENCE",
       ],
-      limitations: [input.performance?.withheldReason ?? "No approved versioned performance scoring policy; performance score is unavailable."],
+      limitations: [
+        input.performance?.withheldReason ?? "No approved versioned performance scoring policy; performance score is unavailable.",
+        "No runtime UX measurement policy is implemented; UX score is unavailable.",
+      ],
     },
     findings: input.findings,
     highlights: {

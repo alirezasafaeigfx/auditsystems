@@ -105,6 +105,7 @@ export default async function ComparePage({ params }: { params: Promise<{ tokenA
               {comparison.overall.before ?? "ناموجود"}{comparison.overall.before === null ? null : <span style={{ fontSize: "1rem" }}>/100</span>}
             </div>
             <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--text)" }}>{comparison.gradeBefore}</div>
+            <div>{comparison.availabilityBefore} · پوشش {comparison.coverageBefore === null ? "نامشخص" : `${Math.round(comparison.coverageBefore * 100)}%`}</div>
           </div>
 
           <div style={{ textAlign: "center" }}>
@@ -115,7 +116,7 @@ export default async function ComparePage({ params }: { params: Promise<{ tokenA
                 color: directionColor(comparison.overall.direction),
               }}
             >
-                  {comparison.overall.direction === "unavailable" ? "Not comparable across scoring policies" : `${directionIcon(comparison.overall.direction)} ${Math.abs(comparison.overall.delta ?? 0)}`}
+                  {comparison.overall.direction === "unavailable" ? "شواهد برای مقایسه هم‌ارز نیست" : `${directionIcon(comparison.overall.direction)} ${Math.abs(comparison.overall.delta ?? 0)}`}
             </div>
           </div>
 
@@ -125,6 +126,7 @@ export default async function ComparePage({ params }: { params: Promise<{ tokenA
               {comparison.overall.after ?? "ناموجود"}{comparison.overall.after === null ? null : <span style={{ fontSize: "1rem" }}>/100</span>}
             </div>
             <div style={{ fontSize: "0.875rem", fontWeight: 600, color: directionColor(comparison.overall.direction) }}>{comparison.gradeAfter}</div>
+            <div>{comparison.availabilityAfter} · پوشش {comparison.coverageAfter === null ? "نامشخص" : `${Math.round(comparison.coverageAfter * 100)}%`}</div>
           </div>
         </div>
       </section>

@@ -3,6 +3,7 @@ import { resolveReportResult } from "./report-result";
 import type { FindingCategory, FindingSeverity } from "./types";
 
 const categories: FindingCategory[] = ["SEO", "PERFORMANCE", "SECURITY", "UX", "ACCESSIBILITY", "RESILIENCE"];
+const coveredCategories: FindingCategory[] = ["SEO", "SECURITY", "ACCESSIBILITY", "RESILIENCE"];
 const counts = { INFO: 0, LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 };
 
 function finding(category: FindingCategory, severity: FindingSeverity, code = `${category}-${severity}`) {
@@ -19,12 +20,12 @@ function currentSummary(overrides: Record<string, unknown> = {}) {
     severityCounts: counts,
     resultCoverage: {
       schema: "asdev.audit.result-coverage.v1",
-      coveredCategories: categories,
-      unavailableCategories: [],
-      ratio: 1,
-      confidence: 1,
+      coveredCategories,
+      unavailableCategories: ["PERFORMANCE", "UX"],
+      ratio: 4 / 6,
+      confidence: 4 / 6,
       freshness: "FRESH",
-      measurementIds: categories.map((category) => `category:${category}`),
+      measurementIds: coveredCategories.map((category) => `category:${category}`),
       limitations: [],
     },
     ...overrides,
@@ -32,14 +33,14 @@ function currentSummary(overrides: Record<string, unknown> = {}) {
 }
 
 describe("resolveReportResult", () => {
-  it("distinguishes a complete successful result from an empty measurement collection", () => {
+  it("distinguishes a successful partial result from an empty measurement collection", () => {
     expect(resolveReportResult({ summary: currentSummary(), findings: [], runStatus: "SUCCEEDED" })).toMatchObject({
-      availability: "AVAILABLE", score: { overall: 100 }, coverage: { ratio: 1 }, processingStatus: "SUCCEEDED",
+      availability: "PARTIAL", score: { overall: 100 }, coverage: { ratio: 4 / 6 }, processingStatus: "SUCCEEDED",
     });
 
     const empty = currentSummary({ resultCoverage: { ...currentSummary().resultCoverage, coveredCategories: [], unavailableCategories: categories, ratio: 0, confidence: 0, measurementIds: [] } });
     expect(resolveReportResult({ summary: empty, findings: [], runStatus: "SUCCEEDED" })).toMatchObject({
-      availability: "UNAVAILABLE", score: null, coverage: { ratio: 0 },
+      availability: "INVALID", score: null, coverage: { ratio: null },
     });
   });
 
@@ -50,18 +51,9 @@ describe("resolveReportResult", () => {
       grade: "CRITICAL",
       categoryScores: { SEO: 100, SECURITY: 40, UX: 100, ACCESSIBILITY: 100, RESILIENCE: 100, PERFORMANCE: 100 },
       severityCounts: { ...counts, HIGH: 1 },
-      resultCoverage: {
-        ...currentSummary().resultCoverage,
-        coveredCategories: ["SEO", "SECURITY", "UX"],
-        unavailableCategories: ["PERFORMANCE", "ACCESSIBILITY", "RESILIENCE"],
-        ratio: 0.5,
-        confidence: 0.5,
-        measurementIds: ["category:SEO", "category:SECURITY", "category:UX"],
-        limitations: ["Three categories were unavailable."],
-      },
     });
     const result = resolveReportResult({ summary, findings, runStatus: "SUCCEEDED" });
-    expect(result).toMatchObject({ availability: "PARTIAL", score: { overall: 40 }, coverage: { ratio: 0.5 } });
+    expect(result).toMatchObject({ availability: "PARTIAL", score: { overall: 40 }, coverage: { ratio: 4 / 6 } });
     expect(result.categoryScores.PERFORMANCE).toBeNull();
     expect(result.categoryScores.SECURITY).toBe(40);
   });
@@ -73,6 +65,7 @@ describe("resolveReportResult", () => {
     ["unsupported coverage schema", currentSummary({ resultCoverage: { ...currentSummary().resultCoverage, schema: "future-v2" } }), "SUCCEEDED"],
     ["malformed ratio", currentSummary({ resultCoverage: { ...currentSummary().resultCoverage, ratio: 2 } }), "SUCCEEDED"],
     ["duplicate measurements", currentSummary({ resultCoverage: { ...currentSummary().resultCoverage, measurementIds: ["duplicate", "duplicate"] } }), "SUCCEEDED"],
+    ["contradictory measurement identities", currentSummary({ resultCoverage: { ...currentSummary().resultCoverage, measurementIds: ["category:SEO"] } }), "SUCCEEDED"],
   ])("withholds a numeric score for %s", (_name, summary, runStatus) => {
     expect(resolveReportResult({ summary, findings: [], runStatus: runStatus as string }).score).toBeNull();
   });
@@ -86,6 +79,21 @@ describe("resolveReportResult", () => {
     expect(result).toMatchObject({ availability: "INVALID", score: null });
   });
 
+  it("fails closed when current aggregates are missing or claim unsupported complete coverage", () => {
+    const missingAggregates = currentSummary({ score: undefined, grade: undefined, categoryScores: undefined, severityCounts: undefined });
+    expect(resolveReportResult({ summary: missingAggregates, findings: [], runStatus: "SUCCEEDED" })).toMatchObject({ availability: "INVALID", score: null });
+
+    const unsupportedComplete = currentSummary({ resultCoverage: {
+      ...currentSummary().resultCoverage,
+      coveredCategories: categories,
+      unavailableCategories: [],
+      ratio: 1,
+      confidence: 1,
+      measurementIds: categories.map((category) => `category:${category}`),
+    } });
+    expect(resolveReportResult({ summary: unsupportedComplete, findings: [], runStatus: "SUCCEEDED" })).toMatchObject({ availability: "INVALID", score: null });
+  });
+
   it("preserves a valid legacy score but labels its coverage unknown", () => {
     const legacy = {
       score: 44,
@@ -96,5 +104,15 @@ describe("resolveReportResult", () => {
     expect(resolveReportResult({ summary: legacy, findings: [finding("SECURITY", "LOW")], runStatus: "SUCCEEDED" })).toMatchObject({
       availability: "LEGACY", score: { overall: 44 }, coverage: { ratio: null },
     });
+  });
+
+  it("rejects a legacy severity aggregate that contradicts recorded findings", () => {
+    const legacy = {
+      score: 100,
+      grade: "EXCELLENT",
+      categoryScores: Object.fromEntries(categories.map((category) => [category, 100])),
+      severityCounts: counts,
+    };
+    expect(resolveReportResult({ summary: legacy, findings: [finding("SECURITY", "CRITICAL")], runStatus: "SUCCEEDED" })).toMatchObject({ availability: "INVALID", score: null });
   });
 });
