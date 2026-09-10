@@ -7,10 +7,13 @@ on:
       - "src/app/api/audit/runs/**"
       - "src/app/api/reports/**"
       - "src/app/api/pdf/**"
-      - "src/lib/audit-enqueue.ts"
-      - "src/lib/report-access.ts"
-      - "src/lib/report-result.ts"
+      - "src/lib/**"
       - "prisma/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "next.config.ts"
+      - "tsconfig.json"
+      - "vitest.config.ts"
       - ".github/workflows/au11-audit-flow-postgres.yml"
   workflow_dispatch:
 

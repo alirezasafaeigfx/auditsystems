@@ -7,8 +7,11 @@ import { generateCSRFToken } from "../lib/csrf";
 import { hashPassword } from "../lib/reportShare";
 import { getReportAccessCookieName, createReportAccessCredential } from "../lib/report-access";
 import { runWorkerCycle } from "./worker-cycle";
+import { assertDisposableAu11Database } from "./au11-test-guard";
 
-const integrationEnabled = process.env.AU11_AUDIT_FLOW_INTEGRATION === "true";
+const integrationRequested = process.env.AU11_AUDIT_FLOW_INTEGRATION === "true";
+if (integrationRequested) assertDisposableAu11Database(process.env);
+const integrationEnabled = integrationRequested;
 const describePostgres = integrationEnabled ? describe : describe.skip;
 
 describePostgres("AU-11 audit flow — disposable PostgreSQL", () => {
@@ -118,6 +121,22 @@ describePostgres("AU-11 audit flow — disposable PostgreSQL", () => {
     expect([first.body.reused, second.body.reused].sort()).toEqual([false, true]);
     expect(await prisma.auditRun.count()).toBe(1);
     expect(await prisma.job.count()).toBe(1);
+  });
+
+  it("does not lease a queued job after the worker shutdown signal", async () => {
+    const submitted = await submit(`${baseUrl}/shutdown`, "au11-shutdown");
+    const shutdown = new AbortController();
+    shutdown.abort(new Error("WORKER_SHUTDOWN"));
+
+    expect(await runWorkerCycle({
+      workerId: "au11-shutdown-worker",
+      fallbackTimeoutMs: 5_000,
+      signal: shutdown.signal,
+    })).toBe(0);
+
+    const job = await prisma.job.findFirstOrThrow({ where: { payload: { path: ["runId"], equals: submitted.body.runId } } });
+    expect(job.status).toBe("QUEUED");
+    expect(job.attempt).toBe(0);
   });
 
   it("retries an actual worker failure and marks its final allowed attempt terminal", async () => {

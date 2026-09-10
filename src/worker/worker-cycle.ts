@@ -12,6 +12,7 @@ export type WorkerCycleOptions = {
   workerId: string;
   fallbackTimeoutMs: number;
   concurrency?: number;
+  signal?: AbortSignal;
 };
 
 type ActiveLease = {
@@ -55,10 +56,13 @@ function startHeartbeat(job: LeasedJob, controller: AbortController, fallbackTim
   };
 }
 
-function beginLease(job: LeasedJob, fallbackTimeoutMs: number): ActiveLease {
+function beginLease(job: LeasedJob, fallbackTimeoutMs: number, signal?: AbortSignal): ActiveLease {
   const controller = new AbortController();
+  if (signal?.aborted) controller.abort(signal.reason ?? new Error("WORKER_SHUTDOWN"));
   const timeoutMs = job.timeoutMs || fallbackTimeoutMs;
-  const stopHeartbeat = startHeartbeat(job, controller, fallbackTimeoutMs);
+  const stopHeartbeat = controller.signal.aborted
+    ? () => undefined
+    : startHeartbeat(job, controller, fallbackTimeoutMs);
   const timeout = setTimeout(() => {
     stopHeartbeat();
     controller.abort(new Error("JOB_TIMEOUT"));
@@ -77,6 +81,7 @@ async function processLease(lease: ActiveLease, workerId: string): Promise<void>
   const { job, controller } = lease;
   const jobStart = Date.now();
   try {
+    if (controller.signal.aborted) throw controller.signal.reason ?? new Error("JOB_ABORTED");
     const handler = handlers[job.type as keyof typeof handlers];
     if (!handler) throw new Error(`NO_HANDLER_FOR_${job.type}`);
     await handler(job, controller.signal);
@@ -98,12 +103,15 @@ async function processLease(lease: ActiveLease, workerId: string): Promise<void>
 
 export async function runWorkerCycle(options: WorkerCycleOptions): Promise<number> {
   const concurrency = options.concurrency ?? 1;
+  if (options.signal?.aborted) return 0;
   const recycled = await recycleExpiredLeases();
   if (recycled > 0) console.warn(`Worker ${options.workerId}: recycled ${recycled} expired lease(s)`);
+  if (options.signal?.aborted) return 0;
   const leases: ActiveLease[] = [];
   for (let index = 0; index < concurrency; index += 1) {
+    if (options.signal?.aborted) break;
     const job = await leaseNextJob(`${options.workerId}-${index}`, options.fallbackTimeoutMs);
-    if (job) leases.push(beginLease(job, options.fallbackTimeoutMs));
+    if (job) leases.push(beginLease(job, options.fallbackTimeoutMs, options.signal));
   }
   if (leases.length > 0) await Promise.all(leases.map((lease) => processLease(lease, options.workerId)));
   return leases.length;

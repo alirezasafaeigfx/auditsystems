@@ -15,6 +15,7 @@ const pollMs = positiveIntegerEnv("WORKER_POLL_MS", 1200, 60_000);
 const fallbackTimeoutMs = positiveIntegerEnv("WORKER_JOB_TIMEOUT_MS", 45_000, 30 * 60_000);
 const concurrency = positiveIntegerEnv("WORKER_CONCURRENCY", 1, 32);
 let isShuttingDown = false;
+const shutdown = new AbortController();
 
 async function runLoop(): Promise<void> {
   console.log(`Worker started: ${workerId}, concurrency: ${concurrency}, pollMs: ${pollMs}`);
@@ -25,7 +26,7 @@ async function runLoop(): Promise<void> {
       break;
     }
 
-    const processed = await runWorkerCycle({ workerId, fallbackTimeoutMs, concurrency });
+    const processed = await runWorkerCycle({ workerId, fallbackTimeoutMs, concurrency, signal: shutdown.signal });
     if (processed === 0) {
       await sleep(pollMs);
       continue;
@@ -37,6 +38,7 @@ async function runLoop(): Promise<void> {
 function requestShutdown(signal: string): void {
   if (isShuttingDown) return;
   isShuttingDown = true;
+  shutdown.abort(new Error("WORKER_SHUTDOWN"));
   console.log(`Worker ${workerId}: received ${signal}, aborting active leases`);
   abortActiveWorkerJobs();
 }
