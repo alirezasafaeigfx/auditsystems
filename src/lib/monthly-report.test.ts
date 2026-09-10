@@ -40,6 +40,21 @@ function partialAudit() {
   };
 }
 
+function partialAuditWithoutSeoEvidence() {
+  const audit = partialAudit();
+  audit.id = "partial-no-seo";
+  audit.summary.seoFiles.robots.status = "UNAVAILABLE";
+  audit.summary.resultCoverage = {
+    ...audit.summary.resultCoverage,
+    coveredCategories: ["SECURITY", "ACCESSIBILITY", "RESILIENCE"],
+    unavailableCategories: ["PERFORMANCE", "UX", "SEO"],
+    ratio: 3 / 6,
+    confidence: 3 / 6,
+    measurementIds: ["category:SECURITY", "category:ACCESSIBILITY", "category:RESILIENCE"],
+  };
+  return audit;
+}
+
 describe("generateMonthlyReport coverage semantics", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -61,5 +76,17 @@ describe("generateMonthlyReport coverage semantics", () => {
     expect(report.markdown).toContain("Coverage:** 67%");
     expect(report.markdown).toContain("Average Score:** 100/100 (EXCELLENT, PARTIAL)");
     expect(report.markdown).not.toContain("| PERFORMANCE | 100/100 |");
+  });
+
+  it("withholds a monthly aggregate when successful audits have incompatible coverage", async () => {
+    mocks.audits.mockReset()
+      .mockResolvedValueOnce([partialAudit(), partialAuditWithoutSeoEvidence()])
+      .mockResolvedValueOnce([partialAudit(), partialAuditWithoutSeoEvidence()])
+      .mockResolvedValueOnce([]);
+    const { generateMonthlyReport } = await import("./monthly-report");
+    const report = await generateMonthlyReport("org-1", 9, 2026);
+
+    expect(report.data).toMatchObject({ comparableAudits: 0, resultAvailability: "INVALID", averageScore: null });
+    expect(report.markdown).toContain("Average Score:** unavailable");
   });
 });

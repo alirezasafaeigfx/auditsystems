@@ -72,11 +72,10 @@ export async function generateMonthlyReport(
   const totalAudits = allAudits.length;
   const successfulAudits = audits.length;
 
-  let totalScore = 0;
   const allFindings: { category: string; severity: string }[] = [];
   const issueMap = new Map<string, { code: string; title: string; severity: string; count: number }>();
   const projectMap = new Map<string, { projectId: string; projectName: string; auditCount: number; totalScore: number }>();
-  const auditResults: ReportResult[] = [];
+  const scoredAudits: Array<{ result: ReportResult; project: { id: string; name: string } | null }> = [];
   let partialAudits = 0;
   let unavailableAudits = 0;
 
@@ -99,29 +98,27 @@ export async function generateMonthlyReport(
       if (result.availability !== "PARTIAL") unavailableAudits++;
       continue;
     }
-    const score = result.score;
-    totalScore += score.overall;
-    auditResults.push(result);
-    if (audit.project) {
-      const projectKey = audit.project.id;
-      const existing = projectMap.get(projectKey);
+    scoredAudits.push({ result, project: audit.project });
+  }
+
+  const coverageSignatures = new Set(scoredAudits.map(({ result }) => `${result.policyVersion}|${result.availability}|${result.coverage.ratio}|${result.coverage.coveredCategories.join(",")}`));
+  const auditResults = coverageSignatures.size <= 1 ? scoredAudits.map(({ result }) => result) : [];
+  const totalScore = auditResults.reduce((sum, result) => sum + result.score!.overall, 0);
+  if (auditResults.length > 0) {
+    for (const { result, project } of scoredAudits) {
+      if (!project || !result.score) continue;
+      const existing = projectMap.get(project.id);
       if (existing) {
         existing.auditCount++;
-        existing.totalScore += score.overall;
+        existing.totalScore += result.score.overall;
       } else {
-        projectMap.set(projectKey, {
-          projectId: audit.project.id,
-          projectName: audit.project.name,
-          auditCount: 1,
-          totalScore: score.overall
-        });
+        projectMap.set(project.id, { projectId: project.id, projectName: project.name, auditCount: 1, totalScore: result.score.overall });
       }
     }
   }
-
   const comparableAudits = auditResults.length;
   const averageScore = comparableAudits > 0 ? Math.round(totalScore / comparableAudits) : null;
-  const resultAvailability: ResultAvailability = comparableAudits === 0 ? "UNAVAILABLE" : auditResults.some((result) => result.availability === "PARTIAL") ? "PARTIAL" : "AVAILABLE";
+  const resultAvailability: ResultAvailability = coverageSignatures.size > 1 ? "INVALID" : comparableAudits === 0 ? "UNAVAILABLE" : auditResults.some((result) => result.availability === "PARTIAL") ? "PARTIAL" : "AVAILABLE";
   const coverageRatio = comparableAudits === 0 ? null : Math.min(...auditResults.map((result) => result.coverage.ratio ?? 0));
   const calculatedBreakdown = calculateScore(allFindings as { category: never; severity: never }[]);
   const scoreBreakdown = auditResults.length === 0
