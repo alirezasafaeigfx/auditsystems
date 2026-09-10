@@ -113,4 +113,41 @@ describe("protected report HTML/RSC access", () => {
     expect(markup).not.toContain("Synthetic protected finding");
     expect(markup).not.toContain("private-customer.invalid");
   });
+
+  it("labels a current partial result and does not present missing performance coverage as 100", async () => {
+    const share = protectedShare();
+    (share as { passwordHash: string | null }).passwordHash = null;
+    share.run.findings = [];
+    share.run.summary = {
+      schema: "asdev.audit.summary.v1",
+      scoringPolicyVersion: "worst-severity-v2",
+      score: 100,
+      grade: "EXCELLENT",
+      categoryScores: { SEO: 100, PERFORMANCE: 100, SECURITY: 100, UX: 100, ACCESSIBILITY: 100, RESILIENCE: 100 },
+      severityCounts: { INFO: 0, LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 },
+      resultCoverage: {
+        schema: "asdev.audit.result-coverage.v1",
+        coveredCategories: ["SEO", "SECURITY", "UX", "ACCESSIBILITY", "RESILIENCE"],
+        unavailableCategories: ["PERFORMANCE"],
+        ratio: 5 / 6,
+        confidence: 5 / 6,
+        freshness: "FRESH",
+        measurementIds: ["category:SEO", "category:SECURITY", "category:UX", "category:ACCESSIBILITY", "category:RESILIENCE"],
+        limitations: ["Performance score withheld."],
+      },
+    } as never;
+    mocks.findUnique.mockResolvedValue(share);
+
+    const { default: ReportPage } = await import("./page");
+    const markup = renderToStaticMarkup(await ReportPage({ params: Promise.resolve({ token: "protected-report-token" }) }));
+    const { default: ReportPageEn } = await import("../../../en/audit/r/[token]/page");
+    const englishMarkup = renderToStaticMarkup(await ReportPageEn({ params: Promise.resolve({ token: "protected-report-token" }) }));
+
+    expect(markup).toContain("نتیجه ناقص");
+    expect(markup).toContain("83%");
+    expect(markup).not.toContain("سرعت</div><div style=\"font-size:1.25rem;font-weight:700\">100");
+    expect(englishMarkup).toContain("Partial result");
+    expect(englishMarkup).toContain("83%");
+    expect(englishMarkup).not.toContain("Performance</div><div style=\"font-size:1.25rem;font-weight:700\">100");
+  });
 });

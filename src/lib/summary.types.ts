@@ -1,4 +1,5 @@
 import type { PerformanceEvidenceBundle } from "./performance-evidence";
+import type { ResultCoverage } from "./report-result";
 import type { Finding, SeoFileEvidence } from "./types";
 
 export type AuditSummaryV1 = {
@@ -46,6 +47,10 @@ export type AuditSummaryV1 = {
     sitemap: SeoFileEvidence;
   };
   performance?: PerformanceEvidenceBundle;
+  resultCoverage: ResultCoverage & {
+    schema: "asdev.audit.result-coverage.v1";
+    measurementIds: string[];
+  };
   findings: Finding[];
   highlights: {
     topFixes: Array<{

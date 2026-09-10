@@ -1,6 +1,7 @@
 import { AuditSummaryV1 } from "./summary.types";
 import type { PerformanceEvidenceBundle } from "./performance-evidence";
 import type { ExtractedResource, Finding, SeoBasics, SeoFileEvidence } from "./types";
+import { RESULT_COVERAGE_SCHEMA } from "./report-result";
 
 function headerPresent(headers: Record<string, string>, headerName: string): boolean {
   return Object.keys(headers).some((key) => key.toLowerCase() === headerName.toLowerCase());
@@ -85,6 +86,22 @@ export function buildAuditSummaryV1(input: {
     },
     ...(input.seoFiles ? { seoFiles: input.seoFiles } : {}),
     ...(input.performance ? { performance: input.performance } : {}),
+    resultCoverage: {
+      schema: RESULT_COVERAGE_SCHEMA,
+      ratio: 5 / 6,
+      confidence: 5 / 6,
+      freshness: "FRESH",
+      coveredCategories: ["SEO", "SECURITY", "UX", "ACCESSIBILITY", "RESILIENCE"],
+      unavailableCategories: ["PERFORMANCE"],
+      measurementIds: [
+        "category:SEO",
+        "category:SECURITY",
+        "category:UX",
+        "category:ACCESSIBILITY",
+        "category:RESILIENCE",
+      ],
+      limitations: [input.performance?.withheldReason ?? "No approved versioned performance scoring policy; performance score is unavailable."],
+    },
     findings: input.findings,
     highlights: {
       topFixes
