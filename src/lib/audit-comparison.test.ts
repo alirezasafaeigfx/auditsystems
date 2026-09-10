@@ -2,13 +2,34 @@ import { describe, it, expect } from "vitest";
 import { compareAuditRuns } from "./audit-comparison";
 import type { AuditRun } from "./audit-comparison";
 import type { FindingCategory, FindingSeverity } from "./types";
+import { calculateScore } from "./scoring";
 
 function makeFinding(code: string, category: string, severity: string) {
   return { code, category: category as FindingCategory, severity: severity as FindingSeverity, title: `${code} title` };
 }
 
 function makeRun(findings: ReturnType<typeof makeFinding>[]): AuditRun {
-  return { findings };
+  const score = calculateScore(findings);
+  return {
+    findings,
+    status: "SUCCEEDED",
+    summary: {
+      schema: "asdev.audit.summary.v1",
+      scoringPolicyVersion: "worst-severity-v2",
+      score: score.overall,
+      grade: score.grade,
+      categoryScores: score.categories,
+      severityCounts: score.severityCounts,
+      seoFiles: { robots: { status: "VERIFIED" }, sitemap: { status: "VERIFIED" } },
+      resultCoverage: {
+        schema: "asdev.audit.result-coverage.v1",
+        coveredCategories: ["SEO", "SECURITY", "ACCESSIBILITY", "RESILIENCE"],
+        unavailableCategories: ["PERFORMANCE", "UX"], ratio: 4 / 6, confidence: 4 / 6, freshness: "FRESH",
+        measurementIds: ["category:SEO", "category:SECURITY", "category:ACCESSIBILITY", "category:RESILIENCE"],
+        limitations: [],
+      },
+    },
+  };
 }
 
 describe("audit-comparison", () => {
@@ -122,5 +143,30 @@ describe("audit-comparison", () => {
     const result = compareAuditRuns(legacy, makeRun(findings));
     expect(result.overall.delta).toBeNull();
     expect(result.overall.direction).toBe("unavailable");
+  });
+
+  it("does not calculate deltas when coverage records contradict the current policy", () => {
+    const complete = makeRun([]);
+    const partial = makeRun([]);
+    partial.summary!.resultCoverage = {
+      ...partial.summary!.resultCoverage!,
+      coveredCategories: ["SEO", "SECURITY", "UX", "ACCESSIBILITY", "RESILIENCE"],
+      unavailableCategories: ["PERFORMANCE"],
+      ratio: 5 / 6,
+      measurementIds: ["category:SEO", "category:SECURITY", "category:UX", "category:ACCESSIBILITY", "category:RESILIENCE"],
+    };
+
+    const result = compareAuditRuns(complete, partial);
+    expect(result.overall).toMatchObject({ delta: null, direction: "unavailable" });
+    expect(result.availabilityAfter).toBe("INVALID");
+  });
+
+  it("withholds comparison scores for a failed result", () => {
+    const complete = makeRun([makeFinding("F1", "SECURITY", "HIGH")]);
+    const failed = { ...makeRun([]), status: "FAILED" };
+    const result = compareAuditRuns(complete, failed);
+    expect(result.overall.after).toBeNull();
+    expect(result.overall.direction).toBe("unavailable");
+    expect(result.resolvedIssues).toEqual([]);
   });
 });

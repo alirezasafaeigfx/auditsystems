@@ -15,6 +15,7 @@ import {
   serializeReportAccessCookie,
   verifyReportAccessCredential,
 } from "../../../../lib/report-access";
+import { resolveReportResult, RESULT_COVERAGE_SCHEMA } from "../../../../lib/report-result";
 
 const PASSWORD_ATTEMPT_LIMIT = 10;
 const PASSWORD_ATTEMPT_WINDOW_SEC = 15 * 60;
@@ -40,15 +41,36 @@ async function fetchShareWithFindings(token: string) {
 
 function buildReportResponse(share: Awaited<ReturnType<typeof fetchShareWithFindings>>, requestId: string) {
   if (!share) return null;
+  const result = resolveReportResult({
+    summary: share.run.summary,
+    findings: share.run.findings,
+    runStatus: share.run.status,
+  });
+  const storedSummary = share.run.summary && typeof share.run.summary === "object" && !Array.isArray(share.run.summary)
+    ? share.run.summary as Record<string, unknown> : {};
+  const safeSummary = {
+    ...storedSummary,
+    score: result.score?.overall ?? null,
+    grade: result.score?.grade ?? null,
+    categoryScores: result.categoryScores,
+    severityCounts: result.score?.severityCounts ?? null,
+    resultCoverage: result.availability === "LEGACY" ? null : {
+      schema: RESULT_COVERAGE_SCHEMA,
+      ...result.coverage,
+      measurementIds: result.coverage.coveredCategories.map((category) => `category:${category}`),
+    },
+    resultAvailability: result.availability,
+  };
   return {
     run: {
       id: share.run.id,
       url: share.run.url,
       normalizedUrl: share.run.normalizedUrl,
       status: share.run.status,
-      summary: share.run.summary,
+      summary: safeSummary,
     },
     findings: share.run.findings,
+    result,
     status: share.run.status,
     share: {
       viewCount: share.viewCount + 1,

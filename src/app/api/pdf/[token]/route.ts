@@ -6,8 +6,7 @@ import { isPerformanceEvidenceBundle } from "../../../../lib/performance-evidenc
 import { appendPerformanceEvidencePage } from "../../../../lib/performance-report";
 import { buildAuditReportPdf } from "../../../../lib/pdf";
 import { isReportShareAccessible } from "../../../../lib/reportShare";
-import { calculateScore } from "../../../../lib/scoring";
-import { scoreFromPersistedSummary } from "../../../../lib/persisted-score";
+import { resolveReportResult } from "../../../../lib/report-result";
 import { getCurrentPlan } from "../../../../lib/usage";
 import { NextRequest } from "next/server";
 
@@ -97,13 +96,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tok
       category: finding.category
     }));
 
-    const calculatedScore = calculateScore(
-      share.run.findings.map((f) => ({
-        category: f.category,
-        severity: f.severity
-      }))
-    );
-    const score = scoreFromPersistedSummary(share.run.summary, calculatedScore);
+    const result = resolveReportResult({ summary: share.run.summary, findings: share.run.findings, runStatus: share.run.status });
 
     let agencyName: string | undefined;
     let agencyLogo: string | undefined;
@@ -128,13 +121,14 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tok
       findings: findingsData,
       generatedAt: new Date().toISOString(),
       locale: share.run.locale ?? "en",
-      score: {
-        overall: score.overall,
-        grade: score.grade,
-        categories: score.categories,
-        severityCounts: score.severityCounts,
-        totalFindings: score.totalFindings
-      },
+      result,
+      score: result.score ? {
+        overall: result.score.overall,
+        grade: result.score.grade,
+        categories: result.categoryScores,
+        severityCounts: result.score.severityCounts,
+        totalFindings: result.score.totalFindings
+      } : undefined,
       agencyName,
       agencyLogo,
       primaryColor,

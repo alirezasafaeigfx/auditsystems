@@ -79,8 +79,8 @@ export default async function ComparePage({ params }: { params: Promise<{ tokenA
   const runB = shareB.run;
 
   const comparison = compareAuditRuns(
-    { findings: runA.findings as AuditRun["findings"], summary: runA.summary as AuditRun["summary"] },
-    { findings: runB.findings as AuditRun["findings"], summary: runB.summary as AuditRun["summary"] }
+    { findings: runA.findings as AuditRun["findings"], summary: runA.summary as AuditRun["summary"], status: runA.status },
+    { findings: runB.findings as AuditRun["findings"], summary: runB.summary as AuditRun["summary"], status: runB.status }
   );
 
   return (
@@ -102,9 +102,10 @@ export default async function ComparePage({ params }: { params: Promise<{ tokenA
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: "0.875rem", color: "var(--muted)", marginBottom: "0.25rem" }}>قبل</div>
             <div style={{ fontSize: "2.5rem", fontWeight: 800, color: "var(--text)" }}>
-              {comparison.overall.before}<span style={{ fontSize: "1rem" }}>/100</span>
+              {comparison.overall.before ?? "ناموجود"}{comparison.overall.before === null ? null : <span style={{ fontSize: "1rem" }}>/100</span>}
             </div>
             <div style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--text)" }}>{comparison.gradeBefore}</div>
+            <div>{comparison.availabilityBefore} · پوشش {comparison.coverageBefore === null ? "نامشخص" : `${Math.round(comparison.coverageBefore * 100)}%`}</div>
           </div>
 
           <div style={{ textAlign: "center" }}>
@@ -115,16 +116,17 @@ export default async function ComparePage({ params }: { params: Promise<{ tokenA
                 color: directionColor(comparison.overall.direction),
               }}
             >
-                  {comparison.overall.direction === "unavailable" ? "Not comparable across scoring policies" : `${directionIcon(comparison.overall.direction)} ${Math.abs(comparison.overall.delta ?? 0)}`}
+                  {comparison.overall.direction === "unavailable" ? "شواهد برای مقایسه هم‌ارز نیست" : `${directionIcon(comparison.overall.direction)} ${Math.abs(comparison.overall.delta ?? 0)}`}
             </div>
           </div>
 
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: "0.875rem", color: "var(--muted)", marginBottom: "0.25rem" }}>بعد</div>
             <div style={{ fontSize: "2.5rem", fontWeight: 800, color: directionColor(comparison.overall.direction) }}>
-              {comparison.overall.after}<span style={{ fontSize: "1rem" }}>/100</span>
+              {comparison.overall.after ?? "ناموجود"}{comparison.overall.after === null ? null : <span style={{ fontSize: "1rem" }}>/100</span>}
             </div>
             <div style={{ fontSize: "0.875rem", fontWeight: 600, color: directionColor(comparison.overall.direction) }}>{comparison.gradeAfter}</div>
+            <div>{comparison.availabilityAfter} · پوشش {comparison.coverageAfter === null ? "نامشخص" : `${Math.round(comparison.coverageAfter * 100)}%`}</div>
           </div>
         </div>
       </section>
@@ -141,11 +143,11 @@ export default async function ComparePage({ params }: { params: Promise<{ tokenA
             </tr>
           </thead>
           <tbody>
-            {comparison.categories.map((cat: { category: string; label: string; before: number; after: number; delta: number | null; direction: string }) => (
+            {comparison.categories.map((cat: { category: string; label: string; before: number | null; after: number | null; delta: number | null; direction: string }) => (
               <tr key={cat.category} style={{ borderBottom: "1px solid var(--line)" }}>
                 <td style={{ padding: "0.75rem", fontWeight: 600 }}>{cat.label}</td>
-                <td style={{ padding: "0.75rem", textAlign: "center" }}>{cat.before}</td>
-                <td style={{ padding: "0.75rem", textAlign: "center" }}>{cat.after}</td>
+                <td style={{ padding: "0.75rem", textAlign: "center" }}>{cat.before ?? "ناموجود"}</td>
+                <td style={{ padding: "0.75rem", textAlign: "center" }}>{cat.after ?? "ناموجود"}</td>
                 <td style={{ padding: "0.75rem", textAlign: "center", color: directionColor(cat.direction), fontWeight: 600 }}>
                   {cat.direction === "unavailable" ? "Not comparable" : `${directionIcon(cat.direction)} ${Math.abs(cat.delta ?? 0)}`}
                 </td>

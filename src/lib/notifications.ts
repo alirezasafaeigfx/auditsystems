@@ -9,7 +9,9 @@ export type AuditCompletionData = {
   grade: string;
   totalFindings: number;
   severityCounts: Record<string, number>;
-  categoryScores: Record<string, number>;
+  categoryScores: Record<string, number | null>;
+  resultAvailability: "AVAILABLE" | "PARTIAL" | "UNAVAILABLE" | "LEGACY" | "INVALID";
+  coverageRatio: number | null;
 };
 
 export async function sendAuditCompleteNotification(
@@ -50,7 +52,8 @@ export async function sendAuditCompleteNotification(
     return false;
   }
 
-  const subject = `ممیزی تکمیل شد — امتیاز: ${auditData.score}/100`;
+  const coverageLabel = auditData.resultAvailability === "PARTIAL" ? "پوشش ناقص" : auditData.resultAvailability === "AVAILABLE" ? "پوشش کامل" : "پوشش نامشخص";
+  const subject = `ممیزی تکمیل شد — امتیاز: ${auditData.score}/100 (${coverageLabel})`;
   const body = renderEmailBody(org.name, auditData, org.id);
 
   // Email service integration placeholder
@@ -96,7 +99,7 @@ function renderEmailBody(
     .join("\n");
 
   const categoryLines = Object.entries(data.categoryScores)
-    .map(([cat, score]) => `  - ${cat}: ${score}/100`)
+    .map(([cat, score]) => `  - ${cat}: ${score === null ? "unavailable" : `${score}/100`}`)
     .join("\n");
 
   const unsubSecret = process.env.CSRF_SECRET; if (!unsubSecret) throw new Error("CSRF_SECRET required"); const unsubscribeToken = signUnsubToken(organizationId, unsubSecret);
@@ -109,6 +112,8 @@ function renderEmailBody(
     `URL: ${data.url}`,
     ``,
     `Score: ${data.score}/100 (${data.grade})`,
+    `Availability: ${data.resultAvailability}`,
+    `Coverage: ${data.coverageRatio === null ? "unknown" : `${Math.round(data.coverageRatio * 100)}%`}`,
     `Total Findings: ${data.totalFindings}`,
     ``,
     `Severity Distribution:`,

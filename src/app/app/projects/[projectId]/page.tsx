@@ -6,6 +6,7 @@ import { RunAuditButton } from "../../../../components/RunAuditButton";
 import { ScheduleManager } from "../../../../components/ScheduleManager";
 import { ScoreTrend } from "../../../../components/ScoreTrend";
 import { getUsageStats, canScheduleAudit } from "../../../../lib/usage";
+import { resolveReportResult } from "../../../../lib/report-result";
 
 type Props = { params: Promise<{ projectId: string }> };
 
@@ -40,6 +41,7 @@ export default async function ProjectDetailPage({ params }: Props) {
       createdAt: true,
       finishedAt: true,
       summary: true,
+      findings: { select: { code: true, category: true, severity: true } },
       shares: { select: { token: true }, take: 1 }
     }
   });
@@ -54,6 +56,16 @@ export default async function ProjectDetailPage({ params }: Props) {
     RUNNING: "در حال اجرا",
     QUEUED: "در صف"
   };
+  const scoredAudits = audits.map((audit) => ({ audit, result: resolveReportResult({ summary: audit.summary, findings: audit.findings, runStatus: audit.status }) }));
+  const latestScored = scoredAudits.find(({ result }) => result.score && (result.availability === "AVAILABLE" || result.availability === "PARTIAL"));
+  const trendAudits = latestScored ? scoredAudits
+    .filter(({ result }) => result.score
+      && result.availability === latestScored.result.availability
+      && result.coverage.ratio === latestScored.result.coverage.ratio
+      && result.policyVersion === latestScored.result.policyVersion)
+    .slice(0, 12)
+    .reverse()
+    .map(({ audit, result }) => ({ score: result.score!.overall, createdAt: audit.createdAt.toISOString(), partial: result.availability === "PARTIAL" })) : [];
 
   return (
     <div>
@@ -104,16 +116,7 @@ export default async function ProjectDetailPage({ params }: Props) {
         </div>
       )}
 
-      <ScoreTrend
-        audits={audits
-          .filter((a) => a.status === "SUCCEEDED" && a.summary)
-          .slice(0, 12)
-          .reverse()
-          .map((a) => ({
-            score: (a.summary as Record<string, unknown> | null)?.score as number ?? 0,
-            createdAt: a.createdAt.toISOString(),
-          }))}
-      />
+      <ScoreTrend audits={trendAudits} />
 
       <h2 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "1rem" }}>تاریخچه ممیزی</h2>
 

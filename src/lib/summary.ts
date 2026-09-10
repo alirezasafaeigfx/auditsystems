@@ -1,6 +1,7 @@
 import { AuditSummaryV1 } from "./summary.types";
 import type { PerformanceEvidenceBundle } from "./performance-evidence";
 import type { ExtractedResource, Finding, SeoBasics, SeoFileEvidence } from "./types";
+import { RESULT_COVERAGE_SCHEMA } from "./report-result";
 
 function headerPresent(headers: Record<string, string>, headerName: string): boolean {
   return Object.keys(headers).some((key) => key.toLowerCase() === headerName.toLowerCase());
@@ -21,6 +22,16 @@ export function buildAuditSummaryV1(input: {
   performance?: PerformanceEvidenceBundle;
 }): AuditSummaryV1 {
   const firstPartyHost = new URL(input.normalizedUrl).hostname;
+  const seoEvidenceComplete = input.seoFiles
+    ? [input.seoFiles.robots, input.seoFiles.sitemap].every((evidence) => evidence.status === "VERIFIED" || evidence.status === "MISSING")
+    : false;
+  const coveredCategories = [
+    ...(seoEvidenceComplete ? ["SEO" as const] : []),
+    "SECURITY" as const,
+    "ACCESSIBILITY" as const,
+    "RESILIENCE" as const,
+  ];
+  const unavailableCategories = ["PERFORMANCE" as const, "UX" as const, ...(seoEvidenceComplete ? [] : ["SEO" as const])];
 
   const thirdPartyMap = new Map<string, { count: number; kinds: Record<string, number>; examples: string[] }>();
   for (const resource of input.resources) {
@@ -85,6 +96,20 @@ export function buildAuditSummaryV1(input: {
     },
     ...(input.seoFiles ? { seoFiles: input.seoFiles } : {}),
     ...(input.performance ? { performance: input.performance } : {}),
+    resultCoverage: {
+      schema: RESULT_COVERAGE_SCHEMA,
+      ratio: coveredCategories.length / 6,
+      confidence: coveredCategories.length / 6,
+      freshness: "FRESH",
+      coveredCategories,
+      unavailableCategories,
+      measurementIds: coveredCategories.map((category) => `category:${category}`),
+      limitations: [
+        input.performance?.withheldReason ?? "No approved versioned performance scoring policy; performance score is unavailable.",
+        "No runtime UX measurement policy is implemented; UX score is unavailable.",
+        ...(seoEvidenceComplete ? [] : ["SEO file evidence is unavailable; SEO score is unavailable."]),
+      ],
+    },
     findings: input.findings,
     highlights: {
       topFixes
