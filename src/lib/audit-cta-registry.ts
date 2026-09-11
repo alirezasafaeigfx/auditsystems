@@ -28,6 +28,7 @@ export type AuditIntentPolicy = {
   destinationClass: AuditCtaDestinationClass;
   path: string;
   external: boolean;
+  localeStrategy: "prefix" | "shared";
 };
 
 export const AUDIT_INTENT_POLICY: Record<AuditCtaIntent, AuditIntentPolicy> = {
@@ -36,48 +37,57 @@ export const AUDIT_INTENT_POLICY: Record<AuditCtaIntent, AuditIntentPolicy> = {
     destinationClass: "automated_audit",
     path: "/audit",
     external: false,
+    localeStrategy: "prefix",
   },
   sample_report: {
     owner: "audit",
     destinationClass: "sample_report",
     path: "/sample-report",
     external: false,
+    localeStrategy: "prefix",
   },
   pricing_view: {
     owner: "audit",
     destinationClass: "pricing",
     path: "/pricing",
     external: false,
+    localeStrategy: "prefix",
   },
   signup: {
     owner: "audit",
     destinationClass: "account_signup",
     path: "/signup",
     external: false,
+    // Current source has only src/app/signup/page.tsx; there is no /en/signup.
+    localeStrategy: "shared",
   },
   professional_review: {
     owner: "audit",
     destinationClass: "specialist_review",
     path: "/qualification",
     external: false,
+    localeStrategy: "prefix",
   },
   implementation_enquiry: {
     owner: "asdev",
     destinationClass: "implementation_enquiry",
     path: "https://alirezasafaeisystems.ir/qualification",
     external: true,
+    localeStrategy: "prefix",
   },
   audit_framework: {
     owner: "audit",
     destinationClass: "audit_content",
     path: "/pillar/iran-readiness-audit",
     external: false,
+    localeStrategy: "prefix",
   },
   agency_contact: {
     owner: "persian_toolbox",
     destinationClass: "utility_site",
     path: "https://persiantoolbox.ir/",
     external: true,
+    localeStrategy: "shared",
   },
 };
 
@@ -278,17 +288,12 @@ const entries: AuditCtaEntry[] = [
   },
 ];
 
-const SAFE_QUERY_KEYS = new Set([
-  "utm_source",
-  "utm_medium",
-  "utm_campaign",
-  "utm_content",
-  "source",
-  "placement",
-  "offer",
-  "locale",
-  "intent",
-]);
+const SAFE_FIXED_QUERY_VALUES: Record<string, ReadonlySet<string>> = {
+  utm_source: new Set(["audit"]),
+  utm_medium: new Set(["intent_router"]),
+  utm_campaign: new Set(["asdev_audit"]),
+  utm_content: new Set(["implementation_enquiry", "toolbox_route"]),
+};
 
 const ALLOWED_EXTERNAL_ORIGINS = new Set([
   "https://alirezasafaeisystems.ir",
@@ -298,7 +303,7 @@ const ALLOWED_EXTERNAL_ORIGINS = new Set([
 function safeQuery(searchParams: URLSearchParams): string {
   const safe = new URLSearchParams();
   for (const [key, value] of searchParams.entries()) {
-    if (SAFE_QUERY_KEYS.has(key)) {
+    if (SAFE_FIXED_QUERY_VALUES[key]?.has(value)) {
       safe.append(key, value);
     }
   }
@@ -306,15 +311,12 @@ function safeQuery(searchParams: URLSearchParams): string {
   return rendered ? `?${rendered}` : "";
 }
 
-function localizeExternalPath(entry: AuditCtaEntry, locale: SampleLocale, pathname: string): string {
-  if (
-    entry.intent === "implementation_enquiry" &&
-    pathname === "/qualification" &&
-    locale === "en"
-  ) {
-    return "/en/qualification";
+function localizedPath(entry: AuditCtaEntry, locale: SampleLocale, pathname: string): string {
+  const policy = AUDIT_INTENT_POLICY[entry.intent];
+  if (locale !== "en" || policy.localeStrategy === "shared") {
+    return pathname;
   }
-  return pathname;
+  return localePath(pathname, locale);
 }
 
 /** Registry-backed surfaces. Nav/layout links remain ad-hoc until a later pass. */
@@ -361,10 +363,11 @@ export function validateAuditCtaRegistry(): string[] {
     try {
       if (entry.external) {
         const url = new URL(entry.path);
+        const policyUrl = new URL(policy.path);
         if (url.protocol !== "https:" || !ALLOWED_EXTERNAL_ORIGINS.has(url.origin)) {
           errors.push(`external origin is not allowed on ${entry.id}`);
         }
-        if (url.origin !== new URL(policy.path).origin || url.pathname !== new URL(policy.path).pathname) {
+        if (url.origin !== policyUrl.origin || url.pathname !== policyUrl.pathname) {
           errors.push(`external destination does not match intent policy on ${entry.id}`);
         }
       } else {
@@ -403,16 +406,14 @@ export function buildAuditCtaHref(
       if (url.protocol !== "https:" || !ALLOWED_EXTERNAL_ORIGINS.has(url.origin)) {
         return "#";
       }
-      const pathname = localizeExternalPath(entry, locale, url.pathname);
-      return `${url.origin}${pathname}${safeQuery(url.searchParams)}`;
+      return `${url.origin}${localizedPath(entry, locale, url.pathname)}${safeQuery(url.searchParams)}`;
     }
 
     const url = new URL(entry.path, "https://audit.invalid");
     if (url.origin !== "https://audit.invalid" || !url.pathname.startsWith("/")) {
       return "#";
     }
-    const localizedPath = localePath(url.pathname, locale);
-    return `${localizedPath}${safeQuery(url.searchParams)}`;
+    return `${localizedPath(entry, locale, url.pathname)}${safeQuery(url.searchParams)}`;
   } catch {
     return "#";
   }
