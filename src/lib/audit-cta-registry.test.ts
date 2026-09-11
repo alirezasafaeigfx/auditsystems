@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
+  AUDIT_INTENT_POLICY,
   buildAuditCtaHref,
   getAllAuditCtas,
   getAuditCta,
@@ -8,7 +9,6 @@ import {
   validateAuditCtaRegistry,
 } from "./audit-cta-registry";
 import { trackAuditCtaClick } from "./audit-cta-tracking";
-import { SAMPLE_DEMO_URL } from "./sample-report/demo-findings";
 
 vi.mock("./analytics", () => ({
   trackSeoEvent: vi.fn(),
@@ -21,8 +21,16 @@ describe("audit-cta-registry", () => {
     vi.mocked(trackSeoEvent).mockClear();
   });
 
-  it("validates every registry entry without errors", () => {
+  it("validates every registry entry against its intent policy", () => {
     expect(validateAuditCtaRegistry()).toEqual([]);
+  });
+
+  it("documents one owner and destination class for every supported intent", () => {
+    for (const entry of getAllAuditCtas()) {
+      const policy = AUDIT_INTENT_POLICY[entry.intent];
+      expect(policy.owner).toBeTruthy();
+      expect(policy.destinationClass).toBeTruthy();
+    }
   });
 
   it("resolves every CTA ID with bilingual labels", () => {
@@ -33,7 +41,7 @@ describe("audit-cta-registry", () => {
     }
   });
 
-  it("defines all sample_report surface CTAs with clear intents", () => {
+  it("defines sample-report CTAs as distinct user intents", () => {
     const ids = getSampleReportCtaIds();
     expect(ids).toHaveLength(5);
 
@@ -44,34 +52,30 @@ describe("audit-cta-registry", () => {
     expect(intents).toContain("professional_review");
   });
 
-  it("builds audit prefill href for own-report CTA", () => {
+  it("routes own-report CTA to the automated audit without a fictional prefill", () => {
     const entry = getAuditCta("sample_report_own_report");
     expect(entry).toBeDefined();
-    const href = buildAuditCtaHref(entry!, "fa");
-    expect(href).toContain("/qualification?url=");
-    expect(href).toContain(encodeURIComponent(SAMPLE_DEMO_URL));
+    expect(buildAuditCtaHref(entry!, "fa")).toBe("/audit");
+    expect(buildAuditCtaHref(entry!, "en")).toBe("/en/audit");
   });
 
-  it("builds locale-aware internal paths", () => {
-    const entry = getAuditCta("sample_report_pricing");
-    expect(buildAuditCtaHref(entry!, "en")).toBe("/en/qualification");
-    expect(buildAuditCtaHref(entry!, "fa")).toBe("/qualification");
-  });
-
-  it("marks professional review as external with UTM params", () => {
-    const entry = getAuditCta("sample_report_pro_review");
-    expect(entry?.external).toBeUndefined();
-    expect(entry?.path).toBe("/qualification");
+  it("builds locale-aware pricing and specialist paths", () => {
+    const pricing = getAuditCta("sample_report_pricing");
+    const specialist = getAuditCta("sample_report_pro_review");
+    expect(buildAuditCtaHref(pricing!, "en")).toBe("/en/pricing");
+    expect(buildAuditCtaHref(pricing!, "fa")).toBe("/pricing");
+    expect(buildAuditCtaHref(specialist!, "en")).toBe("/en/qualification");
+    expect(buildAuditCtaHref(specialist!, "fa")).toBe("/qualification");
   });
 
   it("returns audit_home CTAs for audit form surface", () => {
     const ctas = getAuditCtasForSurface("audit_home");
-    expect(ctas.some((c) => c.id === "audit_home_sample_report")).toBe(true);
+    expect(ctas.some((cta) => cta.id === "audit_home_sample_report")).toBe(true);
   });
 
   it("includes pricing_page and intent_router surfaces", () => {
     const pricing = getAuditCtasForSurface("pricing_page");
-    expect(pricing.map((c) => c.id)).toEqual(
+    expect(pricing.map((cta) => cta.id)).toEqual(
       expect.arrayContaining(["pricing_page_audit_start", "pricing_page_sample_report"])
     );
 
@@ -79,7 +83,7 @@ describe("audit-cta-registry", () => {
     expect(getAuditCta("intent_router_toolbox")?.external).toBe(true);
   });
 
-  it("emits seo_cta_click with stable id, intent, surface, and destination", () => {
+  it("emits seo_cta_click with stable id, intent, surface, and safe destination", () => {
     const entry = getAuditCta("audit_landing_start");
     expect(entry).toBeDefined();
 
@@ -89,17 +93,26 @@ describe("audit-cta-registry", () => {
       cta_id: "audit_landing_start",
       intent: "audit_start",
       surface: "audit_landing",
-      destination: "/qualification",
+      destination: "/audit",
       locale: "fa",
     });
   });
 
-  it("includes prefill destination in click payload when configured", () => {
+  it("does not copy legacy prefill URL or sensitive extra fields into analytics", () => {
     const entry = getAuditCta("sample_report_own_report");
-    trackAuditCtaClick(entry!, "en");
+    trackAuditCtaClick(entry!, "en", {
+      prefillUrl: "https://customer.example.test/private?token=secret",
+      extra: {
+        intent_router_variant: "audit_first",
+        email: "user@example.test",
+        token: "secret",
+      },
+    });
 
     const payload = vi.mocked(trackSeoEvent).mock.calls[0]?.[1];
-    expect(payload?.destination).toContain("/en/qualification?url=");
-    expect(String(payload?.destination)).toContain(encodeURIComponent(SAMPLE_DEMO_URL));
+    expect(payload?.destination).toBe("/en/audit");
+    expect(payload?.intent_router_variant).toBe("audit_first");
+    expect(payload).not.toHaveProperty("email");
+    expect(payload).not.toHaveProperty("token");
   });
 });
