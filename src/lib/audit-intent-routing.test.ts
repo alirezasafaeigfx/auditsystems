@@ -72,7 +72,7 @@ describe("AU-04 intent ownership and safe destinations", () => {
     };
     const external: AuditCtaEntry = {
       id: "test_external_sensitive",
-      intent: "professional_review",
+      intent: "implementation_enquiry",
       surface: "sample_report",
       label: { fa: "اجرا", en: "Implementation" },
       path: "https://alirezasafaeisystems.ir/qualification?utm_source=audit&token=secret&email=user%40example.test&report_id=private",
@@ -82,6 +82,29 @@ describe("AU-04 intent ownership and safe destinations", () => {
 
     expect(buildAuditCtaHref(internal, "fa")).toBe("/pricing");
     expect(buildAuditCtaHref(external, "fa")).toBe("https://alirezasafaeisystems.ir/qualification?utm_source=audit");
+  });
+
+  it("fails closed when a supplied destination contradicts its intent policy", () => {
+    const wrongOwner: AuditCtaEntry = {
+      id: "test_wrong_owner",
+      intent: "professional_review",
+      surface: "sample_report",
+      label: { fa: "اجرا", en: "Implementation" },
+      path: "https://alirezasafaeisystems.ir/qualification?utm_source=audit",
+      external: true,
+      analyticsEvent: "seo_cta_click",
+    };
+    const wrongPath: AuditCtaEntry = {
+      id: "test_wrong_path",
+      intent: "pricing_view",
+      surface: "pricing_page",
+      label: { fa: "قیمت", en: "Pricing" },
+      path: "/qualification",
+      analyticsEvent: "seo_cta_click",
+    };
+
+    expect(buildAuditCtaHref(wrongOwner, "fa")).toBe("#");
+    expect(buildAuditCtaHref(wrongPath, "fa")).toBe("#");
   });
 
   it("does not accept a customer URL through the legacy prefill option", () => {

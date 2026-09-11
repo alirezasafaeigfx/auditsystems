@@ -115,4 +115,20 @@ describe("audit-cta-registry", () => {
     expect(payload).not.toHaveProperty("email");
     expect(payload).not.toHaveProperty("token");
   });
+
+  it("rejects sensitive values hidden behind approved analytics keys", () => {
+    const entry = getAuditCta("intent_router_audit_start");
+    trackAuditCtaClick(entry!, "fa", {
+      extra: {
+        intent_router_variant: "user@example.test",
+        legacy_event: "https://private.example.test/report?id=customer",
+        source: "+989121234567",
+      },
+    });
+
+    const payload = vi.mocked(trackSeoEvent).mock.calls[0]?.[1];
+    expect(payload).not.toHaveProperty("intent_router_variant");
+    expect(payload).not.toHaveProperty("legacy_event");
+    expect(payload).not.toHaveProperty("source");
+  });
 });
