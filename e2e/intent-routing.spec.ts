@@ -26,7 +26,9 @@ const locales = [
     sample: "/en/sample-report",
     auditHref: "/en/audit",
     pricingHref: "/en/pricing",
-    signupHref: "/en/signup",
+    // Signup currently has no /en route. AU-04 keeps the verified shared route
+    // instead of manufacturing a localized 404; full signup localization is separate work.
+    signupHref: "/signup",
     specialistHref: "/en/qualification",
     automatedLabel: "Start automated audit",
     ownReportLabel: "Audit my website",
@@ -87,11 +89,20 @@ for (const locale of locales) {
       expect(external.origin).toBe("https://alirezasafaeisystems.ir");
       expect(external.pathname).toBe(locale.implementationPath);
       expect([...external.searchParams.keys()].every((key) => key.startsWith("utm_"))).toBe(true);
+      expect(external.searchParams.get("utm_source")).toBe("audit");
+      expect(external.searchParams.get("utm_medium")).toBe("intent_router");
+      expect(external.searchParams.get("utm_campaign")).toBe("asdev_audit");
+      expect(external.searchParams.get("utm_content")).toBe("implementation_enquiry");
       expect(implementationHref!).not.toMatch(sensitiveQueryPattern);
 
       await expect(page.getByText(locale.coverageText, { exact: false }).first()).toBeVisible();
       await expectNoHorizontalOverflow(page);
       await expectKeyboardReachable(page, implementation);
+
+      await page.screenshot({
+        path: `browser-evidence/au-04/${testInfo.project.name}-${locale.name}-home-${width}.png`,
+        fullPage: true,
+      });
 
       if (testInfo.project.name.includes("mobile")) {
         await automated.tap();
@@ -99,11 +110,6 @@ for (const locale of locales) {
         await automated.click();
       }
       await expect(page).toHaveURL(new RegExp(`${locale.auditHref.replaceAll("/", "\\/")}(?:\\?|$)`));
-
-      await page.screenshot({
-        path: `browser-evidence/au-04/${testInfo.project.name}-${locale.name}-home-${width}.png`,
-        fullPage: true,
-      });
     });
 
     test(`${locale.name} AU-04 sample CTA ownership at ${width}px`, async ({ page }, testInfo) => {
@@ -123,6 +129,11 @@ for (const locale of locales) {
         await expect(link).toHaveAttribute("href", href);
         const actualHref = await link.getAttribute("href");
         expect(actualHref ?? "").not.toMatch(sensitiveQueryPattern);
+      }
+
+      for (const href of new Set(expectations.map(([, destination]) => destination))) {
+        const response = await page.request.get(href);
+        expect(response.status(), `${locale.name} route ${href}`).toBeLessThan(400);
       }
 
       const ownReport = page.getByRole("link", { name: locale.ownReportLabel, exact: true }).first();
