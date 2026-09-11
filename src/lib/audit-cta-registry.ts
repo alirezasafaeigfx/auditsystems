@@ -226,17 +226,26 @@ export function buildAuditCtaHref(
   // discards it so customer/audited URLs cannot enter hrefs or analytics.
   void options;
 
+  const policy = AUDIT_INTENT_POLICY[entry.intent];
+  if (!policy || Boolean(entry.external) !== policy.external) {
+    return "#";
+  }
+
   try {
     if (entry.external) {
       const url = new URL(entry.path);
+      const policyUrl = new URL(policy.path);
       if (url.protocol !== "https:" || !ALLOWED_EXTERNAL_ORIGINS.has(url.origin)) {
+        return "#";
+      }
+      if (url.origin !== policyUrl.origin || url.pathname !== policyUrl.pathname) {
         return "#";
       }
       return `${url.origin}${localizedPath(entry, locale, url.pathname)}${safeQuery(url.searchParams)}`;
     }
 
     const url = new URL(entry.path, "https://audit.invalid");
-    if (url.origin !== "https://audit.invalid" || !url.pathname.startsWith("/")) {
+    if (url.origin !== "https://audit.invalid" || url.pathname !== policy.path) {
       return "#";
     }
     return `${localizedPath(entry, locale, url.pathname)}${safeQuery(url.searchParams)}`;
