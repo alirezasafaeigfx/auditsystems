@@ -1,4 +1,3 @@
-import { SAMPLE_DEMO_URL } from "./sample-report/demo-findings";
 import type { SampleLocale } from "./sample-report/types";
 import { localePath } from "./sample-report/copy";
 
@@ -7,8 +6,80 @@ export type AuditCtaIntent =
   | "sample_report"
   | "pricing_view"
   | "signup"
-  | "agency_contact"
-  | "professional_review";
+  | "professional_review"
+  | "implementation_enquiry"
+  | "audit_framework"
+  | "agency_contact";
+
+export type AuditCtaOwner = "audit" | "asdev" | "persian_toolbox";
+
+export type AuditCtaDestinationClass =
+  | "automated_audit"
+  | "sample_report"
+  | "pricing"
+  | "account_signup"
+  | "specialist_review"
+  | "implementation_enquiry"
+  | "audit_content"
+  | "utility_site";
+
+export type AuditIntentPolicy = {
+  owner: AuditCtaOwner;
+  destinationClass: AuditCtaDestinationClass;
+  path: string;
+  external: boolean;
+};
+
+export const AUDIT_INTENT_POLICY: Record<AuditCtaIntent, AuditIntentPolicy> = {
+  audit_start: {
+    owner: "audit",
+    destinationClass: "automated_audit",
+    path: "/audit",
+    external: false,
+  },
+  sample_report: {
+    owner: "audit",
+    destinationClass: "sample_report",
+    path: "/sample-report",
+    external: false,
+  },
+  pricing_view: {
+    owner: "audit",
+    destinationClass: "pricing",
+    path: "/pricing",
+    external: false,
+  },
+  signup: {
+    owner: "audit",
+    destinationClass: "account_signup",
+    path: "/signup",
+    external: false,
+  },
+  professional_review: {
+    owner: "audit",
+    destinationClass: "specialist_review",
+    path: "/qualification",
+    external: false,
+  },
+  implementation_enquiry: {
+    owner: "asdev",
+    destinationClass: "implementation_enquiry",
+    path: "https://alirezasafaeisystems.ir/qualification",
+    external: true,
+  },
+  audit_framework: {
+    owner: "audit",
+    destinationClass: "audit_content",
+    path: "/pillar/iran-readiness-audit",
+    external: false,
+  },
+  agency_contact: {
+    owner: "persian_toolbox",
+    destinationClass: "utility_site",
+    path: "https://persiantoolbox.ir/",
+    external: true,
+  },
+};
 
 export type AuditCtaSurface =
   | "audit_home"
@@ -28,7 +99,6 @@ export type AuditCtaEntry = {
   path: string;
   external?: boolean;
   analyticsEvent: string;
-  prefillDemoUrl?: boolean;
   variant?: "primary" | "secondary";
 };
 
@@ -37,8 +107,8 @@ const entries: AuditCtaEntry[] = [
     id: "sample_report_audit_start",
     intent: "audit_start",
     surface: "sample_report",
-    label: { fa: "درخواست ارزیابی", en: "Request assessment" },
-    path: "/qualification",
+    label: { fa: "شروع ارزیابی خودکار", en: "Start automated audit" },
+    path: "/audit",
     analyticsEvent: "seo_cta_click",
     variant: "primary",
   },
@@ -46,18 +116,17 @@ const entries: AuditCtaEntry[] = [
     id: "sample_report_own_report",
     intent: "audit_start",
     surface: "sample_report",
-    label: { fa: "درخواست گزارش سایت خودم", en: "Request my site report" },
-    path: "/qualification",
+    label: { fa: "ارزیابی سایت خودم", en: "Audit my website" },
+    path: "/audit",
     analyticsEvent: "seo_cta_click",
-    prefillDemoUrl: true,
     variant: "secondary",
   },
   {
     id: "sample_report_pricing",
     intent: "pricing_view",
     surface: "sample_report",
-    label: { fa: "درخواست ارزیابی", en: "Request assessment" },
-    path: "/qualification",
+    label: { fa: "مشاهده قیمت‌ها", en: "View pricing" },
+    path: "/pricing",
     analyticsEvent: "seo_cta_click",
     variant: "secondary",
   },
@@ -65,8 +134,8 @@ const entries: AuditCtaEntry[] = [
     id: "sample_report_signup",
     intent: "signup",
     surface: "sample_report",
-    label: { fa: "ثبت درخواست", en: "Submit request" },
-    path: "/qualification",
+    label: { fa: "ساخت حساب", en: "Create account" },
+    path: "/signup",
     analyticsEvent: "seo_cta_click",
     variant: "secondary",
   },
@@ -74,7 +143,7 @@ const entries: AuditCtaEntry[] = [
     id: "sample_report_pro_review",
     intent: "professional_review",
     surface: "sample_report",
-    label: { fa: "درخواست بررسی حرفه‌ای", en: "Request professional review" },
+    label: { fa: "درخواست بررسی تخصصی", en: "Request specialist review" },
     path: "/qualification",
     analyticsEvent: "seo_cta_click",
     variant: "secondary",
@@ -110,8 +179,8 @@ const entries: AuditCtaEntry[] = [
     id: "audit_landing_start",
     intent: "audit_start",
     surface: "audit_landing",
-    label: { fa: "درخواست ارزیابی", en: "Request assessment" },
-    path: "/qualification",
+    label: { fa: "شروع ارزیابی خودکار", en: "Start automated audit" },
+    path: "/audit",
     analyticsEvent: "seo_cta_click",
     variant: "primary",
   },
@@ -119,8 +188,8 @@ const entries: AuditCtaEntry[] = [
     id: "audit_landing_pricing",
     intent: "pricing_view",
     surface: "audit_landing",
-    label: { fa: "درخواست ارزیابی", en: "Request assessment" },
-    path: "/qualification",
+    label: { fa: "مشاهده قیمت‌ها", en: "View pricing" },
+    path: "/pricing",
     analyticsEvent: "seo_cta_click",
     variant: "secondary",
   },
@@ -128,8 +197,8 @@ const entries: AuditCtaEntry[] = [
     id: "audit_landing_pricing_plans",
     intent: "pricing_view",
     surface: "audit_landing",
-    label: { fa: "درخواست ارزیابی", en: "Request assessment" },
-    path: "/qualification",
+    label: { fa: "مشاهده پلن‌ها", en: "View plans" },
+    path: "/pricing",
     analyticsEvent: "seo_cta_click",
     variant: "primary",
   },
@@ -137,8 +206,8 @@ const entries: AuditCtaEntry[] = [
     id: "audit_landing_signup_free",
     intent: "signup",
     surface: "audit_landing",
-    label: { fa: "ثبت درخواست", en: "Submit request" },
-    path: "/qualification",
+    label: { fa: "ساخت حساب", en: "Create account" },
+    path: "/signup",
     analyticsEvent: "seo_cta_click",
     variant: "secondary",
   },
@@ -153,7 +222,7 @@ const entries: AuditCtaEntry[] = [
   },
   {
     id: "audit_landing_feature_pillar",
-    intent: "sample_report",
+    intent: "audit_framework",
     surface: "audit_landing",
     label: { fa: "مطالعه چارچوب ارزیابی", en: "Read audit framework" },
     path: "/pillar/iran-readiness-audit",
@@ -164,8 +233,8 @@ const entries: AuditCtaEntry[] = [
     id: "pricing_page_audit_start",
     intent: "audit_start",
     surface: "pricing_page",
-    label: { fa: "درخواست ارزیابی", en: "Request assessment" },
-    path: "/qualification",
+    label: { fa: "شروع ارزیابی خودکار", en: "Start automated audit" },
+    path: "/audit",
     analyticsEvent: "seo_cta_click",
     variant: "secondary",
   },
@@ -182,17 +251,17 @@ const entries: AuditCtaEntry[] = [
     id: "intent_router_audit_start",
     intent: "audit_start",
     surface: "audit_landing",
-    label: { fa: "درخواست ارزیابی", en: "Request Assessment" },
-    path: "/qualification",
+    label: { fa: "شروع ارزیابی خودکار", en: "Start automated audit" },
+    path: "/audit",
     analyticsEvent: "seo_cta_click",
     variant: "primary",
   },
   {
     id: "intent_router_professional_review",
-    intent: "professional_review",
+    intent: "implementation_enquiry",
     surface: "audit_landing",
-    label: { fa: "ورود به سایت Alireza Safaei", en: "Open Alireza Safaei Systems" },
-    path: "https://alirezasafaeisystems.ir/?utm_source=audit&utm_medium=intent_router&utm_campaign=asdev_audit&utm_content=execution_route",
+    label: { fa: "درخواست همکاری برای اجرا", en: "Request implementation support" },
+    path: "https://alirezasafaeisystems.ir/qualification?utm_source=audit&utm_medium=intent_router&utm_campaign=asdev_audit&utm_content=implementation_enquiry",
     external: true,
     analyticsEvent: "seo_cta_click",
     variant: "secondary",
@@ -209,6 +278,45 @@ const entries: AuditCtaEntry[] = [
   },
 ];
 
+const SAFE_QUERY_KEYS = new Set([
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
+  "source",
+  "placement",
+  "offer",
+  "locale",
+  "intent",
+]);
+
+const ALLOWED_EXTERNAL_ORIGINS = new Set([
+  "https://alirezasafaeisystems.ir",
+  "https://persiantoolbox.ir",
+]);
+
+function safeQuery(searchParams: URLSearchParams): string {
+  const safe = new URLSearchParams();
+  for (const [key, value] of searchParams.entries()) {
+    if (SAFE_QUERY_KEYS.has(key)) {
+      safe.append(key, value);
+    }
+  }
+  const rendered = safe.toString();
+  return rendered ? `?${rendered}` : "";
+}
+
+function localizeExternalPath(entry: AuditCtaEntry, locale: SampleLocale, pathname: string): string {
+  if (
+    entry.intent === "implementation_enquiry" &&
+    pathname === "/qualification" &&
+    locale === "en"
+  ) {
+    return "/en/qualification";
+  }
+  return pathname;
+}
+
 /** Registry-backed surfaces. Nav/layout links remain ad-hoc until a later pass. */
 export const CTA_MIGRATION_STATUS = {
   registryBacked: [
@@ -221,7 +329,6 @@ export const CTA_MIGRATION_STATUS = {
   adHocRemaining: [
     "layout.tsx navigation links",
     "pricing plan signup buttons (billing scope)",
-    "en/page.tsx hero external portfolio/toolbox links",
     "faq/failed page retry links",
   ],
   unchangedByDesign: ["SeoPageEvent page views", "audit form submit events (seo_audit_start)"],
@@ -232,29 +339,53 @@ export function validateAuditCtaRegistry(): string[] {
   for (const entry of entries) {
     if (!entry.id || !entry.intent || !entry.surface) {
       errors.push(`missing fields on ${entry.id || "unknown"}`);
+      continue;
     }
     if (!entry.label.fa || !entry.label.en) {
       errors.push(`missing bilingual label on ${entry.id}`);
     }
     if (!entry.path) {
       errors.push(`missing path on ${entry.id}`);
+      continue;
     }
-    if (!entry.external && !entry.path.startsWith("/")) {
-      errors.push(`internal path must start with / on ${entry.id}`);
+
+    const policy = AUDIT_INTENT_POLICY[entry.intent];
+    if (!policy) {
+      errors.push(`missing intent policy on ${entry.id}`);
+      continue;
     }
-    if (entry.external && !entry.path.startsWith("http")) {
-      errors.push(`external path must be absolute URL on ${entry.id}`);
+    if (Boolean(entry.external) !== policy.external) {
+      errors.push(`destination class mismatch on ${entry.id}`);
+    }
+
+    try {
+      if (entry.external) {
+        const url = new URL(entry.path);
+        if (url.protocol !== "https:" || !ALLOWED_EXTERNAL_ORIGINS.has(url.origin)) {
+          errors.push(`external origin is not allowed on ${entry.id}`);
+        }
+        if (url.origin !== new URL(policy.path).origin || url.pathname !== new URL(policy.path).pathname) {
+          errors.push(`external destination does not match intent policy on ${entry.id}`);
+        }
+      } else {
+        const url = new URL(entry.path, "https://audit.invalid");
+        if (url.origin !== "https://audit.invalid" || url.pathname !== policy.path) {
+          errors.push(`internal destination does not match intent policy on ${entry.id}`);
+        }
+      }
+    } catch {
+      errors.push(`invalid destination on ${entry.id}`);
     }
   }
   return errors;
 }
 
 export function getAuditCta(id: string): AuditCtaEntry | undefined {
-  return entries.find((e) => e.id === id);
+  return entries.find((entry) => entry.id === id);
 }
 
 export function getAuditCtasForSurface(surface: AuditCtaSurface): AuditCtaEntry[] {
-  return entries.filter((e) => e.surface === surface);
+  return entries.filter((entry) => entry.surface === surface);
 }
 
 export function getAllAuditCtas(): AuditCtaEntry[] {
@@ -264,20 +395,27 @@ export function getAllAuditCtas(): AuditCtaEntry[] {
 export function buildAuditCtaHref(
   entry: AuditCtaEntry,
   locale: SampleLocale,
-  options?: { prefillUrl?: string }
+  _options?: { prefillUrl?: string }
 ): string {
-  if (entry.external) {
-    return entry.path;
-  }
+  try {
+    if (entry.external) {
+      const url = new URL(entry.path);
+      if (url.protocol !== "https:" || !ALLOWED_EXTERNAL_ORIGINS.has(url.origin)) {
+        return "#";
+      }
+      const pathname = localizeExternalPath(entry, locale, url.pathname);
+      return `${url.origin}${pathname}${safeQuery(url.searchParams)}`;
+    }
 
-  const base = localePath(entry.path, locale);
-  if (!entry.prefillDemoUrl && !options?.prefillUrl) {
-    return base;
+    const url = new URL(entry.path, "https://audit.invalid");
+    if (url.origin !== "https://audit.invalid" || !url.pathname.startsWith("/")) {
+      return "#";
+    }
+    const localizedPath = localePath(url.pathname, locale);
+    return `${localizedPath}${safeQuery(url.searchParams)}`;
+  } catch {
+    return "#";
   }
-
-  const url = options?.prefillUrl ?? SAMPLE_DEMO_URL;
-  const separator = base.includes("?") ? "&" : "?";
-  return `${base}${separator}url=${encodeURIComponent(url)}`;
 }
 
 export function getSampleReportCtaIds(): string[] {
