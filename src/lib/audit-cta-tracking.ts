@@ -6,13 +6,10 @@ import {
 } from "./audit-cta-registry";
 import type { SampleLocale } from "./sample-report/types";
 
-const SAFE_EXTRA_KEYS = new Set([
-  "intent_router_variant",
-  "legacy_event",
-  "source",
-  "placement",
-  "offer",
-]);
+const SAFE_EXTRA_VALUES: Record<string, ReadonlySet<string | number | boolean | null>> = {
+  intent_router_variant: new Set(["audit_first", "execution_first"]),
+  legacy_event: new Set(["seo_intent_router_click"]),
+};
 
 function safeTrackingExtra(
   extra?: Record<string, string | number | boolean | null | undefined>
@@ -23,7 +20,7 @@ function safeTrackingExtra(
 
   const safe: Record<string, string | number | boolean | null> = {};
   for (const [key, value] of Object.entries(extra)) {
-    if (!SAFE_EXTRA_KEYS.has(key) || value === undefined) {
+    if (value === undefined || !SAFE_EXTRA_VALUES[key]?.has(value)) {
       continue;
     }
     safe[key] = value;
