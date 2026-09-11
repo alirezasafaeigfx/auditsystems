@@ -3,19 +3,20 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { trackSeoEvent } from "../lib/analytics";
-import { trackIntentRouterCtaClick } from "../lib/intent-router-cta";
+import { buildAuditCtaHref } from "../lib/audit-cta-registry";
+import {
+  INTENT_ROUTER_CTA_MAP,
+  trackIntentRouterCtaClick,
+  type IntentRouterRouteKey,
+} from "../lib/intent-router-cta";
 
 type Locale = "fa" | "en";
-type IntentKey = "audit" | "execution" | "toolbox";
 type RouterVariant = "audit_first" | "execution_first";
 
 type RouteItem = {
-  key: IntentKey;
+  key: IntentRouterRouteKey;
   title: string;
   description: string;
-  href: string;
-  external: boolean;
-  cta: string;
 };
 
 function pickVariant(seed: string): RouterVariant {
@@ -57,62 +58,44 @@ export default function IntentRouter({ locale }: { locale: Locale }) {
       };
 
   const routes = useMemo<RouteItem[]>(() => {
-    const fa: Record<IntentKey, RouteItem> = {
+    const fa: Record<IntentRouterRouteKey, RouteItem> = {
       audit: {
         key: "audit",
         title: "می‌خواهم سریع وضعیت فنی سایت را بدانم",
-        description: "اگر گزارش فنی قابل‌اجرا می‌خواهید، همین‌جا ارزیابی جدید را شروع کنید.",
-        href: "/audit",
-        external: false,
-        cta: "شروع ارزیابی",
+        description: "برای بررسی خودکار و مشاهده یافته‌های قابل‌اندازه‌گیری، ارزیابی را همین‌جا شروع کنید.",
       },
       execution: {
         key: "execution",
         title: "برای اصلاح و اجرا به تیم فنی نیاز دارم",
-        description: "اگر بعد از گزارش نیاز به اجرا دارید، مستقیم وارد مسیر همکاری با علیرضا صفایی شوید. یا اسکوپ یک‌صفحه‌ای بررسی فنی + Quick Fix را دانلود کنید.",
-        href: "https://alirezasafaeisystems.ir/?utm_source=audit&utm_medium=intent_router&utm_campaign=alireza_safaei_network&utm_content=execution_route",
-        external: true,
-        cta: "ورود به سایت Alireza Safaei",
+        description: "اگر برای اجرای اصلاحات به همکاری مهندسی نیاز دارید، وارد مسیر درخواست اجرای ASDEV شوید. این مسیر جدا از ارزیابی خودکار است.",
       },
       toolbox: {
         key: "toolbox",
         title: "فعلاً ابزارهای سریع و رایگان می‌خواهم",
         description: "برای کارهای روزمره مثل PDF، متن و تصویر از PersianToolbox استفاده کنید.",
-        href: "https://persiantoolbox.ir/?utm_source=audit&utm_medium=intent_router&utm_campaign=alireza_safaei_network&utm_content=toolbox_route",
-        external: true,
-        cta: "ورود به PersianToolbox",
       },
     };
 
-    const en: Record<IntentKey, RouteItem> = {
+    const en: Record<IntentRouterRouteKey, RouteItem> = {
       audit: {
         key: "audit",
         title: "I need immediate technical visibility",
-        description: "Start an audit now and get prioritized findings with actionable guidance.",
-        href: "/en/audit",
-        external: false,
-        cta: "Start Audit",
+        description: "Start the automated audit here to review measurable findings and coverage.",
       },
       execution: {
         key: "execution",
         title: "I need implementation support",
-        description: "Move from diagnosis to execution with direct engineering collaboration. Or download the one-page Audit + Quick Fix scope.",
-        href: "https://alirezasafaeisystems.ir/?utm_source=audit&utm_medium=intent_router&utm_campaign=alireza_safaei_network&utm_content=execution_route_en",
-        external: true,
-        cta: "Open Alireza Safaei Systems",
+        description: "Use the separate ASDEV implementation enquiry when you need engineering help to carry out fixes; it is not an automated-audit certification path.",
       },
       toolbox: {
         key: "toolbox",
         title: "I need practical utilities first",
         description: "Use local-first Persian tools for daily PDF, text, and image tasks.",
-        href: "https://persiantoolbox.ir/?utm_source=audit&utm_medium=intent_router&utm_campaign=alireza_safaei_network&utm_content=toolbox_route_en",
-        external: true,
-        cta: "Open PersianToolbox",
       },
     };
 
     const source = locale === "fa" ? fa : en;
-    const order: IntentKey[] = variant === "execution_first"
+    const order: IntentRouterRouteKey[] = variant === "execution_first"
       ? ["execution", "audit", "toolbox"]
       : ["audit", "execution", "toolbox"];
 
@@ -128,7 +111,7 @@ export default function IntentRouter({ locale }: { locale: Locale }) {
     });
   }, [locale, variant, variantReady]);
 
-  const primaryKey: IntentKey = variant === "execution_first" ? "execution" : "audit";
+  const primaryKey: IntentRouterRouteKey = variant === "execution_first" ? "execution" : "audit";
 
   return (
     <section id="intent-router" className="intent-router">
@@ -139,26 +122,29 @@ export default function IntentRouter({ locale }: { locale: Locale }) {
       <div className="intent-grid">
         {routes.map((item) => {
           const isPrimary = item.key === primaryKey;
+          const cta = INTENT_ROUTER_CTA_MAP[item.key];
+          const href = buildAuditCtaHref(cta, locale);
+          const external = cta.external === true;
           return (
             <article className="intent-card" key={item.key}>
               <h3>{item.title}</h3>
               <p>{item.description}</p>
               <Link
                 className={`button ${isPrimary ? "" : "secondary"}`.trim()}
-                href={item.href}
-                target={item.external ? "_blank" : undefined}
-                rel={item.external ? "noopener noreferrer" : undefined}
+                href={href}
+                target={external ? "_blank" : undefined}
+                rel={external ? "noopener noreferrer" : undefined}
                 onClick={() => {
                   trackIntentRouterCtaClick(item.key, locale, variant);
                   trackSeoEvent("seo_intent_router_click", {
                     locale,
                     variant,
                     route: item.key,
-                    destination: item.external ? "external" : "internal",
+                    destination: external ? "external" : "internal",
                   });
                 }}
               >
-                {item.cta}
+                {cta.label[locale]}
               </Link>
             </article>
           );
