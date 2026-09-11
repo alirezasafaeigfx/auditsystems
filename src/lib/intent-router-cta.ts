@@ -1,43 +1,25 @@
-import type { AuditCtaEntry } from "./audit-cta-registry";
+import { getAuditCta, type AuditCtaEntry } from "./audit-cta-registry";
 import { trackAuditCtaClick } from "./audit-cta-tracking";
 import type { SampleLocale } from "./sample-report/types";
 
 export type IntentRouterRouteKey = "audit" | "execution" | "toolbox";
 
+function requireRegistryEntry(id: string): AuditCtaEntry {
+  const entry = getAuditCta(id);
+  if (!entry) {
+    throw new Error(`Missing required IntentRouter CTA registry entry: ${id}`);
+  }
+  return entry;
+}
+
 /**
- * Canonical destination metadata for the three IntentRouter choices.
- * Rendering code consumes this map instead of carrying a second set of hrefs.
+ * IntentRouter resolves its destinations from the central registry so labels,
+ * ownership, locale behavior and analytics cannot drift in a second map.
  */
 export const INTENT_ROUTER_CTA_MAP: Record<IntentRouterRouteKey, AuditCtaEntry> = {
-  audit: {
-    id: "intent_router_audit_start",
-    intent: "audit_start",
-    surface: "audit_landing",
-    label: { fa: "شروع ارزیابی خودکار", en: "Start automated audit" },
-    path: "/audit",
-    analyticsEvent: "seo_cta_click",
-    variant: "primary",
-  },
-  execution: {
-    id: "intent_router_professional_review",
-    intent: "implementation_enquiry",
-    surface: "audit_landing",
-    label: { fa: "درخواست همکاری برای اجرا", en: "Request implementation support" },
-    path: "https://alirezasafaeisystems.ir/qualification?utm_source=audit&utm_medium=intent_router&utm_campaign=asdev_audit&utm_content=implementation_enquiry",
-    external: true,
-    analyticsEvent: "seo_cta_click",
-    variant: "secondary",
-  },
-  toolbox: {
-    id: "intent_router_toolbox",
-    intent: "agency_contact",
-    surface: "audit_landing",
-    label: { fa: "ورود به PersianToolbox", en: "Open PersianToolbox" },
-    path: "https://persiantoolbox.ir/?utm_source=audit&utm_medium=intent_router&utm_campaign=asdev_audit&utm_content=toolbox_route",
-    external: true,
-    analyticsEvent: "seo_cta_click",
-    variant: "secondary",
-  },
+  audit: requireRegistryEntry("intent_router_audit_start"),
+  execution: requireRegistryEntry("intent_router_professional_review"),
+  toolbox: requireRegistryEntry("intent_router_toolbox"),
 };
 
 export function trackIntentRouterCtaClick(
