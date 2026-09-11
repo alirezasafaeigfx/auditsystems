@@ -15,6 +15,9 @@ const locales = [
     ownReportLabel: "ارزیابی سایت خودم",
     pricingLabel: "مشاهده قیمت‌ها",
     signupLabel: "ساخت حساب",
+    signupHeading: "ایجاد حساب کاربری",
+    lang: "fa",
+    dir: "rtl",
     specialistLabel: "درخواست بررسی تخصصی",
     implementationLabel: "درخواست همکاری برای اجرا",
     implementationPath: "/qualification",
@@ -34,6 +37,9 @@ const locales = [
     ownReportLabel: "Audit my website",
     pricingLabel: "View pricing",
     signupLabel: "Create account",
+    signupHeading: "Create account",
+    lang: "en",
+    dir: "ltr",
     specialistLabel: "Request specialist review",
     implementationLabel: "Request implementation support",
     implementationPath: "/en/qualification",
@@ -145,6 +151,18 @@ for (const locale of locales) {
         path: `browser-evidence/au-04/${testInfo.project.name}-${locale.name}-sample-${width}.png`,
         fullPage: true,
       });
+
+      const signup = page.getByRole("link", { name: locale.signupLabel, exact: true }).first();
+      if (testInfo.project.name.includes("mobile")) {
+        await signup.tap();
+      } else {
+        await signup.click();
+      }
+      await expect(page).toHaveURL(/\/signup$/);
+      await page.reload();
+      await expect(page.locator("html")).toHaveAttribute("lang", locale.lang);
+      await expect(page.locator("html")).toHaveAttribute("dir", locale.dir);
+      await expect(page.getByRole("heading", { level: 1, name: locale.signupHeading })).toBeVisible();
     });
   }
 }
