@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isIndexablePublicPath } from "./lib/seoPolicy";
+import { isNoIndexRoute } from "./lib/seoPolicy";
 
 function localeForPath(pathname: string): "fa" | "en" {
   return pathname === "/en" || pathname.startsWith("/en/") ? "en" : "fa";
@@ -20,7 +20,7 @@ export function proxy(request: NextRequest) {
     },
   });
 
-  const isPublicIndexable = isIndexablePublicPath(request.nextUrl.pathname);
+  const isPublicIndexable = !isNoIndexRoute(request.nextUrl.pathname);
 
   response.headers.set("X-Robots-Tag", isPublicIndexable ? "all" : "noindex, nofollow, noarchive");
   response.headers.set("Cache-Control", isPublicIndexable ? "public, max-age=0, must-revalidate" : "private, no-store");
