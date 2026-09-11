@@ -11,7 +11,7 @@ type FindingCardProps = {
 export default function FindingCard({ finding, locale, copy }: FindingCardProps) {
   return (
     <article className="finding">
-      <div className="finding-header">
+      <div className="finding-header" style={{ flexWrap: "wrap" }}>
         <strong>{finding.code}</strong>
         <span className={`badge ${severityBadgeClass(finding.severity)}`}>
           <span className="sr-only">{copy.severitySrPrefix}</span>
