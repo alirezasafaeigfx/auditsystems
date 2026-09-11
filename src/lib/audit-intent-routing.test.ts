@@ -8,26 +8,22 @@ import {
 import { INTENT_ROUTER_CTA_MAP } from "./intent-router-cta";
 
 const LOCAL_DESTINATIONS = {
-  audit_start: "/audit",
-  pricing_view: "/pricing",
-  signup: "/signup",
-  professional_review: "/qualification",
+  audit_start: { fa: "/audit", en: "/en/audit" },
+  pricing_view: { fa: "/pricing", en: "/en/pricing" },
+  signup: { fa: "/signup", en: "/signup" },
+  professional_review: { fa: "/qualification", en: "/en/qualification" },
 } as const;
-
-function expectedLocal(path: string, locale: "fa" | "en") {
-  return locale === "en" ? `/en${path}` : path;
-}
 
 describe("AU-04 intent ownership and safe destinations", () => {
   it("keeps each local visitor intent on its documented Audit-owned route", () => {
-    for (const [intent, path] of Object.entries(LOCAL_DESTINATIONS)) {
+    for (const [intent, paths] of Object.entries(LOCAL_DESTINATIONS)) {
       const entries = getAllAuditCtas().filter((entry) => entry.intent === intent);
       expect(entries.length, `missing CTA for ${intent}`).toBeGreaterThan(0);
 
       for (const entry of entries) {
         expect(entry.external, entry.id).not.toBe(true);
-        expect(buildAuditCtaHref(entry, "fa"), entry.id).toBe(path);
-        expect(buildAuditCtaHref(entry, "en"), entry.id).toBe(expectedLocal(path, "en"));
+        expect(buildAuditCtaHref(entry, "fa"), entry.id).toBe(paths.fa);
+        expect(buildAuditCtaHref(entry, "en"), entry.id).toBe(paths.en);
       }
     }
   });
