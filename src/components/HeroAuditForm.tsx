@@ -39,8 +39,7 @@ const COPY: Record<HeroAuditLocale, HeroAuditCopy> = {
 };
 
 export function buildHeroAuditDestination(url: string, locale: HeroAuditLocale): string {
-  void locale;
-  const base = "/audit";
+  const base = locale === "en" ? "/en/audit" : "/audit";
   return `${base}?url=${encodeURIComponent(url)}`;
 }
 
