@@ -148,8 +148,8 @@
         },
         {
           "id": "edge-security-middleware",
-          "description": "Global security headers proxy is enabled",
-          "command": "test -f proxy.ts && grep -nE \"Content-Security-Policy|X-Frame-Options|Strict-Transport-Security\" proxy.ts"
+          "description": "Canonical edge security proxy behavior is enforced",
+          "command": "pnpm exec vitest run src/proxy.governance.test.ts"
         },
         {
           "id": "health-probe-model",

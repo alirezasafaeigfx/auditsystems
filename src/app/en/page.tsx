@@ -10,109 +10,69 @@ export const metadata: Metadata = buildPageMetadata({
   locale: "en",
   path: "/",
   title: "Technical SEO and Security Website Audit",
-  description: "Enter your website URL and get an execution-ready report for engineering and growth teams.",
+  description: "Enter a public website URL to review the checks that can be measured, their coverage, prioritized findings, and practical next steps.",
   keywords: ["website audit", "technical SEO", "performance audit", "conversion operations"]
 });
 
 export default function HomePageEn() {
   return (
-    <main className="landing">
+    <div className="landing">
       <SeoPageEvent event="seo_landing_view" params={{ locale: "en", path: "/en" }} />
       <section className="card hero hero-large">
-        <span className="badge hero-badge">Execution-ready output for engineering and growth teams</span>
-        <h1>Audit your website with actionable output, not just raw issues</h1>
+        <span className="badge hero-badge">Prioritized findings with measured coverage</span>
+        <h1>See what needs attention on your website</h1>
         <p className="hero-lead">
-          In minutes, technical SEO, performance, and security issues are prioritized so your team can execute fixes with clarity.
+          Enter a public website address. The report describes only checks that actually ran and keeps unavailable or unmeasured areas separate from confirmed findings.
         </p>
-        <HeroAuditForm />
+        <HeroAuditForm locale="en" />
         <ul className="hero-checklist">
-          <li>Clear output for engineering, content, and growth teams</li>
-          <li>Risk classification: critical, high, medium</li>
-          <li>Usable for a practical 7 to 30 day plan</li>
+          <li>Prioritized findings in plain language</li>
+          <li>Clear coverage and limitations for each check</li>
+          <li>Practical next steps for issues that were observed</li>
         </ul>
         <div className="hero-actions">
-          <Link className="button" href="/en/audit">
-            Start New Audit
+          <Link className="button secondary" href="/en/qualification">
+            Request specialist review
           </Link>
-          <Link className="button secondary" href="/en/guides">
-            Practical Guides
-          </Link>
-          <Link className="button secondary" href="/en/standards">
-            Delivery Standards
-          </Link>
-          <Link
-            className="button secondary"
-            href="https://alirezasafaeisystems.ir/?utm_source=audit&utm_medium=cross_site&utm_campaign=alireza_safaei_network&utm_content=hero_contact_en"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Execution and Consulting
-          </Link>
-          <Link
-            className="button secondary"
-            href="https://persiantoolbox.ir/?utm_source=audit&utm_medium=cross_site&utm_campaign=alireza_safaei_network&utm_content=hero_toolbox_en"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            PersianToolbox Utilities
-          </Link>
+          <AuditCtaLink ctaId="audit_landing_sample_report" locale="en" />
         </div>
       </section>
 
-      <section className="trust-strip">
+      <section className="trust-strip" aria-label="Report scope and limitations">
         <article>
-          <strong>Fast Delivery</strong>
-          <p>Request submission and processing starts automatically</p>
+          <strong>Measured coverage</strong>
+          <p>The report identifies which checks ran and which areas were unavailable or unmeasured.</p>
         </article>
         <article>
-          <strong>Trackable Output</strong>
-          <p>Each finding includes a concrete recommended action</p>
+          <strong>Prioritized findings</strong>
+          <p>Observed issues are ordered so the most important follow-up is easier to identify.</p>
         </article>
         <article>
-          <strong>Stable Infrastructure</strong>
-          <p>Operational path suitable for production teams</p>
+          <strong>Clear limits</strong>
+          <p>Automated checks provide evidence for what they can measure; they do not guarantee complete security or coverage.</p>
         </article>
       </section>
 
       <IntentRouter locale="en" />
 
-      <section className="kpi-grid">
-        <article className="kpi">
-          <strong>22/22</strong>
-          <p>All done-phase automation checks passing</p>
-        </article>
-        <article className="kpi">
-          <strong>10</strong>
-          <p>Operational and documented API routes</p>
-        </article>
-        <article className="kpi">
-          <strong>20+</strong>
-          <p>SEO-ready pages in Persian and English</p>
-        </article>
-        <article className="kpi">
-          <strong>4</strong>
-          <p>CI pipelines for roadmap, docs, readiness, and main gate</p>
-        </article>
-      </section>
-
       <section className="section-head">
-        <h2>How does this platform help?</h2>
-        <p>From request submission to final report delivery, each step is optimized for practical execution.</p>
+        <h2>Choose the level of review you need</h2>
+        <p>Start with an automated audit, inspect a sample output, or request a separate specialist review when automated evidence is not enough.</p>
       </section>
 
       <section className="feature-grid">
         <article className="card feature">
-          <h3>Core Flows</h3>
-          <p>Audit request intake, queue processing, secure report link, and structured handoff for your team.</p>
+          <h3>Automated audit</h3>
+          <p>Run the available technical checks, see measured coverage, and review prioritized findings with practical follow-up guidance.</p>
           <AuditCtaLink ctaId="audit_landing_sample_report" locale="en" />
         </article>
         <article className="card feature">
-          <h3>Operational Tooling</h3>
-          <p>Roadmap automation, docs generation, payment preflight, and production readiness workflow are integrated.</p>
-          <Link href="/en/pillar/iran-readiness-audit">Read Audit Framework</Link>
-          <Link href="/en/standards">Output Definition and Intent Map</Link>
+          <h3>Specialist review</h3>
+          <p>When automated evidence is not sufficient for your decision, submit a separate request for human review and scope clarification.</p>
+          <Link href="/en/qualification">Request specialist review</Link>
+          <Link href="/en/standards">Read output definitions and audit standards</Link>
         </article>
       </section>
-    </main>
+    </div>
   );
 }
