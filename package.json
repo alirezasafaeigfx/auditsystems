@@ -12,7 +12,7 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e:qualification": "playwright test e2e/qualification.spec.ts e2e/home-experience.spec.ts",
+    "test:e2e:qualification": "playwright test e2e/qualification.spec.ts e2e/home-experience.spec.ts e2e/intent-routing.spec.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "check:no-database-dumps": "bash scripts/check-no-database-dumps.sh",
