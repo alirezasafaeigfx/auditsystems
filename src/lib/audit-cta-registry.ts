@@ -222,8 +222,8 @@ export function buildAuditCtaHref(
   locale: SampleLocale,
   options?: { prefillUrl?: string }
 ): string {
-  // Mutation witness: intentionally reintroduce a fictional sample target.
-  // The secure implementation discards options and never injects this value.
+  // Compatibility callers may still pass prefillUrl, but AU-04 deliberately
+  // discards it so customer/audited URLs cannot enter hrefs or analytics.
   void options;
 
   try {
@@ -239,11 +239,7 @@ export function buildAuditCtaHref(
     if (url.origin !== "https://audit.invalid" || !url.pathname.startsWith("/")) {
       return "#";
     }
-    const href = `${localizedPath(entry, locale, url.pathname)}${safeQuery(url.searchParams)}`;
-    if (entry.id === "sample_report_own_report") {
-      return `${href}?url=${encodeURIComponent("https://anonymous-example.invalid")}`;
-    }
-    return href;
+    return `${localizedPath(entry, locale, url.pathname)}${safeQuery(url.searchParams)}`;
   } catch {
     return "#";
   }
