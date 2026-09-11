@@ -18,7 +18,7 @@ const locales = [
     specialistLabel: "درخواست بررسی تخصصی",
     implementationLabel: "درخواست همکاری برای اجرا",
     implementationPath: "/qualification",
-    coverageText: "پوشش",
+    coverageText: "پوشش و محدودیت هر بررسی به‌صورت روشن",
   },
   {
     name: "en",
@@ -37,7 +37,7 @@ const locales = [
     specialistLabel: "Request specialist review",
     implementationLabel: "Request implementation support",
     implementationPath: "/en/qualification",
-    coverageText: "coverage",
+    coverageText: "Clear coverage and limitations for each check",
   },
 ] as const;
 
@@ -95,7 +95,7 @@ for (const locale of locales) {
       expect(external.searchParams.get("utm_content")).toBe("implementation_enquiry");
       expect(implementationHref!).not.toMatch(sensitiveQueryPattern);
 
-      await expect(page.getByText(locale.coverageText, { exact: false }).first()).toBeVisible();
+      await expect(page.getByRole("main").getByText(locale.coverageText, { exact: true })).toBeVisible();
       await expectNoHorizontalOverflow(page);
       await expectKeyboardReachable(page, implementation);
 
