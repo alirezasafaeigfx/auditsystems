@@ -93,7 +93,7 @@ const entries: AuditCtaEntry[] = [
     intent: "implementation_enquiry",
     surface: "audit_landing",
     label: { fa: "درخواست همکاری برای اجرا", en: "Request implementation support" },
-    path: "https://alirezasafaeisystems.ir/qualification?utm_source=audit&utm_medium=intent_router&utm_campaign=asdev_audit&utm_content=implementation_enquiry&token=synthetic-secret-do-not-use",
+    path: "https://alirezasafaeisystems.ir/qualification?utm_source=audit&utm_medium=intent_router&utm_campaign=asdev_audit&utm_content=implementation_enquiry",
     external: true,
     analyticsEvent: "seo_cta_click",
     variant: "secondary",
@@ -115,7 +115,6 @@ const SAFE_FIXED_QUERY_VALUES: Record<string, ReadonlySet<string>> = {
   utm_medium: new Set(["intent_router"]),
   utm_campaign: new Set(["asdev_audit"]),
   utm_content: new Set(["implementation_enquiry", "toolbox_route"]),
-  token: new Set(["synthetic-secret-do-not-use"]),
 };
 
 const ALLOWED_EXTERNAL_ORIGINS = new Set([
