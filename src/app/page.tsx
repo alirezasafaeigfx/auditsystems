@@ -19,7 +19,7 @@ export const metadata: Metadata = buildPageMetadata({
 
 export default function HomePage() {
   return (
-    <div className="landing">
+    <main className="landing">
       <SeoPageEvent event="seo_landing_view" params={{ locale: "fa", path: "/" }} />
       <section className="card hero hero-large">
         <span className="badge hero-badge">گزارش فنی با گام‌های پیشنهادی</span>
@@ -164,6 +164,6 @@ export default function HomePage() {
           <Link href="/standards">تعریف خروجی و معیارهای ارزیابی</Link>
         </article>
       </section>
-    </div>
+    </main>
   );
 }
