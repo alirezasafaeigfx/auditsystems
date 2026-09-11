@@ -16,7 +16,7 @@ export const metadata: Metadata = buildPageMetadata({
 
 export default function HomePageEn() {
   return (
-    <main className="landing">
+    <div className="landing">
       <SeoPageEvent event="seo_landing_view" params={{ locale: "en", path: "/en" }} />
       <section className="card hero hero-large">
         <span className="badge hero-badge">Prioritized findings with measured coverage</span>
@@ -73,6 +73,6 @@ export default function HomePageEn() {
           <Link href="/en/standards">Read output definitions and audit standards</Link>
         </article>
       </section>
-    </main>
+    </div>
   );
 }
