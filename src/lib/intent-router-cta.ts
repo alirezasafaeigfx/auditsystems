@@ -18,7 +18,7 @@ function requireRegistryEntry(id: string): AuditCtaEntry {
  */
 export const INTENT_ROUTER_CTA_MAP: Record<IntentRouterRouteKey, AuditCtaEntry> = {
   audit: requireRegistryEntry("intent_router_audit_start"),
-  execution: requireRegistryEntry("intent_router_professional_review"),
+  execution: requireRegistryEntry("sample_report_pro_review"),
   toolbox: requireRegistryEntry("intent_router_toolbox"),
 };
 
