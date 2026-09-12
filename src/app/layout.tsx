@@ -11,6 +11,7 @@ import {
 import RumTracker from "../components/RumTracker";
 import ThemeProvider from "../components/ThemeProvider";
 import ThemeToggle from "../components/ThemeToggle";
+import LocaleSwitchLink from "../components/LocaleSwitchLink";
 
 const appBaseUrl = getAppBaseUrl();
 const googleVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim();
@@ -157,6 +158,7 @@ function withLocalePath(path: string, locale: "fa" | "en"): string {
 }
 
 function toOtherLocalePath(pathname: string, locale: "fa" | "en"): string {
+  if (pathname === "/login" || pathname === "/signup") return pathname;
   if (locale === "fa") {
     if (pathname === "/") return "/en";
     return `/en${pathname}`;
@@ -269,9 +271,13 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                 <Link href={withLocalePath("/sample-report", locale)}>{copy.nav.sample}</Link>
                 <Link href={withLocalePath("/pillar/iran-readiness-audit", locale)}>{copy.nav.pillar}</Link>
                 <ThemeToggle />
-                <Link className="lang-switch" href={toOtherLocalePath(pathname, locale)}>
+                <LocaleSwitchLink
+                  href={toOtherLocalePath(pathname, locale)}
+                  shared={pathname === "/login" || pathname === "/signup"}
+                  targetLocale={locale === "en" ? "fa" : "en"}
+                >
                   {copy.footer.langSwitch}
-                </Link>
+                </LocaleSwitchLink>
               </nav>
             </div>
           </header>
