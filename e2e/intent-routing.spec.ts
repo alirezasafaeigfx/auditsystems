@@ -94,7 +94,12 @@ for (const locale of locales) {
       const external = new URL(implementationHref!);
       expect(external.origin).toBe("https://alirezasafaeisystems.ir");
       expect(external.pathname).toBe(locale.implementationPath);
-      expect([...external.searchParams.keys()].every((key) => key.startsWith("utm_"))).toBe(true);
+      expect([...external.searchParams.keys()].sort()).toEqual([
+        "utm_campaign",
+        "utm_content",
+        "utm_medium",
+        "utm_source",
+      ]);
       expect(external.searchParams.get("utm_source")).toBe("audit");
       expect(external.searchParams.get("utm_medium")).toBe("intent_router");
       expect(external.searchParams.get("utm_campaign")).toBe("asdev_audit");
