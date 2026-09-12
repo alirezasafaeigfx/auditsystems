@@ -4,8 +4,21 @@ import { isNoIndexRoute } from "./lib/seoPolicy";
 const SESSION_COOKIE = "saas_session";
 const APP_PREFIX = "/app";
 
-function localeForPath(pathname: string): "fa" | "en" {
-  return pathname === "/en" || pathname.startsWith("/en/") ? "en" : "fa";
+const LOCALE_COOKIE = "audit_locale";
+const SHARED_AUTH_PATHS = new Set(["/login", "/signup"]);
+
+function localeForRequest(request: NextRequest): "fa" | "en" {
+  const pathname = request.nextUrl.pathname;
+  if (pathname === "/en" || pathname.startsWith("/en/")) return "en";
+  if (SHARED_AUTH_PATHS.has(pathname)) {
+    if (request.cookies.get(LOCALE_COOKIE)?.value === "en") return "en";
+    const referer = request.headers.get("referer");
+    if (referer && URL.canParse(referer, request.url)) {
+      const refererPathname = new URL(referer, request.url).pathname;
+      if (refererPathname === "/en" || refererPathname.startsWith("/en/")) return "en";
+    }
+  }
+  return "fa";
 }
 
 function isHttpsRequest(request: NextRequest): boolean {
@@ -62,13 +75,20 @@ function applyResponsePolicy(
   response.headers.set("x-asdev-pathname", pathname);
   response.headers.set("x-site-locale", locale);
   response.headers.set("x-site-pathname", pathname);
+  if (!isApi && request.headers.get("accept")?.includes("text/html")) {
+    response.cookies.set(LOCALE_COOKIE, locale, {
+      path: "/",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 365,
+    });
+  }
 
   return response;
 }
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const locale = localeForPath(pathname);
+  const locale = localeForRequest(request);
   const requestId =
     request.headers.get("x-request-id") ??
     request.headers.get("x-correlation-id") ??
