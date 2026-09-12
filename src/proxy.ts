@@ -5,14 +5,15 @@ const SESSION_COOKIE = "saas_session";
 const APP_PREFIX = "/app";
 
 const LOCALE_COOKIE = "audit_locale";
+const SHARED_AUTH_PATHS = new Set(["/login", "/signup"]);
 
 function localeForRequest(request: NextRequest): "fa" | "en" {
   const pathname = request.nextUrl.pathname;
   if (pathname === "/en" || pathname.startsWith("/en/")) return "en";
-  if (pathname === "/signup") {
+  if (SHARED_AUTH_PATHS.has(pathname)) {
     if (request.cookies.get(LOCALE_COOKIE)?.value === "en") return "en";
     const referer = request.headers.get("referer");
-    if (referer) {
+    if (referer && URL.canParse(referer, request.url)) {
       const refererPathname = new URL(referer, request.url).pathname;
       if (refererPathname === "/en" || refererPathname.startsWith("/en/")) return "en";
     }
