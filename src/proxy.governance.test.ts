@@ -7,9 +7,10 @@ import { proxy } from "./proxy";
 const ROADMAP_PATH = fileURLToPath(new URL("../ops/roadmap/phases.json", import.meta.url));
 const EXPECTED_ROADMAP_COMMAND = "pnpm exec vitest run src/proxy.governance.test.ts";
 
-function makeRequest(pathname: string, options?: { authenticated?: boolean; proto?: "http" | "https" }) {
+function makeRequest(pathname: string, options?: { authenticated?: boolean; proto?: "http" | "https"; referer?: string }) {
   const headers = new Headers();
   headers.set("x-forwarded-proto", options?.proto ?? "https");
+  if (options?.referer) headers.set("referer", options.referer);
   if (options?.authenticated) {
     headers.set("cookie", "saas_session=test-session");
   }
@@ -62,6 +63,13 @@ describe("canonical edge security proxy", () => {
     expect(response.headers.get("x-robots-tag")).toBe("all");
     expect(response.headers.get("cache-control")).toContain("public");
     expectGlobalSecurityHeaders(response);
+  });
+
+  it("fails safely when a shared auth route receives a malformed referer", () => {
+    const response = proxy(makeRequest("/signup", { referer: "http://[" }));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-asdev-locale")).toBe("fa");
   });
 
   it("wires the Roadmap check to the semantic proxy regression instead of a path-only grep", () => {

@@ -16,6 +16,11 @@ const locales = [
     pricingLabel: "مشاهده قیمت‌ها",
     signupLabel: "ساخت حساب",
     signupHeading: "ایجاد حساب کاربری",
+    loginLabel: "ورود",
+    loginHeading: "ورود به حساب",
+    switchLabel: "English",
+    switchedLang: "en",
+    switchedSignupHeading: "Create account",
     lang: "fa",
     dir: "rtl",
     specialistLabel: "درخواست بررسی تخصصی",
@@ -29,8 +34,6 @@ const locales = [
     sample: "/en/sample-report",
     auditHref: "/en/audit",
     pricingHref: "/en/pricing",
-    // Signup currently has no /en route. AU-04 keeps the verified shared route
-    // instead of manufacturing a localized 404; full signup localization is separate work.
     signupHref: "/signup",
     specialistHref: "/en/qualification",
     automatedLabel: "Start automated audit",
@@ -38,6 +41,11 @@ const locales = [
     pricingLabel: "View pricing",
     signupLabel: "Create account",
     signupHeading: "Create account",
+    loginLabel: "Log in",
+    loginHeading: "Log in to your account",
+    switchLabel: "فارسی",
+    switchedLang: "fa",
+    switchedSignupHeading: "ایجاد حساب کاربری",
     lang: "en",
     dir: "ltr",
     specialistLabel: "Request specialist review",
@@ -168,6 +176,19 @@ for (const locale of locales) {
       await expect(page.locator("html")).toHaveAttribute("lang", locale.lang);
       await expect(page.locator("html")).toHaveAttribute("dir", locale.dir);
       await expect(page.getByRole("heading", { level: 1, name: locale.signupHeading })).toBeVisible();
+      const localeSwitch = page.getByRole("link", { name: locale.switchLabel, exact: true });
+      await expect(localeSwitch).toHaveAttribute("href", "/signup");
+      await localeSwitch.click();
+      await expect(page).toHaveURL(/\/signup$/);
+      await expect(page.locator("html")).toHaveAttribute("lang", locale.switchedLang);
+      await expect(page.getByRole("heading", { level: 1, name: locale.switchedSignupHeading })).toBeVisible();
+      await page.goto(locale.sample);
+      await page.getByRole("link", { name: locale.signupLabel, exact: true }).first().click();
+      await page.getByRole("link", { name: locale.loginLabel, exact: true }).click();
+      await expect(page).toHaveURL(/\/login$/);
+      await expect(page.locator("html")).toHaveAttribute("lang", locale.lang);
+      await expect(page.locator("html")).toHaveAttribute("dir", locale.dir);
+      await expect(page.getByRole("heading", { level: 1, name: locale.loginHeading })).toBeVisible();
     });
   }
 }
