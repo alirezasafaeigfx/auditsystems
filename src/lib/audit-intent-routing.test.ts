@@ -43,9 +43,12 @@ describe("AU-04 intent ownership and safe destinations", () => {
     expect(en.pathname).toBe("/en/qualification");
 
     for (const url of [fa, en]) {
-      const keys = [...url.searchParams.keys()];
-      expect(keys).toEqual(expect.arrayContaining(["utm_source", "utm_medium", "utm_campaign", "utm_content"]));
-      expect(keys.every((key) => key.startsWith("utm_"))).toBe(true);
+      expect([...url.searchParams.keys()].sort()).toEqual([
+        "utm_campaign",
+        "utm_content",
+        "utm_medium",
+        "utm_source",
+      ]);
     }
   });
 
