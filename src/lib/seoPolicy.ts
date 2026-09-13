@@ -3,7 +3,16 @@ const EXACT_NO_INDEX_ROUTES = new Set([
   "/en/failed",
   "/login",
   "/signup",
-  "/verify-email"
+  "/verify-email",
+  "/asdev",
+  "/brand/asdev-portfolio",
+  "/en/brand/asdev-portfolio"
+]);
+
+const PUBLIC_NO_INDEX_ROUTES = new Set([
+  "/asdev",
+  "/brand/asdev-portfolio",
+  "/en/brand/asdev-portfolio"
 ]);
 
 const NO_INDEX_ROUTE_PREFIXES = [
@@ -27,4 +36,8 @@ export function isNoIndexRoute(pathname: string): boolean {
   return NO_INDEX_ROUTE_PREFIXES.some(
     (prefix) => normalized === prefix || normalized.startsWith(`${prefix}/`)
   );
+}
+
+export function isPublicNoIndexRoute(pathname: string): boolean {
+  return PUBLIC_NO_INDEX_ROUTES.has(normalizePathname(pathname));
 }

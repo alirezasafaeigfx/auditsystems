@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { NextRequest, type NextResponse } from "next/server";
 import { proxy } from "./proxy";
+import robots from "./app/robots";
 
 const ROADMAP_PATH = fileURLToPath(new URL("../ops/roadmap/phases.json", import.meta.url));
 const EXPECTED_ROADMAP_COMMAND = "pnpm exec vitest run src/proxy.governance.test.ts";
@@ -63,6 +64,27 @@ describe("canonical edge security proxy", () => {
     expect(response.headers.get("x-robots-tag")).toBe("all");
     expect(response.headers.get("cache-control")).toContain("public");
     expectGlobalSecurityHeaders(response);
+  });
+
+  it.each([
+    "/asdev",
+    "/brand/asdev-portfolio",
+    "/en/brand/asdev-portfolio",
+  ])("keeps the HTTP index policy aligned with noindex page metadata on %s", (pathname) => {
+    const response = proxy(makeRequest(pathname));
+
+    expect(response.headers.get("x-robots-tag")).toBe("noindex");
+    expect(response.headers.get("cache-control")).toContain("public");
+  });
+
+  it("allows crawlers to fetch public noindex pages so they can observe the directive", () => {
+    const robotsConfig = robots();
+    const rules = Array.isArray(robotsConfig.rules) ? robotsConfig.rules : [robotsConfig.rules];
+    const disallowed = rules.flatMap((rule) => Array.isArray(rule.disallow) ? rule.disallow : [rule.disallow]);
+
+    expect(disallowed).not.toContain("/asdev");
+    expect(disallowed).not.toContain("/brand/asdev-portfolio");
+    expect(disallowed).not.toContain("/en/brand/asdev-portfolio");
   });
 
   it("fails safely when a shared auth route receives a malformed referer", () => {
