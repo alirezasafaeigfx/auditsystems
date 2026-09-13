@@ -116,6 +116,8 @@ describe("protected report HTML/RSC access", () => {
 
     expect(persian).toContain("امتیاز در دسترس نیست");
     expect(english).toContain("Score unavailable");
+    expect(persian).toContain(">ناموفق</span>");
+    expect(english).toContain(">Failed</span>");
     expect(persian).not.toContain("Synthetic protected finding");
     expect(english).not.toContain("Synthetic protected finding");
     expect(persian).not.toContain("نقشه اقدام");
@@ -169,6 +171,8 @@ describe("protected report HTML/RSC access", () => {
     expect(markup).toContain("67%");
     expect(markup).not.toContain("سرعت</div><div style=\"font-size:1.25rem;font-weight:700\">100");
     expect(englishMarkup).toContain("Partial result");
+    expect(markup).toContain(">عالی</div>");
+    expect(englishMarkup).toContain("(Excellent)");
     expect(englishMarkup).toContain("67%");
     expect(englishMarkup).not.toContain("Performance</div><div style=\"font-size:1.25rem;font-weight:700\">100");
   });
