@@ -2,8 +2,13 @@ import type { BlogPost } from "./index";
 
 const technicalSeoIssues: BlogPost = {
   slug: "technical-seo-issues",
-  updatedAt: "2026-07-07",
+  publishedAt: "2026-07-07",
+  updatedAt: "2026-09-13",
   relatedSlugs: ["seo-audit-checklist", "core-web-vitals-guide"],
+  sources: [
+    { label: "Google Search crawling and indexing documentation", url: "https://developers.google.com/search/docs/crawling-indexing" },
+    { label: "Google robots meta tag specification", url: "https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag" }
+  ],
   fa: {
     title: "مشکلات رایج سئو فنی و راه حل‌های عملی",
     description: "شناسایی و رفع مشکلات رایج سئو فنی شامل خطاهای خزش، محتوای تکراری، canonical مفقود، رندرینگ کند و مشکلات موبایل. راهکارهای عملی برای بهبود عملکرد فنی سایت.",
@@ -20,6 +25,10 @@ const technicalSeoIssues: BlogPost = {
     ],
     content: `
 ## سئو فنی چیست و چرا مهم است؟
+
+## محدوده ASDEV Audit
+
+ASDEV Audit وجود و پاسخ robots.txt و sitemap.xml و عناصر قابل مشاهده HTML را بررسی می‌کند. پاسخ timeout، منع دسترسی یا خطای شبکه «unavailable» است و نباید به‌عنوان نبود فایل گزارش شود. نبود schema در HTML دریافت‌شده نیز نبود schema تزریق‌شده توسط JavaScript را ثابت نمی‌کند و برای آن باید DOM رندرشده جداگانه بررسی شود.
 
 سئو فنی به مجموعه‌ای از بهینه‌سازی‌هایی اطلاق می‌شود که به موتورهای جستجو کمک می‌کند سایت شما را بهتر بخزند، ایندکس کنند و درک کنند. این بهینه‌سازی‌ها شامل موارد زیر می‌شوند:
 
@@ -197,7 +206,7 @@ const technicalSeoIssues: BlogPost = {
 
 رفع مشکلات سئو فنی فرآیندی پیچیده اما ضروری است. با شناسایی و رفع خطاهای خزش، مدیریت محتوای تکراری، بهینه‌سازی canonical و رندرینگ، و اطمینان از سازگاری با موبایل، می‌توانید عملکرد فنی سایت خود را بهبود ببخشید. استفاده منظم از ابزارهای مانیتورینگ و به‌روزرسانی نقشه سایت و robots.txt نیز بسیار مهم است.
     `,
-    cta: "همین حالا سایت خود را رایگان ممیزی کنید و گزارش کامل دریافت کنید."
+    cta: "ممیزی فنی را شروع کنید و evidence هر finding سئو را جداگانه بررسی کنید."
   },
   en: {
     title: "Common Technical SEO Issues and Practical Solutions",
@@ -215,6 +224,10 @@ const technicalSeoIssues: BlogPost = {
     ],
     content: `
 ## What is Technical SEO and Why It Matters?
+
+## ASDEV Audit scope
+
+ASDEV Audit checks the response status and accessible content of robots.txt and sitemap.xml plus observable HTML elements. A timeout, access denial, or network failure is unavailable evidence and must not be reported as a missing file. Missing schema in fetched HTML also does not prove that client-rendered schema is absent; inspect the rendered DOM separately.
 
 Technical SEO refers to a set of optimizations that help search engines better crawl, index, and understand your site. These optimizations include:
 
@@ -392,7 +405,7 @@ To check sitemap, open /sitemap.xml in browser and ensure correct URLs exist. To
 
 Fixing technical SEO issues is a complex but necessary process. By identifying and fixing crawl errors, managing duplicate content, optimizing canonical and rendering, and ensuring mobile compatibility, you can improve your site's technical performance. Regular use of monitoring tools and updating sitemaps and robots.txt is also very important.
     `,
-    cta: "Audit Your Website for Free and Get a Complete Report"
+    cta: "Start a technical audit and inspect the evidence for each SEO finding"
   }
 };
 

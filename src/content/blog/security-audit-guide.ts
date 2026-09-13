@@ -2,11 +2,15 @@ import type { BlogPost } from "./index";
 
 const securityAuditGuide: BlogPost = {
   slug: "security-audit-guide",
-  updatedAt: "2026-07-05",
+  publishedAt: "2026-07-05",
+  updatedAt: "2026-09-13",
   relatedSlugs: ["seo-audit-checklist", "website-speed-test", "wordpress-seo"],
+  sources: [
+    { label: "OWASP Web Security Testing Guide", url: "https://owasp.org/www-project-web-security-testing-guide/" }
+  ],
   fa: {
     title: "راهنمای تست امنیت سایت: محافظت از کسب‌وکار آنلاین شما",
-    description: "چک‌لیست جامع تست امنیت وب‌سایت شامل هدرهای امنیتی، XSS، CSRF، SQL Injection و محافظت از داده‌ها. امنیت سایت خود را تضمین کنید.",
+    description: "راهنمای بررسی نشانه‌های امنیتی وب‌سایت شامل هدرها، HTTPS و گام‌های امن برای ارزیابی تخصصی XSS، CSRF و SQL Injection.",
     sections: [
       "چرا امنیت سایت مهم است؟",
       "هدرهای امنیتی HTTP",
@@ -23,13 +27,11 @@ const securityAuditGuide: BlogPost = {
     content: `
 ## چرا امنیت سایت مهم است؟
 
-امنیت وب‌سایت نه تنها از اطلاعات کاربران محافظت می‌کند، بلکه بر سئو و اعتماد کاربران نیز تأثیر دارد. گوگل سایت‌های ناامن را جریمه می‌کند و کاربران از سایت‌هایی که گواهی SSL ندارند فرار می‌کنند.
+## محدوده ASDEV Audit
 
-### آمار مهم
+ASDEV Audit در نسخه فعلی هدرها، HTTPS و چند نشانه قابل مشاهده را گزارش می‌کند؛ آزمون نفوذ، exploit یا اثبات نبود آسیب‌پذیری انجام نمی‌دهد. نبود یک هدر یک finding پیکربندی است و وجود هدر نیز تضمین امنیت نیست. آزمایش فعال را فقط با مجوز مالک و طبق راهنمای OWASP انجام دهید.
 
-- 43% از حملات سایبری به کسب‌وکارهای کوچک و متوسط است
-- متوسط هزینه یک نقض داده 3.86 میلیون دلار است
-- 60% از کسب‌وکارهای کوچک ظرف 6 ماه پس از حمله تعطیل می‌شوند
+امنیت وب‌سایت بر حفاظت از داده و اعتماد کاربر اثر دارد. HTTPS و هدرها بخشی از پیکربندی دفاعی هستند و برای ارزیابی کامل کافی نیستند.
 
 ## هدرهای امنیتی HTTP
 
@@ -41,7 +43,7 @@ const securityAuditGuide: BlogPost = {
 - **Strict-Transport-Security (HSTS)**: اجبار استفاده از HTTPS
 - **X-Content-Type-Options**: جلوگیری از MIME sniffing
 - **X-Frame-Options**: جلوگیری از clickjacking
-- **X-XSS-Protection**: فیلتر XSS مرورگر
+- **X-XSS-Protection: 0**: غیرفعال‌کردن فیلتر منسوخ مرورگر؛ برای کاهش XSS از CSP استفاده کنید
 - **Referrer-Policy**: کنترل اطلاعات ارجاع
 - **Permissions-Policy**: کنترل دسترسی‌های مرورگر
 
@@ -157,9 +159,9 @@ APIها نقاط ورودی مهمی هستند که باید ایمن باشن�
 
 ## نتیجه‌گیری
 
-امنیت وب‌سایت فرآیندی مستمر است. با اجرای منظم این چک‌لیست و استفاده از ابزارهای امنیتی، می‌توانید از کسب‌وکار آنلاین خود محافظت کنید. اگر نیاز به بررسی جامع امنیت سایت خود دارید، از ابزار آنلاین ما استفاده کنید.
+امنیت وب‌سایت فرآیندی مستمر است. findingهای پیکربندی را اولویت‌بندی کنید و موارد نیازمند آزمون فعال را به ارزیابی مجاز متخصص بسپارید.
     `,
-    cta: "امنیت سایت خود را همین الان بررسی کنید"
+    cta: "نشانه‌های امنیتی قابل مشاهده سایت را ممیزی کنید"
   },
   en: {
     title: "Website Security Audit Guide: Protecting Your Online Business",
@@ -180,13 +182,11 @@ APIها نقاط ورودی مهمی هستند که باید ایمن باشن�
     content: `
 ## Why Website Security Matters
 
-Website security not only protects user data but also impacts SEO and user trust. Google penalizes insecure sites, and users avoid sites without SSL certificates.
+## ASDEV Audit scope
 
-### Important Statistics
+The current ASDEV Audit reports headers, HTTPS, and other externally observable signals. It does not perform penetration testing, exploit vulnerabilities, or prove that no vulnerability exists. A missing header is a configuration finding, while a present header is not a security guarantee. Perform active testing only with owner authorization and an OWASP-based test plan.
 
-- 43% of cyber attacks target small and medium businesses
-- Average cost of a data breach is $3.86 million
-- 60% of small businesses close within 6 months after an attack
+Website security affects data protection and user trust. HTTPS and response headers are useful defensive configuration signals, but they are not a complete security assessment.
 
 ## HTTP Security Headers
 
@@ -198,7 +198,7 @@ Security headers play an important role in protecting your site.
 - **Strict-Transport-Security (HSTS)**: Enforce HTTPS usage
 - **X-Content-Type-Options**: Prevent MIME sniffing
 - **X-Frame-Options**: Prevent clickjacking
-- **X-XSS-Protection**: Browser XSS filter
+- **X-XSS-Protection: 0**: Disable the deprecated browser filter; use CSP to reduce XSS risk
 - **Referrer-Policy**: Control referral information
 - **Permissions-Policy**: Control browser permissions
 
@@ -314,9 +314,9 @@ Check these items monthly:
 
 ## Conclusion
 
-Website security is an ongoing process. By regularly implementing this checklist and using security tools, you can protect your online business. If you need a comprehensive website security audit, use our online tool.
+Website security is ongoing. Prioritize configuration findings and send issues that require active testing to an authorized specialist assessment.
     `,
-    cta: "Audit Your Website Security Now"
+    cta: "Audit the website's externally observable security signals"
   }
 };
 

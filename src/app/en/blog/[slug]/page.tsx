@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getBlogPosts } from "../../../../content/blog";
 import { buildPageMetadata } from "../../../../lib/seoMeta";
+import { renderBlogContent } from "../../../../lib/blog-content";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -43,10 +44,17 @@ export default async function EnglishBlogSlugPage({ params }: { params: Promise<
         <Link href="/en/blog" style={{ fontSize: "0.875rem", color: "var(--muted, #6b7280)" }}>← Back to blog</Link>
         <h1 style={{ fontSize: "1.75rem", fontWeight: 700, marginTop: "1rem", marginBottom: "0.5rem" }}>{post.title}</h1>
         <p style={{ color: "var(--muted, #6b7280)", fontSize: "0.875rem", marginBottom: "2rem" }}>Updated: {post.updatedAt}</p>
-        <div dangerouslySetInnerHTML={{ __html: post.content.replace(/\n/g, "<br/>") }} />
+        {post.sources.length > 0 ? (
+          <p style={{ color: "var(--muted, #6b7280)", fontSize: "0.875rem" }}>
+            Sources: {post.sources.map((source, index) => (
+              <span key={source.url}>{index > 0 ? ", " : ""}<a href={source.url} rel="noreferrer">{source.label}</a></span>
+            ))}
+          </p>
+        ) : null}
+        <div dangerouslySetInnerHTML={{ __html: renderBlogContent(post.content) }} />
         <div style={{ marginTop: "2rem", padding: "1.5rem", background: "var(--brand-bg, #f0fdf4)", borderRadius: "0.5rem" }}>
           <p style={{ fontWeight: 600, marginBottom: "0.5rem" }}>{post.cta}</p>
-          <Link href="/audit" className="button">Start Free Audit</Link>
+          <Link href="/en/audit" className="button">Start Website Audit</Link>
         </div>
       </article>
     </main>

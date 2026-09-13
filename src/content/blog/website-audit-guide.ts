@@ -2,8 +2,14 @@ import type { BlogPost } from "./index";
 
 const websiteAuditGuide: BlogPost = {
   slug: "website-audit-guide",
-  updatedAt: "2026-07-07",
+  publishedAt: "2026-07-07",
+  updatedAt: "2026-09-13",
   relatedSlugs: ["seo-report-client", "core-web-vitals-guide"],
+  sources: [
+    { label: "Google Search crawling and indexing documentation", url: "https://developers.google.com/search/docs/crawling-indexing" },
+    { label: "Web Vitals", url: "https://web.dev/articles/vitals" },
+    { label: "OWASP Web Security Testing Guide", url: "https://owasp.org/www-project-web-security-testing-guide/" }
+  ],
   fa: {
     title: "گزارش فنی سایت: نحوه تفسیر و استفاده از نتایج ممیزی",
     description: "راهنمای کامل تفسیر گزارش‌های ممیزی فنی سایت شامل درک امتیازات، اولویت‌بندی رفع مشکلات، ایجاد برنامه عملیاتی و اندازه‌گیری بهبود. بهینه‌سازی مؤثر سایت.",
@@ -20,6 +26,10 @@ const websiteAuditGuide: BlogPost = {
     ],
     content: `
 ## ممیزی فنی سایت چیست؟
+
+## محدوده ASDEV Audit
+
+گزارش فعلی ASDEV Audit شواهد قابل‌دسترسی مانند HTML، هدرهای پاسخ و نتیجه probe فایل‌های robots.txt و sitemap.xml را بررسی می‌کند. اگر provider داده CrUX در دسترس باشد، ممکن است شواهد میدانی Core Web Vitals را جدا از امتیاز گزارش کند؛ سامانه RUM اختصاصی اجرا نمی‌کند و performance score قطعی نمی‌سازد. رتبه گوگل یا آزمون نفوذ نیز در این گزارش اثبات نمی‌شود. نتیجه unavailable به معنی سالم یا معیوب بودن سایت نیست و مشاهده امنیتی نیز به‌تنهایی اثبات آسیب‌پذیری نیست.
 
 ممیزی فنی سایت فرآیند بررسی جامع تمام جنبه‌های فنی یک وب‌سایت است. هدف این ممیزی شناسایی مشکلات فنی است که ممکن است بر عملکرد سایت در موتورهای جستجو، سرعت بارگذاری و تجربه کاربری تأثیر بگذارند.
 
@@ -318,7 +328,7 @@ const websiteAuditGuide: BlogPost = {
 
 تفسیر صحیح گزارش‌های ممیزی فنی سایت برای بهینه‌سازی مؤثر بسیار مهم است. با درک امتیازات و معیارها، اولویت‌بندی مشکلات و ایجاد برنامه عملیاتی مناسب، می‌توانید عملکرد سایت خود را بهبود بخشید. پیگیری منظم و اندازه‌گیری بهبود نیز بسیار حائز اهمیت است.
     `,
-    cta: "همین حالا سایت خود را رایگان ممیزی کنید و گزارش کامل دریافت کنید."
+    cta: "ممیزی فنی سایت را شروع کنید و نتیجه را با توجه به پوشش شواهد بخوانید."
   },
   en: {
     title: "Technical Site Report: How to Interpret and Use Audit Results",
@@ -336,6 +346,10 @@ const websiteAuditGuide: BlogPost = {
     ],
     content: `
 ## What is Technical Site Audit?
+
+## ASDEV Audit scope
+
+The current ASDEV Audit examines available evidence such as HTML, response headers, and robots.txt or sitemap.xml probe outcomes. When provider CrUX data is available, it may report field Core Web Vitals separately from scoring; it does not operate first-party RUM or assign a definitive performance score. It also does not prove Google rankings or perform penetration testing. An unavailable result is neither a pass nor a failure, and a security observation alone does not prove a vulnerability.
 
 Technical site audit is the process of comprehensive review of all technical aspects of a website. The purpose of this audit is to identify technical issues that may affect site performance in search engines, loading speed and user experience.
 
@@ -634,7 +648,7 @@ Superficial report interpretation may lead to wrong decisions. Interpret the rep
 
 Proper interpretation of technical site audit reports is very important for effective optimization. By understanding scores and metrics, prioritizing problems and creating appropriate action plan, you can improve your site's performance. Regular tracking and measuring improvement is also very important.
     `,
-    cta: "Audit Your Website for Free and Get a Complete Report"
+    cta: "Start a technical website audit and interpret it using the reported evidence coverage"
   }
 };
 
