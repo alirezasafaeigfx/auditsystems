@@ -12,8 +12,8 @@ describe("measurement scorecard", () => {
     expect(buildMeasurementScorecard(rows)).toEqual([expect.objectContaining({
       cohort: { date: "2026-09-01", locale: "fa", device: "mobile", country: "IR" },
       counts: { auditEntry: 10, enqueueAccepted: 7, usableReportReady: 4, auditError: 2 },
-      rates: { entryToEnqueue: 0.7, enqueueToUsableReport: 4 / 7 },
-      coverage: { entryToEnqueue: "available", enqueueToUsableReport: "available" },
+      rates: { entryToEnqueue: 0.7, enqueueToUsableReport: null },
+      coverage: { entryToEnqueue: "available", enqueueToUsableReport: "unjoinable" },
     })]);
   });
 
@@ -23,7 +23,7 @@ describe("measurement scorecard", () => {
     ]));
     expect(buildMeasurementScorecard(rows)[0]).toMatchObject({
       rates: { entryToEnqueue: null, enqueueToUsableReport: null },
-      coverage: { entryToEnqueue: "unavailable", enqueueToUsableReport: "unavailable" },
+      coverage: { entryToEnqueue: "unavailable", enqueueToUsableReport: "unjoinable" },
     });
   });
 

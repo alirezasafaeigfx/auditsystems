@@ -26,6 +26,7 @@ const ALLOWED_DIMENSIONS = new Set([
   "locale", "path", "slug", "cta_id", "intent", "surface", "destination_class",
   "placement", "offer", "variant", "intent_router_variant", "depth", "has_url",
   "error_code", "retryable", "run_status", "retry_count", "provider", "reused_order",
+  "section", "route", "destination",
 ]);
 
 declare global {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { createClsSession } from "../lib/cls-session";
 
 type RumTrackerProps = {
   locale: "fa" | "en";
@@ -77,7 +78,7 @@ export default function RumTracker({ locale }: RumTrackerProps) {
       });
     };
 
-    let clsValue = 0;
+    const clsSession = createClsSession();
     let lcpValue = 0;
     let sentLcp = false;
     let sentCls = false;
@@ -104,9 +105,7 @@ export default function RumTracker({ locale }: RumTrackerProps) {
     const clsObserver = new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
         const shift = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number };
-        if (!shift.hadRecentInput) {
-          clsValue += shift.value ?? 0;
-        }
+        clsSession.observe(shift.startTime, shift.value ?? 0, shift.hadRecentInput === true);
       }
     });
     const lcpObserver = new PerformanceObserver((list) => {
@@ -145,7 +144,7 @@ export default function RumTracker({ locale }: RumTrackerProps) {
       }
       if (!sentCls) {
         sentCls = true;
-        reportVital("CLS", clsValue);
+        reportVital("CLS", clsSession.value());
       }
     };
 

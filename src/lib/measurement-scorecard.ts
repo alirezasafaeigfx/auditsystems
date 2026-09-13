@@ -91,17 +91,13 @@ export function buildMeasurementScorecard(rows: MeasurementRow[]) {
       entryToEnqueue: counts.audit_entry > 0 && counts.enqueue_accepted <= counts.audit_entry
         ? counts.enqueue_accepted / counts.audit_entry
         : null,
-      enqueueToUsableReport: counts.enqueue_accepted > 0 && counts.usable_report_ready <= counts.enqueue_accepted
-        ? counts.usable_report_ready / counts.enqueue_accepted
-        : null,
+      enqueueToUsableReport: null,
     },
     coverage: {
       entryToEnqueue: counts.audit_entry === 0
         ? "unavailable" as const
         : counts.enqueue_accepted > counts.audit_entry ? "inconsistent" as const : "available" as const,
-      enqueueToUsableReport: counts.enqueue_accepted === 0
-        ? "unavailable" as const
-        : counts.usable_report_ready > counts.enqueue_accepted ? "inconsistent" as const : "available" as const,
+      enqueueToUsableReport: "unjoinable" as const,
     },
   }));
 }

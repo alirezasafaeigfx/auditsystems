@@ -84,6 +84,15 @@ describe("analytics", () => {
       });
     });
 
+    it("preserves intent router dimensions without accepting arbitrary payload fields", async () => {
+      (window.localStorage.getItem as ReturnType<typeof vi.fn>).mockReturnValue("granted");
+      const { trackSeoEvent } = await import("../analytics");
+      trackSeoEvent("seo_intent_router_click", { section: "home_intent_router", route: "audit", destination: "internal" });
+      expect(mockGtag).toHaveBeenCalledWith("event", "seo_intent_router_click", {
+        section: "home_intent_router", route: "audit", destination: "internal", event_category: "seo",
+      });
+    });
+
     it("falls back to dataLayer when gtag is not available", async () => {
       (window.localStorage.getItem as ReturnType<typeof vi.fn>).mockReturnValue("granted");
       (window as { gtag?: unknown }).gtag = undefined;
