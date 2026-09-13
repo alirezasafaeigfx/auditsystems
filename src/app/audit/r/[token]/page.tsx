@@ -10,6 +10,7 @@ import { ReportAccessChallenge } from "../../../../components/ReportAccessChalle
 import { getReportAccessCookieName, verifyReportAccessCredential } from "../../../../lib/report-access";
 import { hasPassword } from "../../../../lib/reportShare";
 import { resolveReportResult } from "../../../../lib/report-result";
+import { reportGradeLabel, reportStatusLabel } from "../../../../lib/report-labels";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -89,7 +90,7 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
         <h1>گزارش Audit</h1>
         <p>هدف: {share.run.normalizedUrl ?? share.run.url}</p>
         <div className="hero-actions">
-          <span className={`badge ${statusClass(share.run.status)}`}>{share.run.status}</span>
+          <span className={`badge ${statusClass(share.run.status)}`}>{reportStatusLabel(share.run.status, "fa")}</span>
           <span className="badge" style={{ backgroundColor: "#f3f4f6", color: "var(--text)" }}>
             {share.viewCount + 1} بازدید
           </span>
@@ -110,7 +111,7 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
       {score != null && grade != null && (
         <section className="card" style={{ textAlign: "center", padding: "2rem" }}>
           <div style={{ fontSize: "3rem", fontWeight: 800, color: gradeColor(grade) }}>{score}<span style={{ fontSize: "1.5rem" }}>/100</span></div>
-          <div style={{ fontSize: "1.25rem", fontWeight: 600, color: gradeColor(grade), marginBottom: "1rem" }}>{grade}</div>
+          <div style={{ fontSize: "1.25rem", fontWeight: 600, color: gradeColor(grade), marginBottom: "1rem" }}>{reportGradeLabel(grade, "fa")}</div>
 
           {Object.keys(categoryScores).length > 0 && (
             <div style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap", marginTop: "1rem" }}>
