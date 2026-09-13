@@ -34,3 +34,16 @@ The adapter rejects extra fields, duplicate cohort events and malformed dates or
 CLS uses the largest session-window sum (under 1 second between shifts and under 5 seconds per burst) rather than lifetime accumulation; see [web.dev's CLS definition](https://web.dev/articles/cls).
 
 Use only authorized aggregate exports. GA4, Search Console, live RUM retention, production traffic volume, device/country completeness and any growth outcome are **UNVERIFIED** in this repository. Lab runs and browser emulation must be labelled separately from field data and physical hardware.
+
+## AU-12 implementation receipt
+
+- Pull request: [#26](https://github.com/alirezasafaeigfx/auditsystems/pull/26)
+- Base: `2d5256c69d97193d56314f72b633a26156109c29`
+- Candidate: `c5e825ccd6d18d03b8b6c7c79764845784303f75`
+- Merge: `33999f2acb1818ec9b15c299c33472d38bf2239f`
+- Generated-doc child immediately after merge: `813e138e7734a55b3736bd9964438634fa94e7ef`
+- Candidate verification: lint, typecheck and build passed; Vitest reported 1,096 passed and 41 skipped. The focused privacy, CLS and scorecard tests passed.
+- Candidate hosted runs: Main Gate `34780308613`, Roadmap `34780308671`, Docs `34780308662`, PostgreSQL `34780308665`; all passed for the candidate SHA.
+- Post-merge hosted runs: Main Gate `34780556478`, Roadmap `34780556464`, Docs `34780556441`; all passed for the merge SHA.
+- Independent session review found three material issues in the first candidate. The final candidate fixed all three and the re-review reported no remaining material finding. This is not a durable GitHub human approval.
+- Deployed SHA and live collection remain **UNVERIFIED**.

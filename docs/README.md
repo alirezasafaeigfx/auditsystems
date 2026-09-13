@@ -33,6 +33,9 @@
 - `SEO_ROADMAP_PHASED_NO_TIMELINE.md`: نقشه راه ۳ فازی SEO بدون زمان‌بندی
 - `SEO_MEASUREMENT_AUTOMATION.md`: مدل KPI، taxonomy رویدادها و اتوماسیون سنجش SEO
 - `SEO_CONTENT_AUTHORITY_OPS.md`: چارچوب عملیات محتوا و authority برای رشد پایدار
+- `quality/CONTENT_REGISTER.md`: ثبت منبع، تاریخ و تصمیم محتوایی AU-10
+- `quality/MEASUREMENT.md`: قرارداد اندازه‌گیری، محدودیت داده و رسید اجرای AU-12
+- `quality/GROWTH_REVIEW.md`: checkpoint مشاهده AU-13 و شرایط دقیق خروج از `AWAITING_OBSERVATION`
 
 ## Team & Process
 - `ROLES_AND_SKILLS_SETUP.md`: نقش‌ها، مهارت‌ها، پیش‌نیازها و release gate
