@@ -106,6 +106,7 @@ describe("protected report HTML/RSC access", () => {
     const share = protectedShare();
     (share as { passwordHash: string | null }).passwordHash = null;
     share.run.status = "FAILED";
+    share.run.normalizedUrl = `https://private-customer.invalid/${"a".repeat(180)}`;
     mocks.findUnique.mockResolvedValue(share);
 
     const { default: ReportPage } = await import("./page");
@@ -118,11 +119,31 @@ describe("protected report HTML/RSC access", () => {
     expect(english).toContain("Score unavailable");
     expect(persian).toContain(">ناموفق</span>");
     expect(english).toContain(">Failed</span>");
+    expect(persian).toContain("ممیزی با موفقیت کامل نشد.");
+    expect(persian).not.toContain("The audit did not complete successfully.");
+    expect(persian).toContain('dir="ltr" style="overflow-wrap:anywhere"');
+    expect(english).toContain('dir="ltr" style="overflow-wrap:anywhere"');
     expect(persian).not.toContain("Synthetic protected finding");
     expect(english).not.toContain("Synthetic protected finding");
     expect(persian).not.toContain("نقشه اقدام");
     expect(persian).not.toContain("فعال‌سازی تحویل کامل");
     expect(english).not.toContain("Unlock Full Delivery");
+  });
+
+  it.each(["QUEUED", "RUNNING"])("describes a %s report as pending, not failed", async (status) => {
+    const share = protectedShare();
+    (share as { passwordHash: string | null }).passwordHash = null;
+    share.run.status = status;
+    mocks.findUnique.mockResolvedValue(share);
+    const { default: ReportPage } = await import("./page");
+    const { default: ReportPageEn } = await import("../../../en/audit/r/[token]/page");
+    const markup = renderToStaticMarkup(await ReportPage({ params: Promise.resolve({ token: "protected-report-token" }) }));
+    const english = renderToStaticMarkup(await ReportPageEn({ params: Promise.resolve({ token: "protected-report-token" }) }));
+
+    expect(markup).toContain("ممیزی هنوز کامل نشده است.");
+    expect(markup).not.toContain("ممیزی با موفقیت کامل نشد.");
+    expect(english).toContain("The audit is still in progress.");
+    expect(english).not.toContain("The audit did not complete successfully.");
   });
 
   it.each([
@@ -175,5 +196,22 @@ describe("protected report HTML/RSC access", () => {
     expect(englishMarkup).toContain("(Excellent)");
     expect(englishMarkup).toContain("67%");
     expect(englishMarkup).not.toContain("Performance</div><div style=\"font-size:1.25rem;font-weight:700\">100");
+
+    (share.run.summary as unknown as { resultCoverage: { freshness: string } }).resultCoverage.freshness = "STALE_BLOCKED";
+    const staleMarkup = renderToStaticMarkup(await ReportPage({ params: Promise.resolve({ token: "protected-report-token" }) }));
+    expect(staleMarkup).toContain("شواهد اندازه‌گیری قدیمی است و امتیاز نمایش داده نمی‌شود.");
+    expect(staleMarkup).not.toContain("Measurement evidence is stale and blocked.");
+  });
+
+  it("explains an invalid stored summary without exposing English diagnostics", async () => {
+    const share = protectedShare();
+    (share as { passwordHash: string | null }).passwordHash = null;
+    share.run.summary = null as never;
+    mocks.findUnique.mockResolvedValue(share);
+    const { default: ReportPage } = await import("./page");
+    const markup = renderToStaticMarkup(await ReportPage({ params: Promise.resolve({ token: "protected-report-token" }) }));
+
+    expect(markup).toContain("داده‌های ثبت‌شده برای نمایش امتیاز معتبر نیستند.");
+    expect(markup).not.toContain("The stored result summary is missing or malformed.");
   });
 });
