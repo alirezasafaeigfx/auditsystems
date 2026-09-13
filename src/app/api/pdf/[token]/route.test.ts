@@ -95,6 +95,20 @@ describe("GET /api/pdf/[token] access", () => {
     }));
   });
 
+  it("does not print unconfirmed findings from a failed run", async () => {
+    const share = protectedShare();
+    share.run.status = "FAILED";
+    share.run.findings = [{ code: "UNCONFIRMED", title: "Unconfirmed finding" }] as never;
+    share.run.summary = { performance: { policyVersion: "performance-evidence.v1", providerResults: [], diagnostics: {}, coverage: {}, requestedUrl: "https://private.invalid", finalUrl: "https://private.invalid", collectedAt: "2026-09-13T00:00:00Z", score: null, withheldReason: "UNCONFIRMED", limitations: [] } } as never;
+    mocks.findUnique.mockResolvedValue(share);
+    const { GET } = await import("./route");
+    const response = await GET(request("signed-valid"), { params: Promise.resolve({ token: "protected-share" }) });
+
+    expect(response.status).toBe(200);
+    expect(mocks.buildAuditReportPdf).toHaveBeenCalledWith(expect.objectContaining({ findings: [] }));
+    expect(mocks.appendPerformanceEvidencePage).toHaveBeenCalledWith(expect.any(Uint8Array), undefined);
+  });
+
   it("rejects a credential belonging to a different report before PDF generation", async () => {
     mocks.verifyDownloadToken.mockReturnValue({ runId: "other-run", orderId: "order-1", email: "synthetic@example.invalid", exp: 2_000_000_000 });
     const { GET } = await import("./route");

@@ -46,7 +46,7 @@ function buildReportResponse(share: Awaited<ReturnType<typeof fetchShareWithFind
     findings: share.run.findings,
     runStatus: share.run.status,
   });
-  const storedSummary = share.run.summary && typeof share.run.summary === "object" && !Array.isArray(share.run.summary)
+  const storedSummary = share.run.status === "SUCCEEDED" && share.run.summary && typeof share.run.summary === "object" && !Array.isArray(share.run.summary)
     ? share.run.summary as Record<string, unknown> : {};
   const safeSummary = {
     ...storedSummary,
@@ -69,7 +69,7 @@ function buildReportResponse(share: Awaited<ReturnType<typeof fetchShareWithFind
       status: share.run.status,
       summary: safeSummary,
     },
-    findings: share.run.findings,
+    findings: share.run.status === "SUCCEEDED" ? share.run.findings : [],
     result,
     status: share.run.status,
     share: {
