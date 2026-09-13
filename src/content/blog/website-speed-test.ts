@@ -2,8 +2,12 @@ import type { BlogPost } from "./index";
 
 const websiteSpeedTest: BlogPost = {
   slug: "website-speed-test",
-  updatedAt: "2026-07-05",
+  updatedAt: "2026-09-13",
   relatedSlugs: ["seo-audit-checklist", "wordpress-seo", "ecommerce-audit"],
+  sources: [
+    { label: "Web Vitals", url: "https://web.dev/articles/vitals" },
+    { label: "Core Web Vitals thresholds", url: "https://web.dev/articles/defining-core-web-vitals-thresholds" }
+  ],
   fa: {
     title: "بررسی و بهینه‌سازی سرعت سایت: راهنمای جامع برای کسب‌وکارهای آنلاین",
     description: "آموزش بررسی سرعت سایت و بهینه‌سازی Core Web Vitals شامل LCP، CLS و INP. راهکارهای عملی برای کاهش زمان بارگذاری و بهبود تجربه کاربری.",
@@ -23,11 +27,11 @@ const websiteSpeedTest: BlogPost = {
     content: `
 ## چرا سرعت سایت مهم است؟
 
-سرعت سایت تأثیر مستقیم بر تجربه کاربری، نرخ تبدیل و رتبه سئو دارد. تحقیقات نشان می‌دهد:
+## محدوده ASDEV Audit
 
-- 53% از کاربران موبایل سایت‌هایی را ترک می‌کنند که بیش از 3 ثانیه بارگذاری می‌شوند
-- هر ثانیه تأخیر اضافی، نرخ تبدیل را 7% کاهش می‌دهد
-- گوگل از سرعت سایت به عنوان یک فاکتور رتبه‌بندی استفاده می‌کند
+نسخه فعلی گزارش ASDEV Audit داده میدانی Core Web Vitals را اندازه‌گیری نمی‌کند و برای performance امتیاز قطعی نمی‌سازد. برای قضاوت درباره تجربه واقعی کاربران، داده میدانی را در PageSpeed Insights، CrUX یا Search Console و در صدک ۷۵ موبایل و دسکتاپ بررسی کنید. نتیجه آزمایشگاهی را جای داده میدانی گزارش نکنید.
+
+سرعت و پاسخ‌گویی می‌تواند بر تجربه کاربر اثر بگذارد. اثر تجاری یا جست‌وجویی هر سایت باید با داده همان سایت سنجیده شود.
 
 ## اندازه‌گیری سرعت سایت
 
@@ -156,9 +160,9 @@ Core Web Vitals مجموعه‌ای از معیارهای تجربه کاربر�
 
 ## نتیجه‌گیری
 
-بهینه‌سازی سرعت سایت فرآیندی مستمر است. با اندازه‌گیری منظم و اجرای بهینه‌سازی‌های پیشنهادی، می‌توانید تجربه کاربری بهتری ارائه دهید و رتبه سئوی خود را بهبود ببخشید. اگر نیاز به بررسی جامع سرعت سایت خود دارید، از ابزار آنلاین ما استفاده کنید.
+بهینه‌سازی سرعت فرآیندی مستمر است. ابتدا شواهد آزمایشگاهی و میدانی را جدا نگه دارید، سپس هر تغییر را با همان روش و شرایط دوباره اندازه بگیرید.
     `,
-    cta: "سرعت سایت خود را همین الان بررسی کنید"
+    cta: "ممیزی فنی را شروع کنید و محدودیت شواهد performance را در گزارش بررسی کنید"
   },
   en: {
     title: "Website Speed Test and Optimization: A Complete Guide for Online Businesses",
@@ -179,11 +183,11 @@ Core Web Vitals مجموعه‌ای از معیارهای تجربه کاربر�
     content: `
 ## Why Website Speed Matters
 
-Website speed directly impacts user experience, conversion rate, and SEO ranking. Research shows:
+## ASDEV Audit scope
 
-- 53% of mobile users abandon sites that take more than 3 seconds to load
-- Each second of additional delay reduces conversion rate by 7%
-- Google uses website speed as a ranking factor
+The current ASDEV Audit does not measure field Core Web Vitals or assign a definitive performance score. Evaluate real-user experience with field data from PageSpeed Insights, CrUX, or Search Console at the 75th percentile for mobile and desktop. Do not report a lab sample as field evidence.
+
+Speed and responsiveness can affect user experience. Measure the business and search impact with data from the site being evaluated.
 
 ## Measuring Website Speed
 
@@ -312,9 +316,9 @@ Images are the largest bandwidth consumers:
 
 ## Conclusion
 
-Website speed optimization is an ongoing process. By regularly measuring and implementing suggested optimizations, you can provide better user experience and improve your SEO ranking. If you need a comprehensive website speed audit, use our online tool.
+Speed optimization is ongoing. Keep lab and field evidence separate, then measure each change again with the same method and conditions.
     `,
-    cta: "Test Your Website Speed Now"
+    cta: "Start a technical audit and review the report's performance-evidence limits"
   }
 };
 

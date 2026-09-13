@@ -78,6 +78,13 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         <h1>{post.title}</h1>
         <p>{post.description}</p>
         <p className="text-sm text-muted">آخرین بروزرسانی: {post.updatedAt}</p>
+        {post.sources.length > 0 ? (
+          <p className="text-sm text-muted">
+            منابع: {post.sources.map((source, index) => (
+              <span key={source.url}>{index > 0 ? "، " : ""}<a href={source.url} rel="noreferrer">{source.label}</a></span>
+            ))}
+          </p>
+        ) : null}
       </section>
 
       <section className="card">
@@ -94,8 +101,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       <section className="card">
         <h2>{post.cta}</h2>
         <p>
-          <Link href="/" className="btn">
-            شروع بررسی رایگان
+          <Link href="/audit" className="btn">
+            شروع ممیزی سایت
           </Link>
         </p>
       </section>

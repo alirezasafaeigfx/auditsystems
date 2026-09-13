@@ -24,6 +24,7 @@ export type BlogPost = {
   slug: string;
   updatedAt: string;
   relatedSlugs: string[];
+  sources?: Array<{ label: string; url: string }>;
   fa: BlogTranslation;
   en: BlogTranslation;
 };
@@ -32,6 +33,7 @@ export type BlogPostLocalized = {
   slug: string;
   updatedAt: string;
   relatedSlugs: string[];
+  sources: Array<{ label: string; url: string }>;
   title: string;
   description: string;
   sections: string[];
@@ -58,6 +60,7 @@ function toBlogPostLocalized(post: BlogPost, locale: BlogLocale): BlogPostLocali
     slug: post.slug,
     updatedAt: post.updatedAt,
     relatedSlugs: post.relatedSlugs,
+    sources: post.sources ?? [],
     title: localized.title,
     description: localized.description,
     sections: localized.sections,
