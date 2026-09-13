@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   observeApiRequest,
+  isValidRumWebVitalValue,
   observeRumWebVital,
   observeRumError,
   renderPrometheusMetrics,
@@ -22,10 +23,19 @@ describe("metrics", () => {
     expect(metrics).toContain("audit_rum_web_vital_sum{metric=\"LCP\"}");
   });
 
+  it("records CLS in unitless buckets instead of millisecond buckets", () => {
+    observeRumWebVital("CLS", 0.12);
+    const metrics = renderPrometheusMetrics();
+    expect(metrics).toContain('audit_rum_web_vital_bucket{metric="CLS",le="0.25"}');
+    expect(metrics).not.toContain('audit_rum_web_vital_bucket{metric="CLS",le="100"}');
+    expect(metrics).toContain("# HELP audit_rum_web_vital_sum Total browser web-vital values in native units");
+  });
+
   it("observeRumWebVital ignores invalid metrics", () => {
     observeRumWebVital("INVALID_METRIC", 100);
     observeRumWebVital("LCP", -1);
     observeRumWebVital("LCP", 200000);
+    expect(isValidRumWebVitalValue("CLS", 10.01)).toBe(false);
     const metrics = renderPrometheusMetrics();
     expect(metrics).not.toContain("INVALID_METRIC");
   });

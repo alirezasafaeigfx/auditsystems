@@ -1,5 +1,7 @@
 "use client";
 
+import { sanitizeMeasurementPath } from "./measurement-safety";
+
 export type SeoEventName =
   | "seo_landing_view"
   | "seo_guide_view"
@@ -20,6 +22,13 @@ export type SeoEventName =
 
 type SeoEventParams = Record<string, string | number | boolean | null | undefined>;
 
+const ALLOWED_DIMENSIONS = new Set([
+  "locale", "path", "slug", "cta_id", "intent", "surface", "destination_class",
+  "placement", "offer", "variant", "intent_router_variant", "depth", "has_url",
+  "error_code", "retryable", "run_status", "retry_count", "provider", "reused_order",
+  "section", "route", "destination",
+]);
+
 declare global {
   interface Window {
     dataLayer?: unknown[];
@@ -36,12 +45,32 @@ function hasConsent(): boolean {
   }
 }
 
+function sanitizeParams(params: SeoEventParams): SeoEventParams {
+  const safe: SeoEventParams = {};
+  for (const [key, value] of Object.entries(params)) {
+    if (!ALLOWED_DIMENSIONS.has(key) || value == null) continue;
+    if (key === "path") {
+      if (typeof value === "string") safe.path = sanitizeMeasurementPath(value);
+      continue;
+    }
+    if (typeof value === "string") {
+      if (/https?:\/\//i.test(value) || value.includes("@")) continue;
+      safe[key] = value.slice(0, 80);
+    } else if (typeof value === "number" && Number.isFinite(value)) {
+      safe[key] = value;
+    } else if (typeof value === "boolean") {
+      safe[key] = value;
+    }
+  }
+  return safe;
+}
+
 export function trackSeoEvent(event: SeoEventName, params: SeoEventParams = {}): void {
   if (typeof window === "undefined") return;
   if (!hasConsent()) return;
 
   const payload = {
-    ...params,
+    ...sanitizeParams(params),
     event_category: "seo"
   };
 

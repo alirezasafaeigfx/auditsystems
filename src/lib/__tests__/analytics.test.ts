@@ -38,13 +38,58 @@ describe("analytics", () => {
       expect(mockDataLayer).toHaveLength(0);
     });
 
-    it("fires gtag when consent is granted", async () => {
+    it("fires gtag with allowlisted dimensions when consent is granted", async () => {
       (window.localStorage.getItem as ReturnType<typeof vi.fn>).mockReturnValue("granted");
       const { trackSeoEvent } = await import("../analytics");
-      trackSeoEvent("seo_audit_start", { url: "https://example.com" });
+      trackSeoEvent("seo_audit_start", { locale: "en", depth: 2, has_url: true });
       expect(mockGtag).toHaveBeenCalledWith("event", "seo_audit_start", {
-        url: "https://example.com",
+        locale: "en",
+        depth: 2,
+        has_url: true,
         event_category: "seo",
+      });
+    });
+
+    it("drops customer URLs, contact data, report identifiers and unknown dimensions", async () => {
+      (window.localStorage.getItem as ReturnType<typeof vi.fn>).mockReturnValue("granted");
+      const { trackSeoEvent } = await import("../analytics");
+      trackSeoEvent("seo_audit_start", {
+        url: "https://customer.example/private",
+        email: "person@example.com",
+        phone: "+1-555-0100",
+        report_id: "report-secret",
+        token: "share-secret",
+        slug: "https://customer.example/private",
+        offer: "person@example.com",
+        locale: "fa",
+        unexpected: "private-value",
+      });
+      expect(mockGtag).toHaveBeenCalledWith("event", "seo_audit_start", {
+        locale: "fa",
+        event_category: "seo",
+      });
+    });
+
+    it("redacts report tokens from allowed path dimensions", async () => {
+      (window.localStorage.getItem as ReturnType<typeof vi.fn>).mockReturnValue("granted");
+      const { trackSeoEvent } = await import("../analytics");
+      trackSeoEvent("seo_unlock_page_view", {
+        locale: "en",
+        path: "/en/audit/r/private-share-token/unlock?email=person@example.com",
+      });
+      expect(mockGtag).toHaveBeenCalledWith("event", "seo_unlock_page_view", {
+        locale: "en",
+        path: "/en/audit/r/:token/unlock",
+        event_category: "seo",
+      });
+    });
+
+    it("preserves intent router dimensions without accepting arbitrary payload fields", async () => {
+      (window.localStorage.getItem as ReturnType<typeof vi.fn>).mockReturnValue("granted");
+      const { trackSeoEvent } = await import("../analytics");
+      trackSeoEvent("seo_intent_router_click", { section: "home_intent_router", route: "audit", destination: "internal" });
+      expect(mockGtag).toHaveBeenCalledWith("event", "seo_intent_router_click", {
+        section: "home_intent_router", route: "audit", destination: "internal", event_category: "seo",
       });
     });
 

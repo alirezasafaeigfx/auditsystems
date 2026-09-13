@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { createClsSession } from "../lib/cls-session";
 
 type RumTrackerProps = {
   locale: "fa" | "en";
@@ -46,7 +47,8 @@ function sendRum(payload: Record<string, unknown>): void {
   }
 }
 
-function roundMetric(value: number): number {
+export function formatRumMetricValue(metric: string, value: number): number {
+  if (metric === "CLS") return Number(value.toFixed(4));
   return Number(value.toFixed(2));
 }
 
@@ -61,39 +63,32 @@ export default function RumTracker({ locale }: RumTrackerProps) {
       sendRum({
         type: "web_vital",
         metric,
-        value: roundMetric(value),
+        value: formatRumMetricValue(metric, value),
         path: currentPath(),
         locale,
       });
     };
 
-    const reportError = (subtype: "error" | "unhandledrejection", message: string) => {
+    const reportError = (subtype: "error" | "unhandledrejection") => {
       sendRum({
         type: "js_error",
         subtype,
-        message: message.slice(0, 260),
         path: currentPath(),
         locale,
       });
     };
 
-    let clsValue = 0;
+    const clsSession = createClsSession();
     let lcpValue = 0;
     let sentLcp = false;
     let sentCls = false;
     let sentFcp = false;
 
-    const onWindowError = (event: ErrorEvent) => {
-      reportError("error", event.message || "window_error");
+    const onWindowError = () => {
+      reportError("error");
     };
-    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
-      const reason =
-        typeof event.reason === "string"
-          ? event.reason
-          : event.reason instanceof Error
-            ? event.reason.message
-            : "unhandled_rejection";
-      reportError("unhandledrejection", reason);
+    const onUnhandledRejection = () => {
+      reportError("unhandledrejection");
     };
 
     window.addEventListener("error", onWindowError);
@@ -110,9 +105,7 @@ export default function RumTracker({ locale }: RumTrackerProps) {
     const clsObserver = new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
         const shift = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number };
-        if (!shift.hadRecentInput) {
-          clsValue += shift.value ?? 0;
-        }
+        clsSession.observe(shift.startTime, shift.value ?? 0, shift.hadRecentInput === true);
       }
     });
     const lcpObserver = new PerformanceObserver((list) => {
@@ -151,7 +144,7 @@ export default function RumTracker({ locale }: RumTrackerProps) {
       }
       if (!sentCls) {
         sentCls = true;
-        reportVital("CLS", clsValue * 1000);
+        reportVital("CLS", clsSession.value());
       }
     };
 
