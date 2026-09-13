@@ -47,6 +47,12 @@ describe("AU-10 source-backed content contract", () => {
     expect(renderBlogContent("## محدوده ASDEV Audit")).toBe("<h2>محدوده ASDEV Audit</h2>");
   });
 
+  it("wraps consecutive bullets in a semantic list", () => {
+    expect(renderBlogContent("- one\n- two\n\nAfter")).toBe(
+      "<ul>\n<li>one</li>\n<li>two</li>\n</ul>\n\n<p>After</p>"
+    );
+  });
+
   it("does not recommend the deprecated XSS browser filter", () => {
     for (const locale of ["fa", "en"] as const) {
       const content = getBlogPostBySlug("security-audit-guide", locale)?.content ?? "";
