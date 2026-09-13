@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isNoIndexRoute } from "./seoPolicy";
+import { isNoIndexRoute, isPublicNoIndexRoute } from "./seoPolicy";
 
 describe("isNoIndexRoute", () => {
   it.each([
@@ -34,5 +34,19 @@ describe("isNoIndexRoute", () => {
     "/blog"
   ])("keeps public route %s indexable", (pathname) => {
     expect(isNoIndexRoute(pathname)).toBe(false);
+  });
+});
+
+describe("isPublicNoIndexRoute", () => {
+  it.each([
+    "/asdev",
+    "/brand/asdev-portfolio",
+    "/en/brand/asdev-portfolio",
+  ])("classifies crawlable noindex route %s", (pathname) => {
+    expect(isPublicNoIndexRoute(pathname)).toBe(true);
+  });
+
+  it.each(["/failed", "/audit/r/token", "/admin"])('keeps private noindex route %s out of the public set', (pathname) => {
+    expect(isPublicNoIndexRoute(pathname)).toBe(false);
   });
 });

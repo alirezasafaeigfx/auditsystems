@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isNoIndexRoute } from "./lib/seoPolicy";
+import { isNoIndexRoute, isPublicNoIndexRoute } from "./lib/seoPolicy";
 
 const SESSION_COOKIE = "saas_session";
 const APP_PREFIX = "/app";
@@ -36,9 +36,10 @@ function applyResponsePolicy(
   const { pathname } = request.nextUrl;
   const isApi = pathname.startsWith("/api/");
   const isPublicIndexable = !isApi && !isNoIndexRoute(pathname);
+  const isPublicNoIndex = !isApi && isPublicNoIndexRoute(pathname);
 
-  response.headers.set("X-Robots-Tag", isPublicIndexable ? "all" : "noindex, nofollow, noarchive");
-  response.headers.set("Cache-Control", isPublicIndexable ? "public, max-age=0, must-revalidate" : "private, no-store");
+  response.headers.set("X-Robots-Tag", isPublicIndexable ? "all" : isPublicNoIndex ? "noindex" : "noindex, nofollow, noarchive");
+  response.headers.set("Cache-Control", isPublicIndexable || isPublicNoIndex ? "public, max-age=0, must-revalidate" : "private, no-store");
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("X-Frame-Options", "DENY");
