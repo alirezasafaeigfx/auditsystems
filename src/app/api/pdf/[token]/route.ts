@@ -88,7 +88,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tok
       }
     }
 
-    const findingsData = share.run.findings.map((finding) => ({
+    const findingsData = (share.run.status === "SUCCEEDED" ? share.run.findings : []).map((finding) => ({
       code: finding.code,
       title: finding.title,
       severity: finding.severity,
@@ -136,7 +136,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ tok
     });
     const pdfBytes = await appendPerformanceEvidencePage(
       basePdfBytes,
-      performanceFromSummary(share.run.summary),
+      share.run.status === "SUCCEEDED" ? performanceFromSummary(share.run.summary) : undefined,
     );
 
     return new Response(Buffer.from(pdfBytes), {

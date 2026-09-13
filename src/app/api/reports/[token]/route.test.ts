@@ -126,6 +126,21 @@ describe("GET /api/reports/[token]", () => {
     expect(json.run.id).toBe("run-1");
   });
 
+  it("withholds unconfirmed findings from a failed run", async () => {
+    const share = makeShare();
+    share.run.status = "FAILED";
+    share.run.findings = [{ code: "UNCONFIRMED" }] as never;
+    share.run.summary = { findings: [{ code: "UNCONFIRMED" }], highlights: { topFixes: [{ code: "UNCONFIRMED" }] }, performance: { marker: "UNCONFIRMED" } } as never;
+    mocks.findUnique.mockResolvedValue(share);
+    const { GET } = await import("./route");
+    const response = await GET(new Request("https://test/api/reports/test-token"), { params: Promise.resolve({ token: "test-token" }) });
+    const json = await response.json();
+
+    expect(json.result.availability).toBe("UNAVAILABLE");
+    expect(json.findings).toEqual([]);
+    expect(JSON.stringify(json.run.summary)).not.toContain("UNCONFIRMED");
+  });
+
   it("returns machine-readable partial coverage instead of an implicit perfect result", async () => {
     const share = makeShare();
     share.run.summary = {
