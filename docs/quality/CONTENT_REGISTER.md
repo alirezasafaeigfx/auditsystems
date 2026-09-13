@@ -4,7 +4,7 @@ Updated: 2026-09-13
 
 Author: Codex implementation owner for PR #25.
 
-Technical reviewer: Locke, independent read-only reviewer for PR #25. Review findings and final disposition are recorded on the exact PR head; this register does not represent human approval.
+Review record: durable reviewer identity and human approval are `UNVERIFIED`. Session-only independent review informed PR #25 but is not a GitHub review or human approval.
 
 | Page | Decision | Published | Updated | Primary sources |
 |---|---|---:|---:|---|
