@@ -7,6 +7,7 @@ import { ReportAccessChallenge } from "../../../../../components/ReportAccessCha
 import { getReportAccessCookieName, verifyReportAccessCredential } from "../../../../../lib/report-access";
 import { resolveReportResult } from "../../../../../lib/report-result";
 import { reportGradeLabel, reportStatusLabel, reportWithheldReasonEn } from "../../../../../lib/report-labels";
+import AuditCtaLink from "../../../../../components/AuditCtaLink";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -85,6 +86,10 @@ export default async function ReportPageEn({ params }: { params: Promise<{ token
           </article>
         ))}
       </section>
+      {share.run.status === "SUCCEEDED" ? <section className="card" style={{ textAlign: "center", padding: "2rem" }}>
+        <h2>Need help implementing the fixes?</h2>
+        <AuditCtaLink ctaId="report_implementation_help" locale="en" />
+      </section> : null}
     </main>
   );
 }
