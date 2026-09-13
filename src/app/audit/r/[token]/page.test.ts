@@ -102,6 +102,27 @@ describe("protected report HTML/RSC access", () => {
     expect(mocks.update).toHaveBeenCalledTimes(1);
   });
 
+  it("does not present findings from a failed run as confirmed in either language", async () => {
+    const share = protectedShare();
+    (share as { passwordHash: string | null }).passwordHash = null;
+    share.run.status = "FAILED";
+    mocks.findUnique.mockResolvedValue(share);
+
+    const { default: ReportPage } = await import("./page");
+    const { default: ReportPageEn } = await import("../../../en/audit/r/[token]/page");
+    const params = Promise.resolve({ token: "protected-report-token" });
+    const persian = renderToStaticMarkup(await ReportPage({ params }));
+    const english = renderToStaticMarkup(await ReportPageEn({ params }));
+
+    expect(persian).toContain("امتیاز در دسترس نیست");
+    expect(english).toContain("Score unavailable");
+    expect(persian).not.toContain("Synthetic protected finding");
+    expect(english).not.toContain("Synthetic protected finding");
+    expect(persian).not.toContain("نقشه اقدام");
+    expect(persian).not.toContain("فعال‌سازی تحویل کامل");
+    expect(english).not.toContain("Unlock Full Delivery");
+  });
+
   it.each([
     { revokedAt: new Date(), expiresAt: null },
     { revokedAt: null, expiresAt: new Date("2000-01-01T00:00:00.000Z") },

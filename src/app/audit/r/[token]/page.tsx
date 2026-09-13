@@ -80,7 +80,7 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
   const categoryScores = result.categoryScores;
   const severityCounts: Record<string, number> = result.score?.severityCounts ?? {};
   const criticalCount = (severityCounts.CRITICAL ?? 0) + (severityCounts.HIGH ?? 0);
-  const findings = share.run.findings;
+  const findings = share.run.status === "SUCCEEDED" ? share.run.findings : [];
   const topIssues = findings.filter((f) => f.severity === "CRITICAL" || f.severity === "HIGH").slice(0, 3);
 
   return (
@@ -93,9 +93,9 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
           <span className="badge" style={{ backgroundColor: "#f3f4f6", color: "var(--text)" }}>
             {share.viewCount + 1} بازدید
           </span>
-          <Link className="button secondary" href={`/audit/r/${token}/unlock`}>
+          {share.run.status === "SUCCEEDED" ? <Link className="button secondary" href={`/audit/r/${token}/unlock`}>
             فعال‌سازی تحویل کامل
-          </Link>
+          </Link> : null}
         </div>
       </section>
 
@@ -131,7 +131,7 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
         </section>
       )}
 
-      <EmailCapture token={token} />
+      {share.run.status === "SUCCEEDED" ? <EmailCapture token={token} /> : null}
 
       {topIssues.length > 0 && (
         <section className="card">
@@ -184,7 +184,7 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
 
       <section className="card grid">
         <h2>یافته‌ها ({findings.length})</h2>
-        {findings.length === 0 ? <p>هنوز یافته‌ای ثبت نشده است.</p> : null}
+        {findings.length === 0 ? <p>{share.run.status === "SUCCEEDED" ? "یافته‌ای ثبت نشده است." : "یافتهٔ تأییدشده‌ای در دسترس نیست."}</p> : null}
         {findings.map((finding) => (
           <article key={finding.id} className="finding">
             <div className="finding-header">
@@ -197,13 +197,13 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
         ))}
       </section>
 
-      <section className="card" style={{ textAlign: "center", padding: "2rem" }}>
+      {share.run.status === "SUCCEEDED" ? <section className="card" style={{ textAlign: "center", padding: "2rem" }}>
         <h2>گزارش کامل بگیرید</h2>
         <p>گزارش کامل با جزئیات، نقشه اقدام، و خروجی PDF</p>
         <Link className="button" href={`/audit/r/${token}/unlock`} style={{ display: "inline-block", marginTop: "1rem" }}>
           فعال‌سازی تحویل کامل
         </Link>
-      </section>
+      </section> : null}
     </main>
   );
 }
