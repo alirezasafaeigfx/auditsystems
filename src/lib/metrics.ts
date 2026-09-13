@@ -5,6 +5,7 @@ const rumDurationBuckets = new Map<string, number>();
 
 const LATENCY_BUCKETS_MS = [50, 100, 250, 500, 1000, 2500, 5000, 10000];
 const RUM_BUCKETS_MS = [100, 250, 500, 1000, 2500, 4000, 6000, 10000];
+const CLS_BUCKETS = [0.1, 0.25, 0.5, 1];
 const RUM_WEB_VITALS = new Set(["TTFB", "FCP", "LCP", "CLS", "FID", "INP"]);
 const RUM_ERROR_TYPES = new Set(["error", "unhandledrejection"]);
 
@@ -32,16 +33,19 @@ export function observeApiRequest(route: string, status: number, durationMs: num
   observeLatency(route, durationMs);
 }
 
+export function isValidRumWebVitalValue(metric: string, value: number): boolean {
+  if (!RUM_WEB_VITALS.has(metric) || !Number.isFinite(value) || value < 0) return false;
+  return metric === "CLS" ? value <= 10 : value <= 120000;
+}
+
 export function observeRumWebVital(metric: string, valueMs: number): void {
-  if (!RUM_WEB_VITALS.has(metric)) {
-    return;
-  }
-  if (!Number.isFinite(valueMs) || valueMs < 0 || valueMs > 120000) {
+  if (!isValidRumWebVitalValue(metric, valueMs)) {
     return;
   }
 
   incrementRumCounter(`audit_rum_web_vital_total{metric="${metric}"}`);
-  for (const bucket of RUM_BUCKETS_MS) {
+  const buckets = metric === "CLS" ? CLS_BUCKETS : RUM_BUCKETS_MS;
+  for (const bucket of buckets) {
     if (valueMs <= bucket) {
       incrementRumCounter(`audit_rum_web_vital_bucket{metric="${metric}",le="${bucket}"}`);
     }
@@ -113,7 +117,7 @@ export function renderPrometheusMetrics(): string {
   }
 
   lines.push("");
-  lines.push("# HELP audit_rum_web_vital_bucket Browser web-vital histogram buckets in milliseconds");
+  lines.push("# HELP audit_rum_web_vital_bucket Browser web-vital histogram buckets in native metric units");
   lines.push("# TYPE audit_rum_web_vital_bucket counter");
   for (const [k, v] of rumCounters.entries()) {
     if (k.startsWith("audit_rum_web_vital_bucket")) {
@@ -122,7 +126,7 @@ export function renderPrometheusMetrics(): string {
   }
 
   lines.push("");
-  lines.push("# HELP audit_rum_web_vital_sum Total browser web-vital duration in milliseconds");
+  lines.push("# HELP audit_rum_web_vital_sum Total browser web-vital values in native units");
   lines.push("# TYPE audit_rum_web_vital_sum counter");
   for (const [k, v] of rumDurationBuckets.entries()) {
     if (k.startsWith("audit_rum_web_vital_sum")) {

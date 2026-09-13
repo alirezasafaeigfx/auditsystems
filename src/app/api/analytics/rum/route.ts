@@ -1,8 +1,9 @@
 import { NextRequest } from "next/server";
-import { observeApiRequest, observeRumError, observeRumWebVital } from "../../../../lib/metrics";
+import { isValidRumWebVitalValue, observeApiRequest, observeRumError, observeRumWebVital } from "../../../../lib/metrics";
 import { createRequestId, logEvent, respondJson } from "../../../../lib/observability";
 import { consumeDistributedRateLimit } from "../../../../lib/rateLimit";
 import { getClientIp, hashClientIp } from "../../../../lib/security";
+import { sanitizeMeasurementPath } from "../../../../lib/measurement-safety";
 
 const RATE_LIMIT_PER_MINUTE = 120;
 const RATE_LIMIT_WINDOW_SEC = 60;
@@ -22,15 +23,6 @@ type RumPayload = {
 
 function isLocale(value: unknown): value is "fa" | "en" {
   return value === "fa" || value === "en";
-}
-
-function sanitizePath(value: unknown): string {
-  const raw = typeof value === "string" ? value.trim() : "";
-  if (!raw) return "/";
-  const noQuery = raw.split("?")[0] ?? "/";
-  const noHash = noQuery.split("#")[0] ?? "/";
-  const safe = noHash.startsWith("/") ? noHash : `/${noHash}`;
-  return safe.slice(0, 200);
 }
 
 function sanitizeMessage(value: unknown): string {
@@ -83,12 +75,12 @@ export async function POST(request: NextRequest) {
 
     const type = typeof body.type === "string" ? body.type : "";
     const locale = isLocale(body.locale) ? body.locale : "fa";
-    const path = sanitizePath(body.path);
+    const path = sanitizeMeasurementPath(body.path);
 
     if (type === "web_vital") {
       const metric = typeof body.metric === "string" ? body.metric : "";
       const value = typeof body.value === "number" ? body.value : Number.NaN;
-      if (!WEB_VITALS.has(metric) || !Number.isFinite(value) || value < 0 || value > 120000) {
+      if (!WEB_VITALS.has(metric) || !isValidRumWebVitalValue(metric, value)) {
         statusCode = 400;
         return respondJson({ ok: false, error: "INVALID_WEB_VITAL_PAYLOAD", requestId }, requestId, {
           status: 400,
