@@ -65,6 +65,17 @@ describe("canonical edge security proxy", () => {
     expectGlobalSecurityHeaders(response);
   });
 
+  it.each([
+    "/asdev",
+    "/brand/asdev-portfolio",
+    "/en/brand/asdev-portfolio",
+  ])("keeps the HTTP index policy aligned with noindex page metadata on %s", (pathname) => {
+    const response = proxy(makeRequest(pathname));
+
+    expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow, noarchive");
+    expect(response.headers.get("cache-control")).toContain("no-store");
+  });
+
   it("fails safely when a shared auth route receives a malformed referer", () => {
     const response = proxy(makeRequest("/signup", { referer: "http://[" }));
 

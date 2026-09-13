@@ -3,7 +3,10 @@ const EXACT_NO_INDEX_ROUTES = new Set([
   "/en/failed",
   "/login",
   "/signup",
-  "/verify-email"
+  "/verify-email",
+  "/asdev",
+  "/brand/asdev-portfolio",
+  "/en/brand/asdev-portfolio"
 ]);
 
 const NO_INDEX_ROUTE_PREFIXES = [

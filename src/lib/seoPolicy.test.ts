@@ -14,7 +14,10 @@ describe("isNoIndexRoute", () => {
     "/signup/",
     "/verify-email?token=redacted",
     "/failed",
-    "/en/failed"
+    "/en/failed",
+    "/asdev",
+    "/brand/asdev-portfolio",
+    "/en/brand/asdev-portfolio"
   ])("classifies private and utility route %s as noindex", (pathname) => {
     expect(isNoIndexRoute(pathname)).toBe(true);
   });
