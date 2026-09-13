@@ -2,6 +2,7 @@ import type { BlogPost } from "./index";
 
 const websiteAuditGuide: BlogPost = {
   slug: "website-audit-guide",
+  publishedAt: "2026-07-07",
   updatedAt: "2026-09-13",
   relatedSlugs: ["seo-report-client", "core-web-vitals-guide"],
   sources: [
@@ -28,7 +29,7 @@ const websiteAuditGuide: BlogPost = {
 
 ## محدوده ASDEV Audit
 
-گزارش فعلی ASDEV Audit شواهد قابل‌دسترسی مانند HTML، هدرهای پاسخ و نتیجه probe فایل‌های robots.txt و sitemap.xml را بررسی می‌کند. داده میدانی Core Web Vitals، اثبات رتبه گوگل و آزمون نفوذ در این گزارش اندازه‌گیری نمی‌شود. نتیجه unavailable به معنی سالم یا معیوب بودن سایت نیست و مشاهده امنیتی نیز به‌تنهایی اثبات آسیب‌پذیری نیست.
+گزارش فعلی ASDEV Audit شواهد قابل‌دسترسی مانند HTML، هدرهای پاسخ و نتیجه probe فایل‌های robots.txt و sitemap.xml را بررسی می‌کند. اگر provider داده CrUX در دسترس باشد، ممکن است شواهد میدانی Core Web Vitals را جدا از امتیاز گزارش کند؛ سامانه RUM اختصاصی اجرا نمی‌کند و performance score قطعی نمی‌سازد. رتبه گوگل یا آزمون نفوذ نیز در این گزارش اثبات نمی‌شود. نتیجه unavailable به معنی سالم یا معیوب بودن سایت نیست و مشاهده امنیتی نیز به‌تنهایی اثبات آسیب‌پذیری نیست.
 
 ممیزی فنی سایت فرآیند بررسی جامع تمام جنبه‌های فنی یک وب‌سایت است. هدف این ممیزی شناسایی مشکلات فنی است که ممکن است بر عملکرد سایت در موتورهای جستجو، سرعت بارگذاری و تجربه کاربری تأثیر بگذارند.
 
@@ -348,7 +349,7 @@ const websiteAuditGuide: BlogPost = {
 
 ## ASDEV Audit scope
 
-The current ASDEV Audit examines available evidence such as HTML, response headers, and robots.txt or sitemap.xml probe outcomes. It does not measure field Core Web Vitals, prove Google rankings, or perform penetration testing. An unavailable result is neither a pass nor a failure, and a security observation alone does not prove a vulnerability.
+The current ASDEV Audit examines available evidence such as HTML, response headers, and robots.txt or sitemap.xml probe outcomes. When provider CrUX data is available, it may report field Core Web Vitals separately from scoring; it does not operate first-party RUM or assign a definitive performance score. It also does not prove Google rankings or perform penetration testing. An unavailable result is neither a pass nor a failure, and a security observation alone does not prove a vulnerability.
 
 Technical site audit is the process of comprehensive review of all technical aspects of a website. The purpose of this audit is to identify technical issues that may affect site performance in search engines, loading speed and user experience.
 

@@ -2,6 +2,7 @@ import type { BlogPost } from "./index";
 
 const websiteSpeedTest: BlogPost = {
   slug: "website-speed-test",
+  publishedAt: "2026-07-05",
   updatedAt: "2026-09-13",
   relatedSlugs: ["seo-audit-checklist", "wordpress-seo", "ecommerce-audit"],
   sources: [
@@ -29,7 +30,7 @@ const websiteSpeedTest: BlogPost = {
 
 ## محدوده ASDEV Audit
 
-نسخه فعلی گزارش ASDEV Audit داده میدانی Core Web Vitals را اندازه‌گیری نمی‌کند و برای performance امتیاز قطعی نمی‌سازد. برای قضاوت درباره تجربه واقعی کاربران، داده میدانی را در PageSpeed Insights، CrUX یا Search Console و در صدک ۷۵ موبایل و دسکتاپ بررسی کنید. نتیجه آزمایشگاهی را جای داده میدانی گزارش نکنید.
+نسخه فعلی ASDEV Audit در صورت دسترسی provider ممکن است داده میدانی CrUX را گزارش کند، اما RUM اختصاصی اجرا نمی‌کند و برای performance امتیاز قطعی نمی‌سازد. برای قضاوت درباره تجربه واقعی کاربران، داده میدانی را در PageSpeed Insights، CrUX یا Search Console و در صدک ۷۵ موبایل و دسکتاپ بررسی کنید. نتیجه آزمایشگاهی را جای داده میدانی گزارش نکنید.
 
 سرعت و پاسخ‌گویی می‌تواند بر تجربه کاربر اثر بگذارد. اثر تجاری یا جست‌وجویی هر سایت باید با داده همان سایت سنجیده شود.
 
@@ -185,7 +186,7 @@ Core Web Vitals مجموعه‌ای از معیارهای تجربه کاربر�
 
 ## ASDEV Audit scope
 
-The current ASDEV Audit does not measure field Core Web Vitals or assign a definitive performance score. Evaluate real-user experience with field data from PageSpeed Insights, CrUX, or Search Console at the 75th percentile for mobile and desktop. Do not report a lab sample as field evidence.
+The current ASDEV Audit may report provider CrUX field data when available, but it does not operate first-party RUM or assign a definitive performance score. Evaluate real-user experience with field data from PageSpeed Insights, CrUX, or Search Console at the 75th percentile for mobile and desktop. Do not report a lab sample as field evidence.
 
 Speed and responsiveness can affect user experience. Measure the business and search impact with data from the site being evaluated.
 

@@ -2,6 +2,7 @@ import type { BlogPost } from "./index";
 
 const securityAuditGuide: BlogPost = {
   slug: "security-audit-guide",
+  publishedAt: "2026-07-05",
   updatedAt: "2026-09-13",
   relatedSlugs: ["seo-audit-checklist", "website-speed-test", "wordpress-seo"],
   sources: [
@@ -42,7 +43,7 @@ ASDEV Audit در نسخه فعلی هدرها، HTTPS و چند نشانه قا�
 - **Strict-Transport-Security (HSTS)**: اجبار استفاده از HTTPS
 - **X-Content-Type-Options**: جلوگیری از MIME sniffing
 - **X-Frame-Options**: جلوگیری از clickjacking
-- **X-XSS-Protection**: فیلتر XSS مرورگر
+- **X-XSS-Protection: 0**: غیرفعال‌کردن فیلتر منسوخ مرورگر؛ برای کاهش XSS از CSP استفاده کنید
 - **Referrer-Policy**: کنترل اطلاعات ارجاع
 - **Permissions-Policy**: کنترل دسترسی‌های مرورگر
 
@@ -197,7 +198,7 @@ Security headers play an important role in protecting your site.
 - **Strict-Transport-Security (HSTS)**: Enforce HTTPS usage
 - **X-Content-Type-Options**: Prevent MIME sniffing
 - **X-Frame-Options**: Prevent clickjacking
-- **X-XSS-Protection**: Browser XSS filter
+- **X-XSS-Protection: 0**: Disable the deprecated browser filter; use CSP to reduce XSS risk
 - **Referrer-Policy**: Control referral information
 - **Permissions-Policy**: Control browser permissions
 

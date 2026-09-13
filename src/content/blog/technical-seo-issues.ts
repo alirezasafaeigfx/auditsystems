@@ -2,6 +2,7 @@ import type { BlogPost } from "./index";
 
 const technicalSeoIssues: BlogPost = {
   slug: "technical-seo-issues",
+  publishedAt: "2026-07-07",
   updatedAt: "2026-09-13",
   relatedSlugs: ["seo-audit-checklist", "core-web-vitals-guide"],
   sources: [

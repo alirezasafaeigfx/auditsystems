@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getBlogPostBySlug, getBlogSlugs, getRelatedBlogPosts } from "../../../content/blog";
 import { buildArticleSchema, buildBreadcrumbSchema, buildPageMetadata } from "../../../lib/seoMeta";
 import SeoPageEvent from "../../../components/SeoPageEvent";
+import { renderBlogContent } from "../../../lib/blog-content";
 
 export async function generateStaticParams() {
   return getBlogSlugs().map((slug) => ({ slug }));
@@ -45,28 +46,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     description: post.description,
     path: `/blog/${post.slug}`,
     inLanguage: "fa-IR",
-    datePublished: post.updatedAt,
+    datePublished: post.publishedAt,
     dateModified: post.updatedAt
   });
 
-  const contentHtml = post.content
-    .split("\n")
-    .map((line) => {
-      if (line.startsWith("## ")) {
-        return `<h2>${line.slice(3)}</h2>`;
-      }
-      if (line.startsWith("### ")) {
-        return `<h3>${line.slice(4)}</h3>`;
-      }
-      if (line.startsWith("- ")) {
-        return `<li>${line.slice(2)}</li>`;
-      }
-      if (line.trim() === "") {
-        return "";
-      }
-      return `<p>${line}</p>`;
-    })
-    .join("\n");
+  const contentHtml = renderBlogContent(post.content);
 
   return (
     <main className="grid">

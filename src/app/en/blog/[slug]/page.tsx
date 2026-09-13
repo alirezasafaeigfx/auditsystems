@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getBlogPosts } from "../../../../content/blog";
 import { buildPageMetadata } from "../../../../lib/seoMeta";
+import { renderBlogContent } from "../../../../lib/blog-content";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -50,7 +51,7 @@ export default async function EnglishBlogSlugPage({ params }: { params: Promise<
             ))}
           </p>
         ) : null}
-        <div dangerouslySetInnerHTML={{ __html: post.content.replace(/\n/g, "<br/>") }} />
+        <div dangerouslySetInnerHTML={{ __html: renderBlogContent(post.content) }} />
         <div style={{ marginTop: "2rem", padding: "1.5rem", background: "var(--brand-bg, #f0fdf4)", borderRadius: "0.5rem" }}>
           <p style={{ fontWeight: 600, marginBottom: "0.5rem" }}>{post.cta}</p>
           <Link href="/en/audit" className="button">Start Website Audit</Link>
