@@ -10,7 +10,7 @@ import { ReportAccessChallenge } from "../../../../components/ReportAccessChalle
 import { getReportAccessCookieName, verifyReportAccessCredential } from "../../../../lib/report-access";
 import { hasPassword } from "../../../../lib/reportShare";
 import { resolveReportResult } from "../../../../lib/report-result";
-import { reportGradeLabel, reportStatusLabel } from "../../../../lib/report-labels";
+import { reportGradeLabel, reportStatusLabel, reportWithheldReasonFa } from "../../../../lib/report-labels";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -76,6 +76,7 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
   });
 
   const result = resolveReportResult({ summary: share.run.summary, findings: share.run.findings, runStatus: share.run.status });
+  const withheldReasonFa = reportWithheldReasonFa(result);
   const score = result.score?.overall;
   const grade = result.score?.grade;
   const categoryScores = result.categoryScores;
@@ -88,7 +89,7 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
     <main>
       <section className="card hero">
         <h1>گزارش Audit</h1>
-        <p>هدف: {share.run.normalizedUrl ?? share.run.url}</p>
+        <p>هدف: <bdi dir="ltr" style={{ overflowWrap: "anywhere" }}>{share.run.normalizedUrl ?? share.run.url}</bdi></p>
         <div className="hero-actions">
           <span className={`badge ${statusClass(share.run.status)}`}>{reportStatusLabel(share.run.status, "fa")}</span>
           <span className="badge" style={{ backgroundColor: "#f3f4f6", color: "var(--text)" }}>
@@ -104,7 +105,7 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
         <strong>{result.availability === "AVAILABLE" ? "نتیجه کامل" : result.availability === "PARTIAL" ? "نتیجه ناقص" : result.availability === "LEGACY" ? "گزارش قدیمی با پوشش نامشخص" : "امتیاز در دسترس نیست"}</strong>
         <p>
           پوشش: {result.coverage.ratio == null ? "نامشخص" : `${Math.round(result.coverage.ratio * 100)}%`}
-          {result.withheldReason ? ` — ${result.withheldReason}` : ""}
+          {withheldReasonFa ? ` — ${withheldReasonFa}` : ""}
         </p>
       </section>
 
