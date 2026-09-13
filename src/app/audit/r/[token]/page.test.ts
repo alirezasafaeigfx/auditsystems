@@ -99,6 +99,12 @@ describe("protected report HTML/RSC access", () => {
     const markup = renderToStaticMarkup(await ReportPage({ params: Promise.resolve({ token: "protected-report-token" }) }));
 
     expect(markup).toContain("Synthetic protected finding");
+    expect(markup).toContain("برای اجرای اصلاحات کمک می‌خواهم");
+    expect(markup).toContain("utm_content=report_implementation");
+    expect(markup).toContain('href="https://alirezasafaeisystems.ir/qualification?utm_source=audit&amp;utm_medium=report&amp;utm_campaign=asdev_audit&amp;utm_content=report_implementation"');
+    const { default: ReportPageEn } = await import("../../../en/audit/r/[token]/page");
+    const englishMarkup = renderToStaticMarkup(await ReportPageEn({ params: Promise.resolve({ token: "protected-report-token" }) }));
+    expect(englishMarkup).toContain("Get help implementing fixes");
     expect(mocks.update).toHaveBeenCalledTimes(1);
   });
 
@@ -128,6 +134,7 @@ describe("protected report HTML/RSC access", () => {
     expect(persian).not.toContain("نقشه اقدام");
     expect(persian).not.toContain("فعال‌سازی تحویل کامل");
     expect(english).not.toContain("Unlock Full Delivery");
+    expect(english).not.toContain("Get help implementing fixes");
   });
 
   it.each(["QUEUED", "RUNNING"])("describes a %s report as pending, not failed", async (status) => {

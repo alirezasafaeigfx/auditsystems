@@ -57,6 +57,7 @@ export type AuditCtaSurface =
   | "toolbox_tool_page"
   | "toolbox_home"
   | "pricing_page"
+  | "report"
   | "audit_landing";
 
 export type AuditCtaEntry = {
@@ -87,6 +88,7 @@ const entries: AuditCtaEntry[] = [
   { id: "audit_landing_feature_pillar", intent: "audit_framework", surface: "audit_landing", label: { fa: "مطالعه چارچوب ارزیابی", en: "Read audit framework" }, path: "/pillar/iran-readiness-audit", analyticsEvent: "seo_cta_click", variant: "secondary" },
   { id: "pricing_page_audit_start", intent: "audit_start", surface: "pricing_page", label: { fa: "شروع ارزیابی خودکار", en: "Start automated audit" }, path: "/audit", analyticsEvent: "seo_cta_click", variant: "secondary" },
   { id: "pricing_page_sample_report", intent: "sample_report", surface: "pricing_page", label: { fa: "مشاهده نمونه گزارش", en: "View sample report" }, path: "/sample-report", analyticsEvent: "seo_cta_click", variant: "secondary" },
+  { id: "report_implementation_help", intent: "implementation_enquiry", surface: "report", label: { fa: "برای اجرای اصلاحات کمک می‌خواهم", en: "Get help implementing fixes" }, path: "https://alirezasafaeisystems.ir/qualification?utm_source=audit&utm_medium=report&utm_campaign=asdev_audit&utm_content=report_implementation", external: true, analyticsEvent: "seo_cta_click", variant: "secondary" },
   { id: "intent_router_audit_start", intent: "audit_start", surface: "audit_landing", label: { fa: "شروع ارزیابی خودکار", en: "Start automated audit" }, path: "/audit", analyticsEvent: "seo_cta_click", variant: "primary" },
   {
     id: "intent_router_professional_review",
@@ -112,9 +114,9 @@ const entries: AuditCtaEntry[] = [
 
 const SAFE_FIXED_QUERY_VALUES: Record<string, ReadonlySet<string>> = {
   utm_source: new Set(["audit"]),
-  utm_medium: new Set(["intent_router"]),
+  utm_medium: new Set(["intent_router", "report"]),
   utm_campaign: new Set(["asdev_audit"]),
-  utm_content: new Set(["implementation_enquiry", "toolbox_route"]),
+  utm_content: new Set(["implementation_enquiry", "report_implementation", "toolbox_route"]),
 };
 
 const ALLOWED_EXTERNAL_ORIGINS = new Set([
@@ -148,6 +150,7 @@ export const CTA_MIGRATION_STATUS = {
     "audit_home",
     "audit_landing (hero + preview + features + subscription)",
     "pricing_page (footer CTAs)",
+    "report",
     "intent_router (via adapter)",
   ],
   adHocRemaining: [

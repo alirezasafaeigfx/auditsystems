@@ -11,6 +11,7 @@ import { getReportAccessCookieName, verifyReportAccessCredential } from "../../.
 import { hasPassword } from "../../../../lib/reportShare";
 import { resolveReportResult } from "../../../../lib/report-result";
 import { reportGradeLabel, reportStatusLabel, reportWithheldReasonFa } from "../../../../lib/report-labels";
+import AuditCtaLink from "../../../../components/AuditCtaLink";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -205,6 +206,7 @@ export default async function ReportPage({ params }: { params: Promise<{ token: 
         <Link className="button" href={`/audit/r/${token}/unlock`} style={{ display: "inline-block", marginTop: "1rem" }}>
           فعال‌سازی تحویل کامل
         </Link>
+        <AuditCtaLink ctaId="report_implementation_help" locale="fa" />
       </section> : null}
     </main>
   );
