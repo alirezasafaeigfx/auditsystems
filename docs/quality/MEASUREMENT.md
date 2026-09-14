@@ -29,7 +29,11 @@ Updated: 2026-09-13
 [{"date":"2026-09-01","locale":"fa","device":"mobile","country":"IR","event":"audit_entry","count":10}]
 ```
 
-The adapter rejects extra fields, duplicate cohort events and malformed dates or counts. `buildMeasurementScorecard` groups by date, locale, device and country. `entryToEnqueue` is an aggregate event ratio for consented browser events, not a person-level conversion rate. A missing denominator produces `null` with `unavailable` coverage; a numerator above its denominator produces `null` with `inconsistent` coverage. `enqueueToUsableReport` is always `null`/`unjoinable`: the existing browser enqueue event has no run ID, while the server report-review event has no device/country cohort. Do not assign server events to a device/country without source evidence or interpret the counts as a joined journey.
+The adapter rejects extra fields, duplicate cohort events and malformed dates or counts. `buildMeasurementScorecard` groups by date, locale, device and country. `entryToEnqueue` is an aggregate event ratio for consented browser events, not a person-level conversion rate. A missing denominator produces `null` with `unavailable` coverage; a numerator above its denominator produces `null` with `inconsistent` coverage. The current format has no explicit completeness field, so every expected browser-event row must be present in an authorized export before a zero count can be interpreted as measured zero; an omitted row is missing evidence.
+
+`enqueueToUsableReport` is always `null`/`unjoinable`: the existing browser enqueue event has no run ID, while the server report-review event has no locale/device/country cohort. Although `usable_report_ready` is a reserved scorecard event name, no current production export can populate its required cohort truthfully. Leave it unused until a reviewed privacy-safe source supplies compatible dimensions. Do not assign server events to a device/country without source evidence or interpret the counts as a joined journey.
+
+This adapter does not accept query, page or coverage fields and does not compare 28-day windows. It cannot perform the AU-13 Search Console or non-brand visibility review. Search and funnel observations require separate reviewed import contracts with explicit completeness before they can support a growth verdict.
 
 CLS uses the largest session-window sum (under 1 second between shifts and under 5 seconds per burst) rather than lifetime accumulation; see [web.dev's CLS definition](https://web.dev/articles/cls).
 

@@ -27,9 +27,10 @@ No growth, ranking, conversion or field-quality improvement is claimed. Green CI
 
 ## Next executable observation
 
-Run the existing scorecard adapter only after both of these inputs exist:
+AU-13 has no executable repository adapter for its complete observation set. Resume only after all of these prerequisites exist:
 
 1. Directly observed deployed SHA containing AU-09 through AU-12.
 2. Authorized aggregate exports for two comparable 28-day windows with the same query/page cohort and available date, locale, device, country and coverage fields.
+3. Separate reviewed import contracts for search observations and funnel observations. They must validate query/page cohort identity, explicit completeness and comparable windows; the current `measurement-scorecard` format does none of these.
 
-Preserve missing rows and low-volume cohorts. Keep `enqueueToUsableReport` unavailable until browser enqueue and server report-ready populations can be joined by a reviewed privacy-safe contract. If the inputs remain absent, retain `AWAITING_OBSERVATION`; do not poll, manufacture a baseline or select a growth change from unsupported data.
+The existing scorecard adapter may validate complete consented browser-event aggregates only. It must not be used for Search Console/non-brand analysis, 28-day comparison or server report-ready cohorts. An absent event row is missing evidence, not measured zero. Preserve missing and low-volume cohorts in the future import contracts. Keep `enqueueToUsableReport` unavailable until browser enqueue and server report-ready populations can be joined by a reviewed privacy-safe contract. If the prerequisites remain absent, retain `AWAITING_OBSERVATION`; do not poll, manufacture a baseline or select a growth change from unsupported data.
