@@ -9,7 +9,7 @@ Updated: 2026-09-13
 | `audit_entry` | consented `seo_audit_page_view` export | Audit entry page was viewed. This is navigation, not an accepted audit. |
 | `enqueue_accepted` | consented `seo_audit_run_created` export | The API accepted or reused an audit run. This is not a completed report. |
 | `usable_report_ready` | server-side `report_review` funnel export | The AU-11 worker persisted a completed result that entered report review. |
-| `audit_error` | consented `seo_audit_error` or server-side `audit_queue_failed` export | A client request or queue operation failed. Retry events remain separate. |
+| `audit_error` | consented `seo_audit_error` export | A client audit request failed. Retry events remain separate. |
 
 `report_delivered` records a delivery attempt. It does not prove that a visitor understood the report or took the recommended next action. Those outcomes remain unavailable until a dedicated observable event has a reviewed purpose and consent basis.
 
@@ -31,7 +31,7 @@ Updated: 2026-09-13
 
 The adapter rejects extra fields, duplicate cohort events and malformed dates or counts. `buildMeasurementScorecard` groups by date, locale, device and country. `entryToEnqueue` is an aggregate event ratio for consented browser events, not a person-level conversion rate. A missing denominator produces `null` with `unavailable` coverage; a numerator above its denominator produces `null` with `inconsistent` coverage. The current format has no explicit completeness field, so every expected browser-event row must be present in an authorized export before a zero count can be interpreted as measured zero; an omitted row is missing evidence.
 
-`enqueueToUsableReport` is always `null`/`unjoinable`: the existing browser enqueue event has no run ID, while the server report-review event has no locale/device/country cohort. Although `usable_report_ready` is a reserved scorecard event name, no current production export can populate its required cohort truthfully. Leave it unused until a reviewed privacy-safe source supplies compatible dimensions. Do not assign server events to a device/country without source evidence or interpret the counts as a joined journey.
+`enqueueToUsableReport` is always `null`/`unjoinable`: the existing browser enqueue event has no run ID, while the server report-review event has no locale/device/country cohort. Although `usable_report_ready` is a reserved scorecard event name, no current production export can populate its required cohort truthfully. Leave it unused until a reviewed privacy-safe source supplies compatible dimensions. Server-side `audit_queue_failed` belongs to that future separate funnel contract as well; do not mix it into the browser `audit_error` cohort. Do not assign server events to a device/country without source evidence or interpret the counts as a joined journey.
 
 This adapter does not accept query, page or coverage fields and does not compare 28-day windows. It cannot perform the AU-13 Search Console or non-brand visibility review. Search and funnel observations require separate reviewed import contracts with explicit completeness before they can support a growth verdict.
 
