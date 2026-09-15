@@ -1,11 +1,13 @@
 # SEO Roadmap (3 Phases, No Timeline)
 
+> Historical implementation plan, not current execution or growth acceptance. For the owner's 2026-08-31 paired mission use [the canonical roadmap](roadmaps/AUDIT_PUBLIC_EXPERIENCE.md), AU-08…13 [execution cards](execution/QUALITY_GROWTH_SPRINTS.md) and [shared quality contract](strategy/PAIRED_QUALITY_GROWTH_CONTRACT.md). Preserve proven helpers/content/analytics, verify current code and sources, and repair only real gaps. No phase below proves Google indexing, traffic, ranking or field outcomes without actual data.
+
 این roadmap فقط بر اساس وضعیت واقعی repo طراحی شده و هیچ تخمین زمانی ندارد.
 
-## Execution Status
-- Phase 1: Done
-- Phase 2: Done
-- Phase 3: Done (foundation implemented; production analytics credentials required for full data flow)
+## Historical reported status — requires current verification
+- Phase 1: previously reported implemented; current crawl/index/route acceptance is AU-09.
+- Phase 2: previously reported implemented; content/schema/locale usefulness is checked in AU-09/AU-10.
+- Phase 3: measurement foundation previously reported; live data/outcomes remain UNVERIFIED until authorized sources are inspected in AU-12/AU-13. Credentials unavailable does not mean the phase is fully accepted.
 
 ## Issue Mapping (Each Issue Exactly Once)
 - Phase 1: `SEO-001`, `SEO-002`, `SEO-003`, `SEO-004`

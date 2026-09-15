@@ -1,6 +1,8 @@
 # AuditSystems Product Marketing Context
 
-**Evidence baseline:** repository `alirezasafaei-dev/auditsystems` at `2b700a6653456388badd2f4e219f41aecd14c3a5` on 2026-08-05.
+**Current planning scope:** `alirezasafaeigfx/auditsystems`, source baseline `0fb6edcc483a701b0904c5d0aa38a8b3ab9dbf9a`, rechecked 2026-08-31. Previous context below originated at `alirezasafaei-dev/auditsystems` / `2b700a6653456388badd2f4e219f41aecd14c3a5`; historical capability statements still require current verification.
+
+The owner's priority is an ordinary nontechnical Iranian visitor: leading UI/UX, simple useful Persian, accurate results, good performance and evidence-based search growth. Coordinate with `alirezasafaeigfx/alirezasafaeisystems`: Audit owns automated/specialist assessment; ASDEV owns implementation help. Use [the canonical roadmap](../docs/roadmaps/AUDIT_PUBLIC_EXPERIENCE.md) and [quality/growth contract](../docs/strategy/PAIRED_QUALITY_GROWTH_CONTRACT.md). This is an owner-defined product priority, not proof of a validated customer segment, market share or rank #1.
 
 This document distinguishes repository evidence from assumptions. It must be updated when authoritative product, customer, pricing, or market evidence changes.
 
