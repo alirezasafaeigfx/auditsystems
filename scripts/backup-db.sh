@@ -6,7 +6,7 @@ umask 077
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-BACKUP_BASE="${PROJECT_DIR}/ops/backups"
+BACKUP_BASE="${BACKUP_BASE:-${PROJECT_DIR}/ops/backups}"
 LOG_DIR="$BACKUP_BASE"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_FILE="${BACKUP_BASE}/asdev-audit-${TIMESTAMP}.sql.gz"

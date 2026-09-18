@@ -1,6 +1,6 @@
 # AuditSystems Production Release Runbook
 
-**Last reviewed:** 2026-07-16  
+**Last reviewed:** 2026-09-18
 **Reference release:** Release #103  
 **Production URL:** https://audit.alirezasafaeisystems.ir
 
@@ -50,6 +50,8 @@ pnpm run deploy:readiness
 
 `pnpm run check` includes lint, typecheck, tests, and build. Treat any required CI job that did not receive a runner as an infrastructure blocker, not a pass.
 
+For a production deployment, the manual GitHub Actions workflow also runs `pnpm audit --prod --audit-level high`. Any high or critical advisory is a release blocker; do not suppress, override, or waive it inside the deployment workflow. Issue #15 currently tracks the upstream Prisma → `deepmerge-ts` high-severity advisory and therefore keeps production deployment fail-closed until a supported patched dependency path exists.
+
 The required gate classifies every tracked path independently: only `prisma/migrations/<migration-id>/migration.sql` is allowed, and all other SQL/dump/backup artifacts are rejected. Backup/restore tests must assert the complete remote host, port, user, database, authentication, and SSL target.
 
 ## 3. PostgreSQL rehearsal
@@ -93,9 +95,10 @@ For production, use a complete protected `DATABASE_URL` or the complete `POSTGRE
 
 The script:
 
-- creates `ops/backups/asdev-audit-<timestamp>.sql.gz`;
+- creates `ops/backups/asdev-audit-<timestamp>.sql.gz` by default, or uses `BACKUP_BASE` when the protected workflow supplies a durable location;
+- the production workflow sets `BACKUP_BASE=$VPS_BASE_DIR/shared/backups` so release cleanup cannot delete the pre-deploy backup;
 - verifies file size and gzip integrity;
-- logs to `ops/backups/backup.log`;
+- logs inside the selected backup directory;
 - applies a 30-day on-disk retention policy.
 
 Record the backup filename, size, SHA-256, and verification result in protected evidence. Do not publish the connection string or dump.
@@ -112,22 +115,27 @@ Reject the token if the SHA is abbreviated, the window is missing/expired, or re
 
 ## 6. Deploy the immutable release
 
-Preferred wrapper from the managed workspace:
+The canonical operator path is the manual GitHub Actions workflow `.github/workflows/deploy-vps-manual.yml`. Do not use `scripts/deploy-production.sh` for a normal production release; it is a legacy entrypoint and does not provide the same immutable-SHA, protected-input, external attestation, and rollback contract.
 
-```bash
-bash scripts/vps-deploy.sh deploy production
-```
+Before the workflow can mutate production, configure a protected GitHub Environment named `production` with these environment-scoped values:
 
-Portable lower-level entrypoint:
+- variables: `VPS_BASE_DIR`, `PUBLIC_URL`, `APP_PORT`, `PRODUCTION_DEPLOY_ENABLED=true`;
+- variable `MIGRATION_EXECUTION_APPROVED=true` only for an explicitly approved migration window;
+- secrets: `VPS_HOST`, `VPS_USER`, `VPS_PORT`, `VPS_SSH_PRIVATE_KEY`, `VPS_KNOWN_HOSTS`.
 
-```bash
-bash ops/deploy/deploy.sh \
-  --env production \
-  --source-dir /path/to/extracted-release \
-  --release-id <utc-timestamp-and-short-sha>
-```
+Do not copy values from stale runbooks. Issue #12 tracks the unresolved authoritative runtime topology; verify the active port, base directory, SSH target, Nginx upstream, PM2 identities, and release symlink before provisioning the environment.
 
-The lower-level script installs locked dependencies, generates Prisma client code, builds before database mutation, runs `prisma migrate deploy`, starts web and worker processes, activates the release symlink, checks readiness, and retains recent releases.
+Dispatch requirements:
+
+1. choose `production`;
+2. set `release_ref` to the exact approved 40-character SHA;
+3. leave `run_migrations=false` unless the database change and migration window were separately approved;
+4. type `APPROVE_AUDITSYSTEMS_PRODUCTION_DEPLOY` in `production_confirmation`;
+5. require the production dependency audit to pass.
+
+The workflow builds the immutable candidate before database mutation, creates a fresh verified backup under `$VPS_BASE_DIR/shared/backups`, optionally applies approved forward migrations, starts the exact release, checks localhost readiness and `/api/version`, verifies the same SHA through the public URL, and restores the exact previous application release if post-switch verification fails.
+
+The portable lower-level `ops/deploy/deploy.sh` remains an emergency/operator primitive only. It must not replace the protected workflow without equivalent approval, backup, exact-SHA attestation, and rollback evidence.
 
 ### Runtime registry drift check
 
