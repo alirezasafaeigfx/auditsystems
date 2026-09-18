@@ -22,7 +22,16 @@ reject_literal() {
   fi
 }
 
-require_literal 'options: [staging]'
+require_literal 'options: [staging, production]'
+require_literal 'production_confirmation:'
+require_literal 'APPROVE_AUDITSYSTEMS_PRODUCTION_DEPLOY'
+require_literal 'PRODUCTION_DEPLOY_ENABLED'
+require_literal "inputs.environment == 'production'"
+require_literal 'pnpm audit --prod --audit-level high'
+require_literal 'BACKUP_BASE="\$SHARED_DIR/backups"'
+require_literal 'bash scripts/backup-db.sh'
+require_literal 'if [[ "$DEPLOY_ENV" == "production" ]]'
+reject_literal 'production remains disabled'
 require_literal 'PUBLIC_URL: ${{ vars.PUBLIC_URL }}'
 require_literal 'VPS_BASE_DIR: ${{ vars.VPS_BASE_DIR }}'
 require_literal 'APP_PORT: ${{ vars.APP_PORT }}'

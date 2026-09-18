@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: "Target environment (production remains disabled)"
+        description: "Target environment"
         required: true
         type: choice
-        options: [staging]
+        options: [staging, production]
       release_ref:
         description: "Git ref (tag/branch/SHA) resolved to an exact commit"
         required: true
@@ -21,6 +21,10 @@ on:
         description: "Type YES to confirm a real staging deployment"
         required: true
         default: "NO"
+      production_confirmation:
+        description: "Type APPROVE_AUDITSYSTEMS_PRODUCTION_DEPLOY to confirm a production deployment"
+        required: true
+        default: ""
 
 permissions:
   contents: read
@@ -34,7 +38,7 @@ env:
 
 jobs:
   deploy:
-    if: inputs.approved == 'YES' && inputs.environment == 'staging'
+    if: (inputs.environment == 'staging' && inputs.approved == 'YES') || (inputs.environment == 'production' && inputs.production_confirmation == 'APPROVE_AUDITSYSTEMS_PRODUCTION_DEPLOY')
     runs-on: [self-hosted, linux, x64, asdev-ci]
     timeout-minutes: 45
     environment: ${{ inputs.environment }}
@@ -43,6 +47,7 @@ jobs:
       PUBLIC_URL: ${{ vars.PUBLIC_URL }}
       APP_PORT: ${{ vars.APP_PORT }}
       MIGRATION_EXECUTION_APPROVED: ${{ vars.MIGRATION_EXECUTION_APPROVED }}
+      PRODUCTION_DEPLOY_ENABLED: ${{ vars.PRODUCTION_DEPLOY_ENABLED }}
     outputs:
       deploy_status: ${{ steps.deploy.outcome }}
       smoke_status: ${{ steps.smoke.outcome }}
@@ -80,13 +85,14 @@ jobs:
           SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
           VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
           RUN_MIGRATIONS: ${{ inputs.run_migrations }}
+          TARGET_ENV: ${{ inputs.environment }}
         shell: bash
         run: |
           set -euo pipefail
           required=(SSH_HOST SSH_USER SSH_PORT SSH_PRIVATE_KEY VPS_KNOWN_HOSTS VPS_BASE_DIR PUBLIC_URL APP_PORT)
           for name in "${required[@]}"; do
             if [[ -z "${!name:-}" ]]; then
-              echo "::error::$name is required through the protected staging environment"
+              echo "::error::$name is required through the protected deployment environment"
               exit 1
             fi
           done
@@ -97,7 +103,16 @@ jobs:
           [[ "$PUBLIC_URL" =~ ^https://[^/[:space:]]+(:[0-9]{1,5})?$ ]]
 
           PUBLIC_URL="${PUBLIC_URL%/}"
-          if [[ "$PUBLIC_URL" == "https://audit.alirezasafaeisystems.ir" ]]; then
+          if [[ "$TARGET_ENV" == "production" ]]; then
+            if [[ "$PRODUCTION_DEPLOY_ENABLED" != "true" ]]; then
+              echo "::error::Production deploys require protected environment variable PRODUCTION_DEPLOY_ENABLED=true"
+              exit 1
+            fi
+            if [[ "$PUBLIC_URL" != "https://audit.alirezasafaeisystems.ir" ]]; then
+              echo "::error::Production PUBLIC_URL must be the canonical AuditSystems production URL"
+              exit 1
+            fi
+          elif [[ "$PUBLIC_URL" == "https://audit.alirezasafaeisystems.ir" ]]; then
             echo "::error::The staging PUBLIC_URL resolves to the known production URL"
             exit 1
           fi
@@ -135,6 +150,10 @@ jobs:
           pnpm lint
           pnpm typecheck
           pnpm test
+
+      - name: Enforce production dependency security gate
+        if: inputs.environment == 'production'
+        run: pnpm audit --prod --audit-level high
 
       - name: Package source artifact
         env:
@@ -180,7 +199,7 @@ jobs:
             exit 1
           fi
 
-      - name: Deploy exact release to staging
+      - name: Deploy exact release to target environment
         id: deploy
         env:
           SSH_KEY: ${{ github.workspace }}/../_temp/deploy-key-placeholder
@@ -206,7 +225,7 @@ jobs:
             "/tmp/asdev-audit-ir-${RELEASE_ID}.tar.gz" \
             "${SSH_USER}@${SSH_HOST}:${REMOTE_TMP}"
 
-          echo "==> Running remote staging deploy..."
+          echo "==> Running remote ${DEPLOY_ENV} deploy..."
           ssh -i "$SSH_KEY" -p "$SSH_PORT" \
             -o BatchMode=yes -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$KNOWN_HOSTS" \
@@ -256,15 +275,24 @@ jobs:
           export RELEASE_ID="${RELEASE_ID}"
           export RELEASE_BUILT_AT="${RELEASE_BUILT_AT}"
 
+          # Build the immutable candidate before any database mutation.
+          pnpm run build
+          cp -r .next/static .next/standalone/.next/
+          cp -r public .next/standalone/
+
+          # Production always gets a fresh durable database backup before any
+          # migration or process switch. The backup lives outside release cleanup.
+          if [[ "$DEPLOY_ENV" == "production" ]]; then
+            mkdir -p "\$SHARED_DIR/backups"
+            chmod 700 "\$SHARED_DIR/backups"
+            BACKUP_BASE="\$SHARED_DIR/backups" bash scripts/backup-db.sh
+          fi
+
           if [[ "${RUN_MIGRATIONS}" == "true" ]]; then
             pnpm prisma migrate deploy
           else
             echo "[deploy] database migrations intentionally disabled"
           fi
-
-          pnpm run build
-          cp -r .next/static .next/standalone/.next/
-          cp -r public .next/standalone/
 
           NODE_BIN="\$(command -v node)"
           WEB_NAME="\${APP_NAME}-web"
@@ -334,7 +362,7 @@ jobs:
           exit 1
           REMOTE_DEPLOY
 
-      - name: Verify exact release through staging URL
+      - name: Verify exact release through target URL
         id: smoke
         env:
           EXPECTED_SHA: ${{ steps.release.outputs.release_sha }}
@@ -371,10 +399,10 @@ jobs:
           VERSION_JSON="$(curl -fsS --max-time 15 "${PUBLIC_URL}/api/version")"
           ACTUAL_SHA="$(printf '%s' "$VERSION_JSON" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{const j=JSON.parse(d);process.stdout.write(j.release?.commitSha||"")})')"
           if [[ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]]; then
-            echo "::error::Staging reports $ACTUAL_SHA but expected $EXPECTED_SHA"
+            echo "::error::${{ inputs.environment }} reports $ACTUAL_SHA but expected $EXPECTED_SHA"
             FAIL=$((FAIL + 1))
           else
-            echo "✓ Staging exact SHA verified: $EXPECTED_SHA"
+            echo "✓ ${{ inputs.environment }} exact SHA verified: $EXPECTED_SHA"
             PASS=$((PASS + 1))
           fi
 
@@ -442,7 +470,7 @@ jobs:
           SMOKE_STATUS: ${{ steps.smoke.outcome }}
         run: |
           {
-            echo "## Staging Deployment Summary"
+            echo "## Deployment Summary"
             echo
             echo "| Field | Value |"
             echo "|---|---|"
