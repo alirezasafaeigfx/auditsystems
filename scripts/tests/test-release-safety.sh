@@ -127,6 +127,16 @@ fi
 grep -Fx -- '--clean' "$TMP_ROOT/pg-dump.args" >/dev/null
 grep -Fx -- '--if-exists' "$TMP_ROOT/pg-dump.args" >/dev/null
 
+# Production workflows must be able to place pre-deploy backups outside an
+# immutable release directory so cleanup cannot delete the rollback artifact.
+durable_backup_root="$TMP_ROOT/durable-backups"
+PATH="$TEST_BIN:$PATH" DATABASE_URL="$CANARY_URL" BACKUP_BASE="$durable_backup_root" \
+  bash "$PROJECT/scripts/backup-db.sh" >"$TMP_ROOT/backup-durable.log"
+durable_backup_file="$(find "$durable_backup_root" -maxdepth 1 -name 'asdev-audit-*.sql.gz' -type f -print -quit)"
+test -n "$durable_backup_file"
+gzip -t "$durable_backup_file"
+test "$(stat -c '%a' "$durable_backup_file")" = "600"
+
 PATH="$TEST_BIN:$PATH" DATABASE_URL="$CANARY_URL" \
   bash "$PROJECT/scripts/restore-db.sh" "$backup_file" --force >"$TMP_ROOT/restore.log"
 grep -Fx -- '--single-transaction' "$TMP_ROOT/psql.args" >/dev/null
