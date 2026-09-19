@@ -48,6 +48,7 @@ jobs:
       APP_PORT: ${{ vars.APP_PORT }}
       MIGRATION_EXECUTION_APPROVED: ${{ vars.MIGRATION_EXECUTION_APPROVED }}
       PRODUCTION_DEPLOY_ENABLED: ${{ vars.PRODUCTION_DEPLOY_ENABLED }}
+      VPS_HOST_KEY_SHA256: ${{ vars.VPS_HOST_KEY_SHA256 }}
     outputs:
       deploy_status: ${{ steps.deploy.outcome }}
       smoke_status: ${{ steps.smoke.outcome }}
@@ -83,13 +84,12 @@ jobs:
           SSH_USER: ${{ secrets.VPS_USER }}
           SSH_PORT: ${{ secrets.VPS_PORT || '22' }}
           SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
-          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
           RUN_MIGRATIONS: ${{ inputs.run_migrations }}
           TARGET_ENV: ${{ inputs.environment }}
         shell: bash
         run: |
           set -euo pipefail
-          required=(SSH_HOST SSH_USER SSH_PORT SSH_PRIVATE_KEY VPS_KNOWN_HOSTS VPS_BASE_DIR PUBLIC_URL APP_PORT)
+          required=(SSH_HOST SSH_USER SSH_PORT SSH_PRIVATE_KEY VPS_HOST_KEY_SHA256 VPS_BASE_DIR PUBLIC_URL APP_PORT)
           for name in "${required[@]}"; do
             if [[ -z "${!name:-}" ]]; then
               echo "::error::$name is required through the protected deployment environment"
@@ -182,20 +182,33 @@ jobs:
           SSH_HOST: ${{ secrets.VPS_HOST }}
           SSH_PORT: ${{ secrets.VPS_PORT || '22' }}
           SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
-          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          VPS_HOST_KEY_SHA256: ${{ vars.VPS_HOST_KEY_SHA256 }}
         shell: bash
         run: |
           set -euo pipefail
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/deploy_key"
-          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
-          chmod 600 "$HOME/.ssh/deploy_key" "$HOME/.ssh/known_hosts"
-          ssh-keygen -l -f "$HOME/.ssh/known_hosts" >/dev/null
+          chmod 600 "$HOME/.ssh/deploy_key"
+
+          if ! ssh-keyscan -p "$SSH_PORT" -t ed25519 "$SSH_HOST" > "$HOME/.ssh/known_hosts" 2>/dev/null; then
+            echo "::error::Unable to collect the configured SSH host key"
+            exit 1
+          fi
+          [[ -s "$HOME/.ssh/known_hosts" ]] || { echo "::error::SSH host key scan returned no key"; exit 1; }
+          chmod 600 "$HOME/.ssh/known_hosts"
+
+          mapfile -t HOST_KEY_FINGERPRINTS < <(
+            ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256 | awk '{print $2}' | sort -u
+          )
+          if [[ "${#HOST_KEY_FINGERPRINTS[@]}" -ne 1 || "${HOST_KEY_FINGERPRINTS[0]:-}" != "$VPS_HOST_KEY_SHA256" ]]; then
+            echo "::error::SSH host key fingerprint mismatch"
+            exit 1
+          fi
 
           TARGET="$SSH_HOST"
           if [[ "$SSH_PORT" != "22" ]]; then TARGET="[$SSH_HOST]:$SSH_PORT"; fi
           if ! ssh-keygen -F "$TARGET" -f "$HOME/.ssh/known_hosts" >/dev/null; then
-            echo "::error::VPS_KNOWN_HOSTS does not contain the configured SSH target"
+            echo "::error::Scanned known_hosts does not contain the configured SSH target"
             exit 1
           fi
 
