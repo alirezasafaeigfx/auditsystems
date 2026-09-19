@@ -1,0 +1,118 @@
+name: production-ssh-preflight
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: production-ssh-preflight-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  ssh-preflight:
+    if: github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, linux, x64, asdev-ci]
+    timeout-minutes: 5
+    environment: production
+    env:
+      SSH_HOST: ${{ secrets.VPS_HOST }}
+      SSH_USER: ${{ secrets.VPS_USER }}
+      SSH_PORT: ${{ secrets.VPS_PORT || '22' }}
+      VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+      VPS_HOST_KEY_SHA256: ${{ vars.VPS_HOST_KEY_SHA256 }}
+      VPS_BASE_DIR: ${{ vars.VPS_BASE_DIR }}
+
+    steps:
+      - name: Validate protected SSH inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            SSH_HOST
+            SSH_USER
+            SSH_PORT
+            VPS_SSH_PRIVATE_KEY
+            VPS_HOST_KEY_SHA256
+            VPS_BASE_DIR
+          )
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::$name is required through the protected production environment"
+              exit 1
+            fi
+          done
+
+          [[ "$SSH_USER" =~ ^[A-Za-z_][A-Za-z0-9._-]*$ ]] || {
+            echo "::error::SSH_USER is invalid"
+            exit 1
+          }
+          [[ "$SSH_PORT" =~ ^[0-9]{1,5}$ ]] && (( SSH_PORT >= 1 && SSH_PORT <= 65535 )) || {
+            echo "::error::SSH_PORT is invalid"
+            exit 1
+          }
+          [[ "$VPS_BASE_DIR" =~ ^/[A-Za-z0-9._/-]+$ ]] || {
+            echo "::error::VPS_BASE_DIR is invalid"
+            exit 1
+          }
+          [[ "$VPS_HOST_KEY_SHA256" =~ ^SHA256:[A-Za-z0-9+/=]+$ ]] || {
+            echo "::error::VPS_HOST_KEY_SHA256 is invalid"
+            exit 1
+          }
+
+      - name: Verify pinned SSH credentials without mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          SSH_DIR="${RUNNER_TEMP}/auditsystems-production-ssh-preflight"
+          install -d -m 700 "$SSH_DIR"
+
+          cleanup() {
+            rm -f "$SSH_DIR/deploy_key" "$SSH_DIR/known_hosts"
+            rmdir "$SSH_DIR" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > "$SSH_DIR/deploy_key"
+          chmod 600 "$SSH_DIR/deploy_key"
+          ssh-keygen -y -f "$SSH_DIR/deploy_key" >/dev/null
+
+          if ! ssh-keyscan -p "$SSH_PORT" -t ed25519 "$SSH_HOST" > "$SSH_DIR/known_hosts" 2>/dev/null; then
+            echo "::error::Unable to collect the configured SSH host key"
+            exit 1
+          fi
+          [[ -s "$SSH_DIR/known_hosts" ]] || {
+            echo "::error::SSH host key scan returned no key"
+            exit 1
+          }
+
+          mapfile -t HOST_KEY_FINGERPRINTS < <(
+            ssh-keygen -lf "$SSH_DIR/known_hosts" -E sha256 | awk '{print $2}' | sort -u
+          )
+          if [[ "${#HOST_KEY_FINGERPRINTS[@]}" -ne 1 || "${HOST_KEY_FINGERPRINTS[0]:-}" != "$VPS_HOST_KEY_SHA256" ]]; then
+            echo "::error::SSH host key fingerprint mismatch"
+            exit 1
+          fi
+
+          TARGET="$SSH_HOST"
+          if [[ "$SSH_PORT" != "22" ]]; then
+            TARGET="[$SSH_HOST]:$SSH_PORT"
+          fi
+          if ! ssh-keygen -F "$TARGET" -f "$SSH_DIR/known_hosts" >/dev/null; then
+            echo "::error::Scanned known_hosts does not contain the configured SSH target"
+            exit 1
+          fi
+
+          ssh \
+            -i "$SSH_DIR/deploy_key" \
+            -p "$SSH_PORT" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$SSH_DIR/known_hosts" \
+            -o ConnectTimeout=10 \
+            "$SSH_USER@$SSH_HOST" \
+            "test -d '$VPS_BASE_DIR'"
+
+          echo "Production SSH credential preflight: PASS"
