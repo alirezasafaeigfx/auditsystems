@@ -4,9 +4,26 @@ set -euo pipefail
 REPO_ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 WORKFLOW="$REPO_ROOT/.github/workflows/deploy-vps-manual.yml"
 PREFLIGHT_WORKFLOW="$REPO_ROOT/.github/workflows/production-ssh-preflight.yml"
+PACKAGER="$REPO_ROOT/scripts/package-release.sh"
 
 [[ -f "$WORKFLOW" ]] || { echo "deploy workflow missing" >&2; exit 1; }
 [[ -f "$PREFLIGHT_WORKFLOW" ]] || { echo "production SSH preflight workflow missing" >&2; exit 1; }
+
+fixture_root="$(mktemp -d)"
+trap 'rm -rf -- "$fixture_root"' EXIT
+mkdir -p "$fixture_root/source/reports" "$fixture_root/source/src/app/api/reports/[token]"
+printf 'excluded\n' > "$fixture_root/source/reports/runtime.txt"
+printf 'included\n' > "$fixture_root/source/src/app/api/reports/[token]/route.ts"
+bash "$PACKAGER" "$fixture_root/source" "$fixture_root/release.tar.gz"
+tar -tzf "$fixture_root/release.tar.gz" > "$fixture_root/archive.txt"
+grep -Fx './src/app/api/reports/[token]/route.ts' "$fixture_root/archive.txt" >/dev/null || {
+  echo "release package omitted nested API reports route" >&2
+  exit 1
+}
+if grep -Fx './reports/runtime.txt' "$fixture_root/archive.txt" >/dev/null; then
+  echo "release package included root reports artifact" >&2
+  exit 1
+fi
 
 require_literal() {
   local value="$1"
