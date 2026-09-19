@@ -39,7 +39,7 @@ env:
 jobs:
   deploy:
     if: (inputs.environment == 'staging' && inputs.approved == 'YES') || (inputs.environment == 'production' && inputs.production_confirmation == 'APPROVE_AUDITSYSTEMS_PRODUCTION_DEPLOY')
-    runs-on: [self-hosted, linux, x64, asdev-ci]
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: ${{ inputs.environment }}
     env:
