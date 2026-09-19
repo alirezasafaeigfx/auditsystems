@@ -12,7 +12,7 @@ concurrency:
 jobs:
   ssh-preflight:
     if: github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, linux, x64, asdev-ci]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: production
     env:
@@ -32,7 +32,6 @@ jobs:
             SSH_HOST
             SSH_USER
             SSH_PORT
-            VPS_SSH_PRIVATE_KEY
             VPS_HOST_KEY_SHA256
             VPS_BASE_DIR
           )
@@ -60,7 +59,7 @@ jobs:
             exit 1
           }
 
-      - name: Verify pinned SSH credentials without mutation
+      - name: Verify pinned SSH host and credentials without mutation
         shell: bash
         run: |
           set -euo pipefail
@@ -73,10 +72,6 @@ jobs:
             rmdir "$SSH_DIR" 2>/dev/null || true
           }
           trap cleanup EXIT
-
-          printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > "$SSH_DIR/deploy_key"
-          chmod 600 "$SSH_DIR/deploy_key"
-          ssh-keygen -y -f "$SSH_DIR/deploy_key" >/dev/null
 
           if ! ssh-keyscan -p "$SSH_PORT" -t ed25519 "$SSH_HOST" > "$SSH_DIR/known_hosts" 2>/dev/null; then
             echo "::error::Unable to collect the configured SSH host key"
@@ -103,6 +98,14 @@ jobs:
             echo "::error::Scanned known_hosts does not contain the configured SSH target"
             exit 1
           fi
+
+          if [[ -z "${VPS_SSH_PRIVATE_KEY:-}" ]]; then
+            echo "::error::VPS_SSH_PRIVATE_KEY is required through the protected production environment"
+            exit 1
+          fi
+          printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > "$SSH_DIR/deploy_key"
+          chmod 600 "$SSH_DIR/deploy_key"
+          ssh-keygen -y -f "$SSH_DIR/deploy_key" >/dev/null
 
           ssh \
             -i "$SSH_DIR/deploy_key" \
