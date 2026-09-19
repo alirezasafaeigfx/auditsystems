@@ -1,6 +1,6 @@
 # AuditSystems Production Release Runbook
 
-**Last reviewed:** 2026-09-18
+**Last reviewed:** 2026-09-19
 **Reference release:** Release #103  
 **Production URL:** https://audit.alirezasafaeisystems.ir
 
@@ -50,7 +50,7 @@ pnpm run deploy:readiness
 
 `pnpm run check` includes lint, typecheck, tests, and build. Treat any required CI job that did not receive a runner as an infrastructure blocker, not a pass.
 
-For a production deployment, the manual GitHub Actions workflow also runs `pnpm audit --prod --audit-level high`. Any high or critical advisory is a release blocker; do not suppress, override, or waive it inside the deployment workflow. Issue #15 currently tracks the upstream Prisma → `deepmerge-ts` high-severity advisory and therefore keeps production deployment fail-closed until a supported patched dependency path exists.
+For a production deployment, the manual GitHub Actions workflow also runs `pnpm audit --prod --audit-level high`. Any high or critical advisory is a release blocker; do not suppress, downgrade, or waive it inside the deployment workflow. The Prisma → `deepmerge-ts` advisory previously tracked in Issue #15 was remediated through PR #29 with a narrowly scoped, regression-tested dependency override; the production audit is green on current main. Any future high or critical advisory re-blocks deployment.
 
 The required gate classifies every tracked path independently: only `prisma/migrations/<migration-id>/migration.sql` is allowed, and all other SQL/dump/backup artifacts are rejected. Backup/restore tests must assert the complete remote host, port, user, database, authentication, and SSL target.
 
@@ -119,19 +119,28 @@ The canonical operator path is the manual GitHub Actions workflow `.github/workf
 
 Before the workflow can mutate production, configure a protected GitHub Environment named `production` with these environment-scoped values:
 
-- variables: `VPS_BASE_DIR`, `PUBLIC_URL`, `APP_PORT`, `PRODUCTION_DEPLOY_ENABLED=true`;
-- variable `MIGRATION_EXECUTION_APPROVED=true` only for an explicitly approved migration window;
-- secrets: `VPS_HOST`, `VPS_USER`, `VPS_PORT`, `VPS_SSH_PRIVATE_KEY`, `VPS_KNOWN_HOSTS`.
+- variables: `VPS_BASE_DIR`, `PUBLIC_URL`, `APP_PORT`, `PRODUCTION_DEPLOY_ENABLED=true`, `VPS_HOST_KEY_SHA256`;
+- variable `MIGRATION_EXECUTION_APPROVED=true` only for an explicitly approved migration window; keep it `false` otherwise;
+- secrets: `VPS_HOST`, `VPS_USER`, `VPS_PORT`, `VPS_SSH_PRIVATE_KEY`.
 
-Do not copy values from stale runbooks. Issue #12 tracks the unresolved authoritative runtime topology; verify the active port, base directory, SSH target, Nginx upstream, PM2 identities, and release symlink before provisioning the environment.
+`VPS_HOST_KEY_SHA256` is the protected expected ED25519 fingerprint. The deployment workflow scans the live ED25519 key, requires exactly one unique SHA-256 fingerprint, and fails closed unless it matches this protected pin. A separate `VPS_KNOWN_HOSTS` secret is no longer required.
+
+Issue #12 completed the authoritative runtime-topology reconciliation. The protected production values must continue to match that reconciled topology rather than stale runbooks: SSH `ubuntu@193.93.169.32:22`, base directory `/var/www/asdev-audit-ir`, public URL `https://audit.alirezasafaeisystems.ir`, and application port `3012`. Re-verify Nginx, PM2 identities, active release symlink, and host fingerprint if infrastructure changes.
+
+### Protected Environment checkpoint — 2026-09-19
+
+Configured production variables are `VPS_BASE_DIR`, `PUBLIC_URL`, `APP_PORT`, `PRODUCTION_DEPLOY_ENABLED=true`, `MIGRATION_EXECUTION_APPROVED=false`, and the verified `VPS_HOST_KEY_SHA256` pin. Environment secrets `VPS_HOST`, `VPS_USER`, and `VPS_PORT` are configured. `VPS_SSH_PRIVATE_KEY` is not yet provisioned in GitHub, so both SSH preflight and deployment must remain fail-closed. A dedicated AuditSystems public key is installed on the reconciled production account and an external strict-host-key read-only connection proof succeeded; that control-host proof does not substitute for a successful GitHub Environment preflight.
+
+Before dispatching a real deployment, run `.github/workflows/production-ssh-preflight.yml` from `main`. The preflight is manual-only, uses the same protected `production` Environment and deployment-runner labels, does not checkout repository code, and performs no backup, migration, upload, process restart, symlink change, or deploy. It only validates the protected SSH inputs, pins the scanned ED25519 host key to `VPS_HOST_KEY_SHA256`, proves the private key is parseable, connects with strict host verification, and checks that `VPS_BASE_DIR` exists. A non-successful preflight is a production blocker.
 
 Dispatch requirements:
 
-1. choose `production`;
-2. set `release_ref` to the exact approved 40-character SHA;
-3. leave `run_migrations=false` unless the database change and migration window were separately approved;
-4. type `APPROVE_AUDITSYSTEMS_PRODUCTION_DEPLOY` in `production_confirmation`;
-5. require the production dependency audit to pass.
+1. require the production SSH preflight to pass on current `main`;
+2. choose `production`;
+3. set `release_ref` to the exact approved 40-character SHA;
+4. leave `run_migrations=false` unless the database change and migration window were separately approved;
+5. type `APPROVE_AUDITSYSTEMS_PRODUCTION_DEPLOY` in `production_confirmation`;
+6. require the production dependency audit to pass.
 
 The workflow builds the immutable candidate before database mutation, creates a fresh verified backup under `$VPS_BASE_DIR/shared/backups`, optionally applies approved forward migrations, starts the exact release, checks localhost readiness and `/api/version`, verifies the same SHA through the public URL, and restores the exact previous application release if post-switch verification fails.
 
