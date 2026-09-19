@@ -1,12 +1,12 @@
 # Auto Generated Project Status
 
-Generated at: 2026-09-19T08:53:03.452Z
+Generated at: 2026-09-19T12:30:29.872Z
 
 ## Overview
 - API routes: 50
 - Page routes: 73
 - Test files: 128
-- NPM scripts: 67
+- NPM scripts: 68
 
 ## Roadmap Phases
 - Done: 10
@@ -187,7 +187,7 @@ Generated at: 2026-09-19T08:53:03.452Z
 
 ## Key Commands
 - `pnpm run dev` -> `next dev`
-- `pnpm run check` -> `pnpm run check:no-database-dumps && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build`
+- `pnpm run check` -> `pnpm run check:no-database-dumps && pnpm run check:prisma-deepmerge && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build`
 - `pnpm run worker:dev` -> `tsx src/worker/index.ts`
 - `pnpm run roadmap:run` -> `tsx src/scripts/roadmap-automation.ts --strict`
 - `pnpm run roadmap:dry` -> `tsx src/scripts/roadmap-automation.ts --dry-run`
