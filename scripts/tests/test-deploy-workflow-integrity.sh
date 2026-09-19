@@ -70,6 +70,8 @@ reject_literal 'production remains disabled'
 require_literal 'PUBLIC_URL: ${{ vars.PUBLIC_URL }}'
 require_literal 'VPS_BASE_DIR: ${{ vars.VPS_BASE_DIR }}'
 require_literal 'APP_PORT: ${{ vars.APP_PORT }}'
+require_literal 'PM2_WEB_NAME: ${{ vars.PM2_WEB_NAME }}'
+require_literal 'PM2_WORKER_NAME: ${{ vars.PM2_WORKER_NAME }}'
 require_literal 'VPS_HOST_KEY_SHA256: ${{ vars.VPS_HOST_KEY_SHA256 }}'
 require_literal 'ssh-keyscan -p "$SSH_PORT" -t ed25519 "$SSH_HOST"'
 require_literal 'ssh-keygen -lf "$HOME/.ssh/known_hosts" -E sha256'
@@ -85,6 +87,10 @@ require_literal '.previous-release'
 require_literal 'release_sha='
 require_literal 'cancel-in-progress: false'
 require_literal 'runs-on: ubuntu-latest'
+require_literal 'WEB_NAME="${PM2_WEB_NAME}"'
+require_literal 'WORKER_NAME="${PM2_WORKER_NAME}"'
+require_literal 'pm2 start node_modules/next/dist/bin/next --name "\$WEB_NAME" -- start -p "\$PORT"'
+require_literal 'pm2 start node_modules/tsx/dist/cli.mjs --name "\$WORKER_NAME" -- src/worker/index.ts'
 
 reject_literal 'runs-on: [self-hosted, linux, x64, asdev-ci]'
 reject_literal 'StrictHostKeyChecking=no'
@@ -93,6 +99,8 @@ reject_literal 'PUBLIC_URL: https://audit.alirezasafaeisystems.ir'
 reject_literal 'ls -1dt'
 reject_literal "sed -n '2p'"
 reject_literal 'PROD_PORT:'
+reject_literal 'WEB_NAME="\${APP_NAME}-web"'
+reject_literal 'WORKER_NAME="\${APP_NAME}-worker"'
 
 known_hosts_count="$(grep -F -c -- 'StrictHostKeyChecking=yes' "$WORKFLOW")"
 if [[ "$known_hosts_count" -lt 3 ]]; then

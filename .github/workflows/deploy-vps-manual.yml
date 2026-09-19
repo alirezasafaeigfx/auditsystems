@@ -46,6 +46,8 @@ jobs:
       VPS_BASE_DIR: ${{ vars.VPS_BASE_DIR }}
       PUBLIC_URL: ${{ vars.PUBLIC_URL }}
       APP_PORT: ${{ vars.APP_PORT }}
+      PM2_WEB_NAME: ${{ vars.PM2_WEB_NAME }}
+      PM2_WORKER_NAME: ${{ vars.PM2_WORKER_NAME }}
       MIGRATION_EXECUTION_APPROVED: ${{ vars.MIGRATION_EXECUTION_APPROVED }}
       PRODUCTION_DEPLOY_ENABLED: ${{ vars.PRODUCTION_DEPLOY_ENABLED }}
       VPS_HOST_KEY_SHA256: ${{ vars.VPS_HOST_KEY_SHA256 }}
@@ -89,7 +91,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          required=(SSH_HOST SSH_USER SSH_PORT SSH_PRIVATE_KEY VPS_HOST_KEY_SHA256 VPS_BASE_DIR PUBLIC_URL APP_PORT)
+          required=(SSH_HOST SSH_USER SSH_PORT SSH_PRIVATE_KEY VPS_HOST_KEY_SHA256 VPS_BASE_DIR PUBLIC_URL APP_PORT PM2_WEB_NAME PM2_WORKER_NAME)
           for name in "${required[@]}"; do
             if [[ -z "${!name:-}" ]]; then
               echo "::error::$name is required through the protected deployment environment"
@@ -101,6 +103,9 @@ jobs:
           [[ "$APP_PORT" =~ ^[0-9]{1,5}$ ]] && (( APP_PORT >= 1 && APP_PORT <= 65535 ))
           [[ "$VPS_BASE_DIR" =~ ^/[A-Za-z0-9._/-]+$ ]]
           [[ "$PUBLIC_URL" =~ ^https://[^/[:space:]]+(:[0-9]{1,5})?$ ]]
+          [[ "$PM2_WEB_NAME" =~ ^[A-Za-z0-9._-]+$ ]]
+          [[ "$PM2_WORKER_NAME" =~ ^[A-Za-z0-9._-]+$ ]]
+          [[ "$PM2_WEB_NAME" != "$PM2_WORKER_NAME" ]]
 
           PUBLIC_URL="${PUBLIC_URL%/}"
           if [[ "$TARGET_ENV" == "production" ]]; then
@@ -238,7 +243,6 @@ jobs:
           CURRENT_LINK="\$BASE_DIR/current/${DEPLOY_ENV}"
           RELEASE_DIR="\$RELEASES_DIR/${RELEASE_ID}"
           PORT="${APP_PORT}"
-          APP_NAME="asdev-audit-ir-${DEPLOY_ENV}"
 
           [[ -f "\$ENV_FILE" ]] || { echo "[deploy] missing environment file" >&2; exit 1; }
           mkdir -p "\$RELEASES_DIR" "\$SHARED_DIR/logs"
@@ -294,8 +298,8 @@ jobs:
           fi
 
           NODE_BIN="\$(command -v node)"
-          WEB_NAME="\${APP_NAME}-web"
-          WORKER_NAME="\${APP_NAME}-worker"
+          WEB_NAME="${PM2_WEB_NAME}"
+          WORKER_NAME="${PM2_WORKER_NAME}"
           LOG_DIR="\$SHARED_DIR/logs"
 
           cat > ecosystem.config.cjs <<ECOSYSTEM
@@ -432,7 +436,10 @@ jobs:
           CURRENT_LINK="\$BASE_DIR/current/${DEPLOY_ENV}"
           FAILED_RELEASE="\$RELEASES_DIR/${RELEASE_ID}"
           MARKER="\$FAILED_RELEASE/.previous-release"
+          ENV_FILE="\$BASE_DIR/shared/env/${DEPLOY_ENV}.env"
           PORT="${APP_PORT}"
+          WEB_NAME="${PM2_WEB_NAME}"
+          WORKER_NAME="${PM2_WORKER_NAME}"
 
           [[ -f "\$MARKER" ]] || { echo "[rollback] previous-release marker missing" >&2; exit 1; }
           PREV_RELEASE="\$(cat "\$MARKER")"
@@ -444,9 +451,14 @@ jobs:
 
           ln -sfn "\$PREV_RELEASE" "\$CURRENT_LINK"
           cd "\$PREV_RELEASE"
-          pm2 delete "asdev-audit-ir-${DEPLOY_ENV}-web" 2>/dev/null || true
-          pm2 delete "asdev-audit-ir-${DEPLOY_ENV}-worker" 2>/dev/null || true
-          pm2 start ecosystem.config.cjs --update-env
+          set -a
+          source "\$ENV_FILE"
+          set +a
+          export NODE_ENV=production HOSTNAME=127.0.0.1 PORT="\$PORT"
+          pm2 delete "\$WEB_NAME" 2>/dev/null || true
+          pm2 delete "\$WORKER_NAME" 2>/dev/null || true
+          pm2 start node_modules/next/dist/bin/next --name "\$WEB_NAME" -- start -p "\$PORT"
+          pm2 start node_modules/tsx/dist/cli.mjs --name "\$WORKER_NAME" -- src/worker/index.ts
           pm2 save 2>/dev/null || true
 
           for attempt in \$(seq 1 30); do
