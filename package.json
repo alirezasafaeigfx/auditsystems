@@ -16,7 +16,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "check:no-database-dumps": "bash scripts/check-no-database-dumps.sh",
-    "check": "pnpm run check:no-database-dumps && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build",
+    "check": "pnpm run check:no-database-dumps && pnpm run check:prisma-deepmerge && pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build",
     "dev:check": "bash scripts/dev-check.sh",
     "perf:build": "PERF_MODE=full ../../../scripts/gpu-browser-run.sh pnpm run build",
     "perf:lint": "PERF_MODE=full ../../../scripts/gpu-run.sh pnpm run lint",
@@ -71,7 +71,8 @@
     "auto:monitor": "bash ../../../scripts/automation-master.sh monitor",
     "auto:report": "bash ../../../scripts/automation-master.sh report",
     "auto:full": "bash ../../../scripts/automation-master.sh full",
-    "auto:sync": "bash ../../../scripts/automation-master.sh sync"
+    "auto:sync": "bash ../../../scripts/automation-master.sh sync",
+    "check:prisma-deepmerge": "bash scripts/tests/test-prisma-deepmerge-remediation.sh"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -99,7 +100,8 @@
   },
   "pnpm": {
     "overrides": {
-      "undici": "7.29.0"
+      "undici": "7.29.0",
+      "@prisma/config>deepmerge-ts": "8.0.0"
     },
     "onlyBuiltDependencies": [
       "@prisma/client",
