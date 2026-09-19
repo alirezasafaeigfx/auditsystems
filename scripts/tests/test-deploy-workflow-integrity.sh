@@ -3,8 +3,10 @@ set -euo pipefail
 
 REPO_ROOT="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 WORKFLOW="$REPO_ROOT/.github/workflows/deploy-vps-manual.yml"
+PREFLIGHT_WORKFLOW="$REPO_ROOT/.github/workflows/production-ssh-preflight.yml"
 
 [[ -f "$WORKFLOW" ]] || { echo "deploy workflow missing" >&2; exit 1; }
+[[ -f "$PREFLIGHT_WORKFLOW" ]] || { echo "production SSH preflight workflow missing" >&2; exit 1; }
 
 require_literal() {
   local value="$1"
@@ -18,6 +20,22 @@ reject_literal() {
   local value="$1"
   if grep -F -- "$value" "$WORKFLOW" >/dev/null; then
     echo "deploy workflow contains forbidden pattern: $value" >&2
+    exit 1
+  fi
+}
+
+require_preflight_literal() {
+  local value="$1"
+  if ! grep -F -- "$value" "$PREFLIGHT_WORKFLOW" >/dev/null; then
+    echo "production SSH preflight missing required invariant: $value" >&2
+    exit 1
+  fi
+}
+
+reject_preflight_literal() {
+  local value="$1"
+  if grep -F -- "$value" "$PREFLIGHT_WORKFLOW" >/dev/null; then
+    echo "production SSH preflight contains forbidden pattern: $value" >&2
     exit 1
   fi
 }
@@ -66,6 +84,36 @@ fi
 version_check_count="$(grep -F -c -- '/api/version' "$WORKFLOW")"
 if [[ "$version_check_count" -lt 3 ]]; then
   echo "exact release attestation must cover route, local smoke, and external smoke" >&2
+  exit 1
+fi
+
+require_preflight_literal 'workflow_dispatch:'
+require_preflight_literal 'permissions: {}'
+require_preflight_literal "if: github.ref == 'refs/heads/main'"
+require_preflight_literal 'runs-on: [self-hosted, linux, x64, asdev-ci]'
+require_preflight_literal 'timeout-minutes: 5'
+require_preflight_literal 'environment: production'
+require_preflight_literal 'VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}'
+require_preflight_literal 'VPS_HOST_KEY_SHA256: ${{ vars.VPS_HOST_KEY_SHA256 }}'
+require_preflight_literal 'ssh-keyscan -p "$SSH_PORT" -t ed25519 "$SSH_HOST"'
+require_preflight_literal 'ssh-keygen -lf "$SSH_DIR/known_hosts" -E sha256'
+require_preflight_literal 'sort -u'
+require_preflight_literal 'StrictHostKeyChecking=yes'
+require_preflight_literal 'UserKnownHostsFile="$SSH_DIR/known_hosts"'
+require_preflight_literal 'ssh-keygen -y -f "$SSH_DIR/deploy_key"'
+require_preflight_literal 'ConnectTimeout=10'
+require_preflight_literal 'test -d'
+reject_preflight_literal 'uses:'
+reject_preflight_literal 'actions/checkout'
+reject_preflight_literal 'scp '
+reject_preflight_literal 'rsync '
+reject_preflight_literal 'prisma migrate'
+reject_preflight_literal 'pm2 '
+reject_preflight_literal 'deploy.sh'
+reject_preflight_literal 'backup-db.sh'
+
+if grep -Eq '^[[:space:]]+(push|pull_request|schedule):' "$PREFLIGHT_WORKFLOW"; then
+  echo "production SSH preflight must remain manual-only" >&2
   exit 1
 fi
 
