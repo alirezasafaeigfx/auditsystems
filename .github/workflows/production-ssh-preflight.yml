@@ -12,7 +12,7 @@ concurrency:
 jobs:
   ssh-preflight:
     if: github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, linux, x64, asdev-ci]
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: production
     env:

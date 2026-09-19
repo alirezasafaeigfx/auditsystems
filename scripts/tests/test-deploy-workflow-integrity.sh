@@ -41,6 +41,7 @@ reject_preflight_literal() {
 }
 
 require_literal 'options: [staging, production]'
+require_literal 'runs-on: ubuntu-latest'
 require_literal 'production_confirmation:'
 require_literal 'APPROVE_AUDITSYSTEMS_PRODUCTION_DEPLOY'
 require_literal 'PRODUCTION_DEPLOY_ENABLED'
@@ -90,7 +91,7 @@ fi
 require_preflight_literal 'workflow_dispatch:'
 require_preflight_literal 'permissions: {}'
 require_preflight_literal "if: github.ref == 'refs/heads/main'"
-require_preflight_literal 'runs-on: [self-hosted, linux, x64, asdev-ci]'
+require_preflight_literal 'runs-on: ubuntu-latest'
 require_preflight_literal 'timeout-minutes: 5'
 require_preflight_literal 'environment: production'
 require_preflight_literal 'VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}'
